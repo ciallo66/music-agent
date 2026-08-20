@@ -1,5 +1,8 @@
 # pre-commit 钩子：每次 git commit 强制检查，不合规的代码进不了仓库
 # 安装：pip install pre-commit && pre-commit install
+#
+# ⚠️ 重要：ruff 规则来自 pyproject.toml。改规则时必须把 pyproject.toml 一起提交，
+#    否则 pre-commit 运行期间会临时还原未暂存改动，ruff 用旧配置导致新规则不生效。
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9

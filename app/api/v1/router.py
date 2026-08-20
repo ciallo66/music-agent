@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-router = APIRouter()
+from app.api.v1.routes import auth
 
-# 子路由注册示例（后续按模块添加）：
-# from app.api.v1.routes import songs, playlists
-# router.include_router(songs.router, prefix="/songs", tags=["songs"])
-# router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
+router = APIRouter()
+router.include_router(auth.router, prefix="/auth", tags=["auth"])

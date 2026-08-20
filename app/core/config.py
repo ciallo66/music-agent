@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,6 +16,12 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     secret_key: str = "change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_minutes: int = 4320
+    refresh_cookie_name: str = "refresh_token"
+    refresh_cookie_secure: bool = False
+    refresh_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
 
     database_url: str = "postgresql+psycopg://postgres:your_password@127.0.0.1:5432/music_agent"
 
@@ -25,9 +32,7 @@ class Settings(BaseSettings):
     jamendo_client_id: str = ""
     jamendo_base_url: str = "https://api.jamendo.com/v3.0"
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 @lru_cache

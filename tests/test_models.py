@@ -1,0 +1,43 @@
+"""SQLAlchemy 模型结构测试。"""
+
+from __future__ import annotations
+
+import app.models  # noqa: F401
+from app.core.database import Base
+
+EXPECTED_TABLES = {
+    "artists",
+    "play_records",
+    "playlist_songs",
+    "playlists",
+    "refresh_sessions",
+    "song_tags",
+    "songs",
+    "tags",
+    "users",
+}
+
+
+def test_core_tables_are_registered() -> None:
+    """核心关系表应全部注册到 SQLAlchemy metadata。"""
+    assert set(Base.metadata.tables) == EXPECTED_TABLES
+
+
+def test_vector_fields_are_deferred() -> None:
+    """阶段 1 不应提前创建尚未确定维度的向量字段。"""
+    songs = Base.metadata.tables["songs"]
+
+    assert "embedding" not in songs.columns
+    assert "knowledge_chunks" not in Base.metadata.tables
+
+
+def test_association_tables_use_composite_primary_keys() -> None:
+    """多对多关联表应使用复合主键阻止重复关系。"""
+    playlist_songs = Base.metadata.tables["playlist_songs"]
+    song_tags = Base.metadata.tables["song_tags"]
+
+    assert {column.name for column in playlist_songs.primary_key.columns} == {
+        "playlist_id",
+        "song_id",
+    }
+    assert {column.name for column in song_tags.primary_key.columns} == {"song_id", "tag_id"}
