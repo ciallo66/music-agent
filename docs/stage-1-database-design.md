@@ -32,7 +32,7 @@
 
 ## 验收
 
-1. `alembic upgrade head` 可创建全部核心表。
+1. 进入 `backend/` 后执行 `alembic upgrade head` 可创建全部核心表。
 2. PostgreSQL 可查询到表、主键、外键和约束。
 3. SQLAlchemy metadata 与迁移后的数据库结构一致。
 4. Ruff、mypy 和 pytest 通过。

@@ -22,7 +22,7 @@ FastAPI + SQLAlchemy 2.0 + PostgreSQL + pgvector + DeepSeek API；Vue 3 + Vite +
 
 - 开发前读取实际项目文件，确认语言、框架、依赖版本和现有实现；信息不足且无法确认时，先询问用户。
 - 禁止编造项目中不存在的 import、依赖、工具类、方法或 API。
-- 只使用项目实际版本支持的语法和 API；新增依赖必须在 `pyproject.toml` 中声明并说明原因。
+- 只使用项目实际版本支持的语法和 API；新增后端依赖必须在 `backend/pyproject.toml` 中声明并说明原因。
 - 业务规则不明确时不得擅自决定默认值、错误码、自动创建记录等行为。
 
 ### 目录与分层
@@ -30,17 +30,13 @@ FastAPI + SQLAlchemy 2.0 + PostgreSQL + pgvector + DeepSeek API；Vue 3 + Vite +
 目录结构：
 
 ```
-app/
-  main.py          # FastAPI 入口
-  core/            # 配置、数据库连接
-  models/          # SQLAlchemy 表模型
-  schemas/         # Pydantic 请求/响应
-  repositories/    # 数据访问层
-  services/        # 业务逻辑（推荐、AI 编排）
-  api/v1/routes/   # 路由
+backend/
+  app/             # FastAPI 源码（core/models/schemas/repositories/services/api）
+  migrations/      # Alembic 迁移
+  scripts/         # 数据导入与后端维护脚本
+  tests/           # pytest 测试
+  pyproject.toml   # 后端依赖与工具配置
 frontend/          # Vue 3
-scripts/           # 数据导入
-tests/             # 测试
 docs/              # 文档
 ```
 

@@ -67,7 +67,7 @@
   2. 安装 PostgreSQL + pgvector（见 `docs/pgvector-install.md`）
   3. 复制 `.env.example` 为 `.env`，填数据库/DeepSeek/Jamendo 配置
   4. `pre-commit install`
-- **产出**：`uvicorn app.main:app --reload` 能启动，`/health` 返回 ok
+- **产出**：进入 `backend/` 后执行 `uvicorn app.main:app --reload` 能启动，`/health` 返回 ok
 - **验收**：`/health` 200；pre-commit 生效
 
 ### 阶段 1：数据库建模
@@ -77,7 +77,7 @@
   2. 配置 alembic 迁移
   3. 建库：`CREATE DATABASE music_agent;`
   4. `CREATE EXTENSION vector;`
-- **产出**：`alembic upgrade head` 建表成功
+- **产出**：进入 `backend/` 后执行 `alembic upgrade head` 建表成功
 - **验收**：psql 里能看到所有表；pytest 空跑通过
 
 ### 阶段 2：基础功能（后端 API）
@@ -106,7 +106,7 @@
 - **目标**：库里真有几万条歌
 - **任务**：
   1. developer.jamendo.com 免费申请 Client ID
-  2. scripts/import_jamendo.py：分页抓取 + 清洗（去重/字段映射）+ 批量写入
+  2. `backend/scripts/import_jamendo.py`：分页抓取 + 清洗（去重/字段映射）+ 批量写入
   3. 抓取 1 万条（含 genre/语言/音频链接/歌词）
 - **产出**：`SELECT count(*) FROM songs;` 返回 10000+
 - **验收**：导入脚本幂等（重复跑不产生重复数据）；带歌词的能查

@@ -11,24 +11,23 @@
 
 ## 项目结构
 ```
-app/
-  main.py          # FastAPI 入口
-  core/            # 配置、数据库
-  models/          # 表模型
-  schemas/         # Pydantic
-  repositories/    # 数据访问
-  services/        # 业务逻辑（推荐、AI 编排）
-  api/v1/routes/   # 路由
-frontend/          # Vue 3
-scripts/           # 数据导入
-tests/             # 测试
-docs/              # 文档
+backend/            # FastAPI 独立后端项目
+  app/              # 后端源码
+  migrations/       # Alembic 数据库迁移
+  scripts/          # 数据导入和维护脚本
+  tests/            # pytest 测试
+  pyproject.toml    # Python 依赖与质量工具配置
+frontend/           # Vue 3 独立前端项目
+  src/              # 页面、状态和 API 客户端
+  package.json      # Node.js 依赖与命令
+docs/               # 跨端设计文档
 ```
 
 ## 快速开始（后端）
 
 ```bash
-# 1. 创建虚拟环境
+# 1. 进入后端并创建虚拟环境
+cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate   |   Mac/Linux: source .venv/bin/activate
 
@@ -38,12 +37,21 @@ pip install -e ".[dev]"
 # 3. 配置环境
 cp .env.example .env   # 填入数据库、DeepSeek、Jamendo 配置
 
-# 4. 安装 pre-commit（提交前强制检查）
-pre-commit install
-
-# 5. 启动
+# 4. 启动
 uvicorn app.main:app --reload
 ```
+
+首次配置 Git 门禁时回到仓库根目录执行 `backend/.venv/Scripts/pre-commit install`（Linux/macOS 使用对应的 `bin/pre-commit`）。
+
+## 快速开始（前端）
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端与后端代码放在同一仓库、不同目录并分别管理依赖；详细说明见 `frontend/README.md`。
 
 ## 开发规范
 - 所有开发规范见 `CLAUDE.md`（Claude）和 `AGENTS.md`（Codex）

@@ -30,7 +30,7 @@
 
 ### 环境与真实性
 
-- 开发前读取 `pyproject.toml`、现有源码和相关文档，确认实际版本、依赖、工具类和调用方式。
+- 开发前读取 `backend/pyproject.toml`、现有源码和相关文档，确认实际版本、依赖、工具类和调用方式。
 - 禁止编造不存在的 import、依赖、工具类、方法或 API；需要新能力时先说明并声明依赖。
 - 只使用项目实际版本支持的语法和 API，禁止复制不适配当前版本的写法。
 - 业务规则不明确时必须询问，不得擅自决定默认值、错误码、自动创建记录等行为。
@@ -38,17 +38,13 @@
 ### 目录结构与分层
 
 ```
-app/
-  main.py          # FastAPI 入口
-  core/            # 配置、数据库连接
-  models/          # SQLAlchemy 表模型
-  schemas/         # Pydantic 请求/响应
-  repositories/    # 数据访问层（只做 SQL，不做业务判断）
-  services/        # 业务逻辑层（推荐、AI 编排放这）
-  api/v1/routes/   # 路由（只做参数校验 + 调 service）
+backend/
+  app/             # FastAPI 源码（core/models/schemas/repositories/services/api）
+  migrations/      # Alembic 迁移
+  scripts/         # 数据导入与后端维护脚本
+  tests/           # pytest 测试
+  pyproject.toml   # 后端依赖与工具配置
 frontend/          # Vue 3 项目
-scripts/           # 数据导入脚本
-tests/             # pytest 测试
 docs/              # 文档（规范细节、架构）
 ```
 
@@ -63,7 +59,7 @@ docs/              # 文档（规范细节、架构）
 - Pydantic 使用 v2 API，例如 `BaseModel` + `model_validator`，不得使用已废弃的 v1 写法。
 - 显式导入，禁止 `from x import *`；禁止死代码和未使用导入。
 - 密钥、密码和环境相关 URL 必须通过 `.env` / settings 配置，禁止进入源码或 Git。
-- 新增第三方依赖必须在 `pyproject.toml` 中声明，并确认与当前 Python 和框架版本兼容。
+- 新增后端依赖必须在 `backend/pyproject.toml` 中声明，并确认与当前 Python 和框架版本兼容。
 - 推荐引擎、function calling、数据管道等关键模块必须有 pytest 测试。
 - 交付前必须运行适用的 Ruff、mypy 和 pytest，报告通过项、失败项和未验证项。
 

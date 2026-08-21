@@ -1,7 +1,7 @@
 # Python
 __pycache__/
 *.py[cod]
-.venv/
+**/.venv/
 venv/
 *.egg-info/
 
@@ -10,9 +10,9 @@ venv/
 .env.local
 
 # 测试/缓存
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
 .coverage
 
 # 前端
