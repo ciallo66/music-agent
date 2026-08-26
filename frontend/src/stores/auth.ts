@@ -79,5 +79,15 @@ export const useAuthStore = defineStore('auth', () => {
     return '发生未知错误，请稍后重试'
   }
 
-  return { initialized, isAdmin, isAuthenticated, user, errorMessage, initialize, login, logout, register }
+  return {
+    initialized,
+    isAdmin,
+    isAuthenticated,
+    user,
+    errorMessage,
+    initialize,
+    login,
+    logout,
+    register,
+  }
 })

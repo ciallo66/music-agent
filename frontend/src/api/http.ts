@@ -25,12 +25,15 @@ export function configureAuthToken(
 
 export async function refreshAccessToken(): Promise<string> {
   if (refreshRequest === null) {
-    refreshRequest = refreshClient.post<TokenResponse>('/auth/refresh').then(({ data }) => {
-      saveAccessToken(data.access_token)
-      return data.access_token
-    }).finally(() => {
-      refreshRequest = null
-    })
+    refreshRequest = refreshClient
+      .post<TokenResponse>('/auth/refresh')
+      .then(({ data }) => {
+        saveAccessToken(data.access_token)
+        return data.access_token
+      })
+      .finally(() => {
+        refreshRequest = null
+      })
   }
   return refreshRequest
 }
@@ -43,9 +46,10 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(undefined, async (error: AxiosError) => {
   const request = error.config as RetriableRequest | undefined
-  const isAuthEntry = request?.url?.includes('/auth/login') === true
-    || request?.url?.includes('/auth/register') === true
-    || request?.url?.includes('/auth/refresh') === true
+  const isAuthEntry =
+    request?.url?.includes('/auth/login') === true ||
+    request?.url?.includes('/auth/register') === true ||
+    request?.url?.includes('/auth/refresh') === true
 
   if (error.response?.status !== 401 || request === undefined || request._retry || isAuthEntry) {
     return Promise.reject(error)

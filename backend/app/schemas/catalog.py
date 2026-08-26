@@ -59,12 +59,21 @@ class SongCreate(BaseModel):
 
     title: Name
     artist_id: Annotated[int, Field(gt=0)]
+    album: Annotated[str, Field(max_length=255)] | None = None
     genre: Annotated[str, Field(min_length=1, max_length=100)] | None = None
     language: Annotated[str, Field(min_length=1, max_length=50)] | None = None
     duration: Annotated[int, Field(ge=0)] | None = None
-    audio_url: HttpUrl
+    audio_url: HttpUrl | None = None
     lyrics: str | None = None
     popularity: Annotated[int, Field(ge=0)] = 0
+    bpm: Annotated[float, Field(gt=0)] | None = None
+    music_key: Annotated[str, Field(max_length=20)] | None = None
+    energy: Annotated[float, Field(ge=0, le=1)] | None = None
+    valence: Annotated[float, Field(ge=0, le=1)] | None = None
+    danceability: Annotated[float, Field(ge=0, le=1)] | None = None
+    loudness: float | None = None
+    instruments: Annotated[str, Field(max_length=255)] | None = None
+    song_structure: str | None = None
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -74,12 +83,21 @@ class SongUpdate(BaseModel):
 
     title: Name | None = None
     artist_id: Annotated[int, Field(gt=0)] | None = None
+    album: Annotated[str, Field(max_length=255)] | None = None
     genre: Annotated[str, Field(min_length=1, max_length=100)] | None = None
     language: Annotated[str, Field(min_length=1, max_length=50)] | None = None
     duration: Annotated[int, Field(ge=0)] | None = None
-    audio_url: HttpUrl | None = None
+    audio_url: str | None = None
     lyrics: str | None = None
     popularity: Annotated[int, Field(ge=0)] | None = None
+    bpm: Annotated[float, Field(gt=0)] | None = None
+    music_key: Annotated[str, Field(max_length=20)] | None = None
+    energy: Annotated[float, Field(ge=0, le=1)] | None = None
+    valence: Annotated[float, Field(ge=0, le=1)] | None = None
+    danceability: Annotated[float, Field(ge=0, le=1)] | None = None
+    loudness: float | None = None
+    instruments: Annotated[str, Field(max_length=255)] | None = None
+    song_structure: str | None = None
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -88,7 +106,7 @@ class SongUpdate(BaseModel):
         """要求至少更新一个字段，且必填字段不能显式置空。"""
         if not self.model_fields_set:
             raise ValueError("至少提供一个待更新字段")
-        for field_name in ("title", "artist_id", "audio_url", "popularity"):
+        for field_name in ("title", "artist_id", "popularity"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 raise ValueError(f"{field_name} 不能为空")
         return self
@@ -110,11 +128,17 @@ class SongSummary(BaseModel):
     id: int
     title: str
     artist: SongArtist
+    album: str | None
     genre: str | None
     language: str | None
     duration: int | None
-    audio_url: str
+    audio_url: str | None
     popularity: int
+    bpm: float | None
+    music_key: str | None
+    energy: float | None
+    valence: float | None
+    danceability: float | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,6 +147,9 @@ class SongDetail(SongSummary):
     """歌曲详情响应。"""
 
     lyrics: str | None
+    loudness: float | None
+    instruments: str | None
+    song_structure: str | None
 
 
 class SongPage(BaseModel):

@@ -1,0 +1,351 @@
+<template>
+  <div class="detail-page" v-if="song">
+    <div class="song-header">
+      <div class="cover-placeholder">{{ song.title.slice(0, 1) }}</div>
+      <div class="info">
+        <h2>{{ song.title }}</h2>
+        <p class="artist">{{ song.artist.name }}</p>
+        <p class="meta">
+          {{ song.genre }} · {{ song.language }} ·
+          {{ song.bpm ? Math.round(song.bpm) + ' BPM' : '' }}
+        </p>
+        <div class="actions">
+          <el-button type="primary" @click="playSong">▶ 播放</el-button>
+          <el-button @click="toggleFav">{{ isFav ? '已收藏' : '收藏' }}</el-button>
+        </div>
+      </div>
+    </div>
+    <div class="features" v-if="song.energy !== null">
+      <h3>音乐特征</h3>
+      <div class="feature-grid">
+        <div class="feat-item">
+          <span class="feat-label">BPM</span
+          ><span class="feat-val">{{ song.bpm ? Math.round(song.bpm) : '-' }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">Key</span
+          ><span class="feat-val">{{ song.music_key || '-' }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">Energy</span
+          ><span class="feat-val">{{
+            song.energy !== null ? (song.energy * 100).toFixed(0) + '%' : '-'
+          }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">Valence</span
+          ><span class="feat-val">{{
+            song.valence !== null ? (song.valence * 100).toFixed(0) + '%' : '-'
+          }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">Dance</span
+          ><span class="feat-val">{{
+            song.danceability !== null ? (song.danceability * 100).toFixed(0) + '%' : '-'
+          }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">Loudness</span
+          ><span class="feat-val">{{
+            song.loudness !== null ? song.loudness.toFixed(1) + ' dB' : '-'
+          }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="radar-block" v-if="song.energy !== null">
+      <h3>特征画像</h3>
+      <div ref="chartEl" class="radar-chart"></div>
+      <p class="radar-note">数值已归一化到 0-100（Loudness 按 -60~0 dB、BPM 按 0~180 归一化）</p>
+    </div>
+    <div class="detail-block" v-if="song.instruments">
+      <h3>乐器</h3>
+      <div class="tag-list">
+        <span v-for="inst in instruments" :key="inst" class="tag">{{ inst }}</span>
+      </div>
+    </div>
+    <div class="detail-block" v-if="song.song_structure">
+      <h3>歌曲结构</h3>
+      <p class="structure-text">{{ song.song_structure }}</p>
+    </div>
+    <div class="lyrics-section" v-if="song.lyrics">
+      <h3>歌词</h3>
+      <pre class="lyrics-text">{{ song.lyrics }}</pre>
+    </div>
+  </div>
+  <div v-else class="loading">加载中...</div>
+</template>
+<script setup lang="ts">
+import { ElMessage } from 'element-plus'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import * as echarts from 'echarts/core'
+import { RadarChart } from 'echarts/charts'
+import { LegendComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import { getSong, type SongDetail } from '../api/songs'
+import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
+import { usePlayerStore } from '../stores/player'
+
+echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
+
+const route = useRoute()
+const player = usePlayerStore()
+const song = ref<SongDetail | null>(null)
+const isFav = ref(false)
+const favId = ref<number | null>(null)
+const chartEl = ref<HTMLDivElement | null>(null)
+let chart: echarts.ECharts | null = null
+
+const instruments = computed(() =>
+  (song.value?.instruments ?? '')
+    .split(/[,，、]/)
+    .map((item) => item.trim())
+    .filter(Boolean),
+)
+
+async function load() {
+  try {
+    const { data } = await getSong(Number(route.params.id))
+    song.value = data
+  } catch {
+    ElMessage.error('加载失败')
+    return
+  }
+  await nextTick()
+  renderRadar()
+  try {
+    const { data: favData } = await listFavorites()
+    const found = favData.items.find((item) => item.song_id === song.value?.id)
+    if (found) {
+      isFav.value = true
+      favId.value = found.id
+    }
+  } catch {
+    // 收藏状态接口暂不可用时保持未收藏，不影响详情与特征展示
+  }
+}
+
+function normalizeLoudness(value: number | null) {
+  if (value === null) return 0
+  return Math.min(100, Math.max(0, ((value + 60) / 60) * 100))
+}
+
+function normalizeBpm(value: number | null) {
+  if (value === null) return 0
+  return Math.min(100, (value / 180) * 100)
+}
+
+function renderRadar() {
+  if (!song.value || !chartEl.value) return
+  if (!chart) chart = echarts.init(chartEl.value)
+  const current = song.value
+  const values = [
+    current.energy !== null ? Math.round(current.energy * 100) : 0,
+    current.valence !== null ? Math.round(current.valence * 100) : 0,
+    current.danceability !== null ? Math.round(current.danceability * 100) : 0,
+    Math.round(normalizeLoudness(current.loudness)),
+    Math.round(normalizeBpm(current.bpm)),
+  ]
+  chart.setOption({
+    tooltip: {},
+    legend: { show: false },
+    radar: {
+      indicator: [
+        { name: 'Energy', max: 100 },
+        { name: 'Valence', max: 100 },
+        { name: 'Danceability', max: 100 },
+        { name: 'Loudness', max: 100 },
+        { name: 'BPM', max: 100 },
+      ],
+      radius: '68%',
+      axisName: { color: '#858a96', fontSize: 12 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.10)' } },
+      splitArea: {
+        areaStyle: { color: ['rgba(89,226,164,0.03)', 'rgba(89,226,164,0.06)'] },
+      },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.15)' } },
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: values,
+            name: current.title,
+            symbol: 'circle',
+            symbolSize: 4,
+            lineStyle: { color: '#59e2a4', width: 2 },
+            itemStyle: { color: '#59e2a4' },
+            areaStyle: { color: 'rgba(89,226,164,0.22)' },
+          },
+        ],
+      },
+    ],
+  })
+}
+
+function onResize() {
+  chart?.resize()
+}
+
+async function toggleFav() {
+  if (!song.value) return
+  if (isFav.value && favId.value !== null) {
+    await removeFavorite(favId.value)
+    isFav.value = false
+    favId.value = null
+    ElMessage.success('已取消收藏')
+  } else {
+    const { data } = await addFavorite(song.value.id)
+    isFav.value = true
+    favId.value = data.id
+    ElMessage.success('已收藏')
+  }
+}
+
+function playSong() {
+  if (song.value) player.playSong(song.value)
+}
+
+onMounted(() => {
+  load()
+  window.addEventListener('resize', onResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
+  chart?.dispose()
+  chart = null
+})
+</script>
+<style scoped>
+.detail-page {
+  padding: 40px;
+  max-width: 800px;
+}
+.loading {
+  text-align: center;
+  color: #858a96;
+  padding: 60px;
+}
+.song-header {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  margin-bottom: 40px;
+}
+.cover-placeholder {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #59e2a4, #2a8f6e);
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  color: #07110c;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.info h2 {
+  color: #f0f1f3;
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+.artist {
+  color: #59e2a4;
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+.meta {
+  color: #858a96;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+}
+.features,
+.radar-block,
+.detail-block,
+.lyrics-section {
+  margin-bottom: 32px;
+}
+.features h3,
+.radar-block h3,
+.detail-block h3,
+.lyrics-section h3 {
+  color: #f0f1f3;
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.feat-item {
+  background: #111215;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.feat-label {
+  color: #626771;
+  font-size: 12px;
+}
+.feat-val {
+  color: #f0f1f3;
+  font-size: 20px;
+  font-weight: 700;
+}
+.radar-chart {
+  width: 100%;
+  height: 320px;
+}
+.radar-note {
+  color: #626771;
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  background: rgba(89, 226, 164, 0.08);
+  border: 1px solid rgba(89, 226, 164, 0.25);
+  color: #59e2a4;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 13px;
+}
+.structure-text {
+  color: #c9cbd2;
+  font-size: 14px;
+  line-height: 1.9;
+  background: #111215;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 0;
+}
+.lyrics-text {
+  color: #858a96;
+  font-size: 14px;
+  line-height: 2;
+  white-space: pre-wrap;
+  background: #111215;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>

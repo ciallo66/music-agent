@@ -35,8 +35,8 @@ def test_pgvector_extension_is_enabled() -> None:
 
 
 def test_database_is_at_expected_revision() -> None:
-    """数据库应处于阶段 1 初始迁移版本。"""
+    """数据库应处于当前最新迁移版本。"""
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
 
-    assert revision == "20260821_03"
+    assert revision == "20260825_04"

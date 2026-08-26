@@ -55,4 +55,4 @@ npm run dev
 
 ## 开发规范
 - 所有开发规范见 `CLAUDE.md`（Claude）和 `AGENTS.md`（Codex）
-- 提交前自动跑 ruff + mypy，不合规代码进不了仓库
+- 提交前自动跑 ruff + mypy（后端）与 ESLint + vue-tsc（前端），不合规代码进不了仓库

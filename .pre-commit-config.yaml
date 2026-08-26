@@ -18,3 +18,18 @@ repos:
       - id: mypy
         additional_dependencies: [pydantic]
         args: ["--ignore-missing-imports", "--config-file=backend/pyproject.toml"]
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend lint (eslint)
+        entry: npm --prefix frontend run lint:check
+        language: system
+        files: ^frontend/.*\.(js|ts|tsx|vue)$
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: frontend typecheck (vue-tsc)
+        entry: npm --prefix frontend run typecheck
+        language: system
+        files: ^frontend/.*\.(ts|tsx|vue)$
+        pass_filenames: false
