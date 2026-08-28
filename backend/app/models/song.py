@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -62,6 +63,7 @@ class Song(Base):
     loudness: Mapped[float | None]
     instruments: Mapped[str | None] = mapped_column(String(255))
     song_structure: Mapped[str | None] = mapped_column(Text)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector())
 
     artist: Mapped[Artist] = relationship(back_populates="songs")
     playlist_links: Mapped[list[PlaylistSong]] = relationship(back_populates="song")

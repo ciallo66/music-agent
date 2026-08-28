@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { configureAuthToken, http, refreshAccessToken } from '../api/http'
+import type { TokenResponse } from '../types/music'
 
 export interface UserProfile {
   id: number
@@ -10,12 +11,6 @@ export interface UserProfile {
   role: 'user' | 'admin'
   status: 'active' | 'disabled'
   created_at: string
-}
-
-interface TokenResponse {
-  access_token: string
-  token_type: 'bearer'
-  expires_in: number
 }
 
 export const useAuthStore = defineStore('auth', () => {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from app.core.config import BACKEND_ROOT, Settings
 
 
@@ -14,3 +15,9 @@ def test_env_file_is_bound_to_backend_directory() -> None:
     assert isinstance(env_file, Path)
     assert env_file == BACKEND_ROOT / ".env"
     assert env_file.parent.name == "backend"
+
+
+def test_default_secret_key_is_rejected() -> None:
+    """示例密钥不能用于启动应用。"""
+    with pytest.raises(ValueError, match="SECRET_KEY"):
+        Settings(secret_key="change-me")

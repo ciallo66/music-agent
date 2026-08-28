@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
@@ -14,8 +15,10 @@ class Base(DeclarativeBase):
     """所有 ORM 模型的基类。"""
 
 
+database_url = os.getenv("TEST_DATABASE_URL", settings.database_url)
+
 engine = create_engine(
-    settings.database_url,
+    database_url,
     pool_pre_ping=True,
     pool_recycle=3600,
     echo=settings.debug,
@@ -24,9 +27,13 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI 依赖：每个请求创建一个数据库会话，用完关闭。"""
+    """FastAPI 依赖：以请求为事务边界管理会话并在结束时关闭。"""
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

@@ -56,8 +56,9 @@ function formatTime(s: number) {
   left: 0;
   right: 0;
   height: 64px;
-  background: #111215;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(90deg, var(--surface-raised), var(--bg-elevated));
+  border-top: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -70,7 +71,7 @@ function formatTime(s: number) {
   flex-direction: column;
 }
 .title {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -78,7 +79,7 @@ function formatTime(s: number) {
   text-overflow: ellipsis;
 }
 .artist {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 .controls {
@@ -89,19 +90,19 @@ function formatTime(s: number) {
 .controls button {
   background: none;
   border: none;
-  color: #c9cbd2;
+  color: var(--text-secondary);
   font-size: 20px;
   cursor: pointer;
 }
 .controls button:hover {
-  color: #59e2a4;
+  color: var(--accent);
 }
 .play-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #59e2a4 !important;
-  color: #07110c !important;
+  background: var(--accent) !important;
+  color: var(--text-on-accent) !important;
   font-size: 16px !important;
   display: grid;
   place-items: center;
@@ -114,10 +115,10 @@ function formatTime(s: number) {
 }
 .progress input[type='range'] {
   flex: 1;
-  accent-color: #59e2a4;
+  accent-color: var(--accent);
 }
 .time {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 12px;
   width: 40px;
 }
@@ -129,7 +130,7 @@ function formatTime(s: number) {
 }
 .volume input[type='range'] {
   width: 80px;
-  accent-color: #59e2a4;
+  accent-color: var(--accent);
 }
 @media (max-width: 640px) {
   .player-bar {

@@ -1,34 +1,6 @@
 import { http } from './http'
-
-export interface ArtistBrief {
-  id: number
-  name: string
-  avatar_url: string | null
-}
-
-export interface SongSummary {
-  id: number
-  title: string
-  artist: ArtistBrief
-  album: string | null
-  genre: string | null
-  language: string | null
-  duration: number | null
-  audio_url: string | null
-  popularity: number
-  bpm: number | null
-  music_key: string | null
-  energy: number | null
-  valence: number | null
-  danceability: number | null
-}
-
-export interface SongDetail extends SongSummary {
-  lyrics: string | null
-  loudness: number | null
-  instruments: string | null
-  song_structure: string | null
-}
+import type { SongDetail, SongSummary } from '../types/music'
+export type { SongDetail, SongSummary } from '../types/music'
 
 export interface SongPage {
   items: SongSummary[]

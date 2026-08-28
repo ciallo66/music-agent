@@ -75,7 +75,6 @@
   <div v-else class="loading">加载中...</div>
 </template>
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as echarts from 'echarts/core'
@@ -85,6 +84,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { usePlayerStore } from '../stores/player'
+import { showError, showSuccess } from '../utils/feedback'
 
 echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
@@ -107,8 +107,8 @@ async function load() {
   try {
     const { data } = await getSong(Number(route.params.id))
     song.value = data
-  } catch {
-    ElMessage.error('加载失败')
+  } catch (error) {
+    showError(error, '歌曲详情加载失败')
     return
   }
   await nextTick()
@@ -135,6 +135,10 @@ function normalizeBpm(value: number | null) {
   return Math.min(100, (value / 180) * 100)
 }
 
+function cssVariable(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 function renderRadar() {
   if (!song.value || !chartEl.value) return
   if (!chart) chart = echarts.init(chartEl.value)
@@ -146,6 +150,12 @@ function renderRadar() {
     Math.round(normalizeLoudness(current.loudness)),
     Math.round(normalizeBpm(current.bpm)),
   ]
+  const textSecondary = cssVariable('--text-secondary')
+  const chartBorder = cssVariable('--chart-border')
+  const chartBorderStrong = cssVariable('--chart-border-strong')
+  const chartAccentSoft = cssVariable('--chart-accent-soft')
+  const chartAccentFill = cssVariable('--chart-accent-fill')
+  const accent = cssVariable('--accent')
   chart.setOption({
     tooltip: {},
     legend: { show: false },
@@ -158,12 +168,12 @@ function renderRadar() {
         { name: 'BPM', max: 100 },
       ],
       radius: '68%',
-      axisName: { color: '#858a96', fontSize: 12 },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.10)' } },
+      axisName: { color: textSecondary, fontSize: 12 },
+      splitLine: { lineStyle: { color: chartBorder } },
       splitArea: {
-        areaStyle: { color: ['rgba(89,226,164,0.03)', 'rgba(89,226,164,0.06)'] },
+        areaStyle: { color: [chartAccentSoft, chartAccentFill] },
       },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.15)' } },
+      axisLine: { lineStyle: { color: chartBorderStrong } },
     },
     series: [
       {
@@ -174,9 +184,9 @@ function renderRadar() {
             name: current.title,
             symbol: 'circle',
             symbolSize: 4,
-            lineStyle: { color: '#59e2a4', width: 2 },
-            itemStyle: { color: '#59e2a4' },
-            areaStyle: { color: 'rgba(89,226,164,0.22)' },
+            lineStyle: { color: accent, width: 2 },
+            itemStyle: { color: accent },
+            areaStyle: { color: chartAccentFill },
           },
         ],
       },
@@ -190,16 +200,20 @@ function onResize() {
 
 async function toggleFav() {
   if (!song.value) return
-  if (isFav.value && favId.value !== null) {
-    await removeFavorite(favId.value)
-    isFav.value = false
-    favId.value = null
-    ElMessage.success('已取消收藏')
-  } else {
-    const { data } = await addFavorite(song.value.id)
-    isFav.value = true
-    favId.value = data.id
-    ElMessage.success('已收藏')
+  try {
+    if (isFav.value) {
+      await removeFavorite(song.value.id)
+      isFav.value = false
+      favId.value = null
+      showSuccess('已取消收藏')
+    } else {
+      const { data } = await addFavorite(song.value.id)
+      isFav.value = true
+      favId.value = data.id
+      showSuccess('已收藏')
+    }
+  } catch (error) {
+    showError(error, '收藏操作失败')
   }
 }
 
@@ -225,7 +239,7 @@ onUnmounted(() => {
 }
 .loading {
   text-align: center;
-  color: #858a96;
+  color: var(--text-secondary);
   padding: 60px;
 }
 .song-header {
@@ -238,26 +252,26 @@ onUnmounted(() => {
   width: 160px;
   height: 160px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #59e2a4, #2a8f6e);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   display: grid;
   place-items: center;
   font-size: 48px;
-  color: #07110c;
+  color: var(--text-on-accent);
   font-weight: 800;
   flex-shrink: 0;
 }
 .info h2 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 28px;
   margin: 0 0 8px;
 }
 .artist {
-  color: #59e2a4;
+  color: var(--accent);
   font-size: 16px;
   margin: 0 0 6px;
 }
 .meta {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0 0 20px;
 }
@@ -275,7 +289,7 @@ onUnmounted(() => {
 .radar-block h3,
 .detail-block h3,
 .lyrics-section h3 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 18px;
   margin: 0 0 16px;
 }
@@ -285,8 +299,8 @@ onUnmounted(() => {
   gap: 12px;
 }
 .feat-item {
-  background: #111215;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
@@ -294,11 +308,11 @@ onUnmounted(() => {
   gap: 6px;
 }
 .feat-label {
-  color: #626771;
+  color: var(--text-muted);
   font-size: 12px;
 }
 .feat-val {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 20px;
   font-weight: 700;
 }
@@ -307,7 +321,7 @@ onUnmounted(() => {
   height: 320px;
 }
 .radar-note {
-  color: #626771;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 8px 0 0;
 }
@@ -317,28 +331,28 @@ onUnmounted(() => {
   gap: 8px;
 }
 .tag {
-  background: rgba(89, 226, 164, 0.08);
-  border: 1px solid rgba(89, 226, 164, 0.25);
-  color: #59e2a4;
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
   border-radius: 999px;
   padding: 4px 14px;
   font-size: 13px;
 }
 .structure-text {
-  color: #c9cbd2;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.9;
-  background: #111215;
+  background: var(--surface-raised);
   border-radius: 10px;
   padding: 16px 20px;
   margin: 0;
 }
 .lyrics-text {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 2;
   white-space: pre-wrap;
-  background: #111215;
+  background: var(--surface-raised);
   border-radius: 10px;
   padding: 20px;
   margin: 0;

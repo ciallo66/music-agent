@@ -31,6 +31,7 @@ const router = createRouter({
           component: () => import('../views/FavoritesPage.vue'),
         },
         { path: 'search', name: 'search', component: () => import('../views/SearchPage.vue') },
+        { path: 'agent', name: 'agent', component: () => import('../views/AgentPage.vue') },
       ],
     },
     {
@@ -41,9 +42,9 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  if (!auth.initialized) return
+  if (!auth.initialized) await auth.initialize()
   if (to.path !== '/login' && !auth.isAuthenticated) {
     return '/login'
   }

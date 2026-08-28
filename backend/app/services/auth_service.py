@@ -79,30 +79,24 @@ class AuthService:
     def login(self, username: str, password: str) -> AuthTokens:
         """验证用户名和密码并创建双 Token 会话。"""
         user = self._authenticate(username, password)
-        tokens = self._issue_tokens(user.id)
-        self.db.commit()
-        return tokens
+        return self._issue_tokens(user.id)
 
     def login_admin(self, username: str, password: str) -> AuthTokens:
         """仅允许管理员从独立入口登录。"""
         user = self._authenticate(username, password)
         if user.role != UserRole.ADMIN.value:
             raise AdminAccessDeniedError
-        tokens = self._issue_tokens(user.id)
-        self.db.commit()
-        return tokens
+        return self._issue_tokens(user.id)
 
     def _create_user(self, username: str, password: str, role: UserRole) -> User:
         """按指定角色创建用户并统一处理唯一约束竞争。"""
         if self.users.get_by_username(username) is not None:
             raise UsernameAlreadyExistsError
         try:
-            user = self.users.create(username, hash_password(password), role)
-            self.db.commit()
-            self.db.refresh(user)
+            with self.db.begin_nested():
+                user = self.users.create(username, hash_password(password), role)
             return user
         except IntegrityError as error:
-            self.db.rollback()
             raise UsernameAlreadyExistsError from error
 
     def _authenticate(self, username: str, password: str) -> User:
@@ -131,21 +125,16 @@ class AuthService:
             raise InvalidRefreshTokenError
         if user.status != UserStatus.ACTIVE.value:
             self.refresh_sessions.revoke_active_for_user(payload.user_id, now)
-            self.db.commit()
             raise AccountDisabledError
         if token_session.revoked_at is not None:
             self.refresh_sessions.revoke_active_for_user(payload.user_id, now)
-            self.db.commit()
             raise InvalidRefreshTokenError
         if token_session.expires_at <= now:
             self.refresh_sessions.revoke(token_session, now)
-            self.db.commit()
             raise InvalidRefreshTokenError
 
         self.refresh_sessions.revoke(token_session, now)
-        tokens = self._issue_tokens(payload.user_id)
-        self.db.commit()
-        return tokens
+        return self._issue_tokens(payload.user_id)
 
     def logout(self, refresh_token: str | None) -> None:
         """撤销当前 Refresh Token；缺少或无效 Token 时保持幂等。"""
@@ -154,7 +143,6 @@ class AuthService:
         token_session = self.refresh_sessions.get_by_hash(hash_token(refresh_token))
         if token_session is not None and token_session.revoked_at is None:
             self.refresh_sessions.revoke(token_session, datetime.now(timezone.utc))
-            self.db.commit()
 
     def get_user_from_access_token(self, access_token: str) -> User:
         """通过 Access Token 获取当前用户。"""

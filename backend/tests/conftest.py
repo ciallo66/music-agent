@@ -2,13 +2,33 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from app.core.database import engine, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+if os.getenv("TEST_DATABASE_URL") is None:
+    raise RuntimeError(
+        "测试必须设置 TEST_DATABASE_URL，并使用独立测试数据库；禁止直接连接开发数据库。"
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def migrate_test_database() -> Generator[None, None, None]:
+    """测试开始前将独立数据库迁移到当前 head。"""
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", os.environ["TEST_DATABASE_URL"].replace("%", "%%"))
+    command.upgrade(config, "head")
+    yield
 
 
 @pytest.fixture

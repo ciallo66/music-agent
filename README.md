@@ -41,6 +41,16 @@ cp .env.example .env   # 填入数据库、DeepSeek、Jamendo 配置
 uvicorn app.main:app --reload
 ```
 
+运行后端测试时必须使用独立数据库，不得复用开发库：
+
+```bash
+cd backend
+# Windows PowerShell
+$env:TEST_DATABASE_URL="postgresql+psycopg://postgres:密码@127.0.0.1:5432/music_agent_test"
+alembic upgrade head
+python -m pytest tests -q
+```
+
 首次配置 Git 门禁时回到仓库根目录执行 `backend/.venv/Scripts/pre-commit install`（Linux/macOS 使用对应的 `bin/pre-commit`）。
 
 ## 快速开始（前端）

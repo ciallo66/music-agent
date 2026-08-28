@@ -1,11 +1,16 @@
 <template>
   <div class="playlists-page">
-    <div class="page-header">
-      <h2>我的歌单</h2>
-      <el-button type="primary" @click="showCreate = true">+ 新建歌单</el-button>
-    </div>
-    <div v-if="loading" class="loading">加载中...</div>
-    <div v-else-if="playlists.length === 0" class="empty">还没有歌单，创建一个吧</div>
+    <PageHeader title="我的歌单" subtitle="整理你的专属播放列表">
+      <template #actions
+        ><el-button type="primary" @click="showCreate = true">+ 新建歌单</el-button></template
+      >
+    </PageHeader>
+    <StatePanel v-if="loading" type="loading" title="正在加载歌单" />
+    <StatePanel
+      v-else-if="playlists.length === 0"
+      title="还没有歌单"
+      message="创建一个歌单，开始整理喜欢的歌曲"
+    />
     <div v-else class="playlist-grid">
       <div v-for="pl in playlists" :key="pl.id" class="playlist-card" @click="go(pl.id)">
         <div class="pl-cover">{{ pl.name.slice(0, 1) }}</div>
@@ -37,11 +42,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { createPlaylist, listPlaylists } from '../api/playlists'
 import type { PlaylistItem } from '../api/playlists'
+import { showError, showSuccess } from '../utils/feedback'
+import PageHeader from '../components/PageHeader.vue'
+import StatePanel from '../components/StatePanel.vue'
 const router = useRouter()
 const playlists = ref<PlaylistItem[]>([])
 const loading = ref(false)
@@ -52,25 +59,25 @@ async function load() {
   try {
     const { data } = await listPlaylists()
     playlists.value = data.items
-  } catch {
-    ElMessage.error('加载失败')
+  } catch (error) {
+    showError(error, '歌单加载失败')
   } finally {
     loading.value = false
   }
 }
 async function createPl() {
   if (!createForm.value.name.trim()) {
-    ElMessage.warning('请输入歌单名称')
+    showError(null, '请输入歌单名称')
     return
   }
   try {
     await createPlaylist(createForm.value)
-    ElMessage.success('创建成功')
+    showSuccess('歌单创建成功')
     showCreate.value = false
     createForm.value = { name: '', description: '' }
     load()
-  } catch {
-    ElMessage.error('创建失败')
+  } catch (error) {
+    showError(error, '歌单创建失败')
   }
 }
 function go(id: number) {
@@ -89,14 +96,14 @@ onMounted(load)
   margin-bottom: 28px;
 }
 .page-header h2 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 24px;
   margin: 0;
 }
 .loading,
 .empty {
   text-align: center;
-  color: #858a96;
+  color: var(--text-secondary);
   padding: 60px 0;
 }
 .playlist-grid {
@@ -109,35 +116,35 @@ onMounted(load)
   gap: 14px;
   align-items: center;
   padding: 16px;
-  background: #111215;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
 .playlist-card:hover {
-  border-color: #59e2a4;
+  border-color: var(--accent);
 }
 .pl-cover {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #59e2a4, #2a8f6e);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   display: grid;
   place-items: center;
   font-size: 20px;
   font-weight: 800;
-  color: #07110c;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 .pl-name {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 4px;
 }
 .pl-count {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 12px;
   margin: 0;
 }

@@ -23,13 +23,14 @@
       </router-link>
     </div>
     <div class="hot-section" v-if="hotSongs.length > 0">
-      <h3>🔥 热门推荐</h3>
+      <h3>✨ 为你推荐</h3>
       <div class="hot-grid">
         <div v-for="s in hotSongs" :key="s.id" class="hot-card" @click="goDetail(s.id)">
           <div class="hot-cover">{{ s.title.slice(0, 1) }}</div>
           <div class="hot-info">
             <span class="hot-title">{{ s.title }}</span>
             <span class="hot-artist">{{ s.artist.name }}</span>
+            <span class="hot-reason">{{ s.reason }}</span>
             <span class="hot-meta"
               >{{ s.genre || '未知风格' }} · {{ s.bpm ? Math.round(s.bpm) + ' BPM' : '' }}</span
             >
@@ -43,22 +44,23 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listSongs, type SongSummary } from '../api/songs'
+import { listRecommendations } from '../api/recommendations'
+import type { RecommendationItem } from '../types/music'
 import { useAuthStore } from '../stores/auth'
 import { usePlayerStore } from '../stores/player'
 const auth = useAuthStore()
 const router = useRouter()
 const player = usePlayerStore()
-const hotSongs = ref<SongSummary[]>([])
+const hotSongs = ref<RecommendationItem[]>([])
 onMounted(async () => {
   try {
-    const { data } = await listSongs({ page_size: 8 })
+    const { data } = await listRecommendations()
     hotSongs.value = data.items
   } catch {
     hotSongs.value = []
   }
 })
-function play(s: SongSummary) {
+function play(s: RecommendationItem) {
   player.playSong(s)
   player.setQueue(hotSongs.value)
 }
@@ -74,12 +76,12 @@ function goDetail(id: number) {
   margin-bottom: 40px;
 }
 .hero h2 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 28px;
   margin: 0 0 8px;
 }
 .hero p {
-  color: #858a96;
+  color: var(--text-secondary);
   font-size: 15px;
   margin: 0;
 }
@@ -95,24 +97,24 @@ function goDetail(id: number) {
   align-items: center;
   gap: 12px;
   padding: 32px 20px;
-  background: #111215;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 12px;
   text-decoration: none;
   transition: border-color 0.2s;
 }
 .action-card:hover {
-  border-color: #59e2a4;
+  border-color: var(--accent);
 }
 .icon {
   font-size: 32px;
 }
 .label {
-  color: #c9cbd2;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 .hot-section h3 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 20px;
   margin: 0 0 16px;
 }
@@ -125,24 +127,24 @@ function goDetail(id: number) {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #111215;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
 .hot-card:hover {
-  border-color: #59e2a4;
+  border-color: var(--accent);
 }
 .hot-cover {
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2a8f6e, #59e2a4);
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
   display: grid;
   place-items: center;
-  color: #07110c;
+  color: var(--text-on-accent);
   font-weight: 800;
   font-size: 18px;
   flex-shrink: 0;
@@ -155,7 +157,7 @@ function goDetail(id: number) {
   min-width: 0;
 }
 .hot-title {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -163,12 +165,19 @@ function goDetail(id: number) {
   text-overflow: ellipsis;
 }
 .hot-artist {
-  color: #59e2a4;
+  color: var(--accent);
   font-size: 12px;
 }
 .hot-meta {
-  color: #626771;
+  color: var(--text-muted);
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hot-reason {
+  color: var(--accent-strong);
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -178,8 +187,8 @@ function goDetail(id: number) {
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: #59e2a4;
-  color: #07110c;
+  background: var(--accent);
+  color: var(--text-on-accent);
   cursor: pointer;
   font-size: 12px;
   display: grid;

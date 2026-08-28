@@ -1,33 +1,7 @@
 import { http } from './http'
-
-export interface ArtistBrief {
-  id: number
-  name: string
-  avatar_url: string | null
-}
-
-export interface SongBrief {
-  id: number
-  title: string
-  artist: ArtistBrief
-  album: string | null
-  genre: string | null
-  duration: number | null
-  audio_url: string | null
-  popularity: number
-}
-
-export interface PlaylistItem {
-  id: number
-  name: string
-  description: string | null
-  song_count: number
-  created_at: string
-}
-
-export interface PlaylistDetail extends PlaylistItem {
-  songs: SongBrief[]
-}
+import type { PlaylistDetail, PlaylistItem, SongSummary } from '../types/music'
+export type { PlaylistDetail, PlaylistItem } from '../types/music'
+export type SongBrief = SongSummary
 
 export function listPlaylists() {
   return http.get<{ items: PlaylistItem[] }>('/playlists')

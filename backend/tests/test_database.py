@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from app.core.database import engine
 from sqlalchemy import inspect, text
 
+ALEMBIC_CONFIG = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
 EXPECTED_TABLES = {
     "alembic_version",
     "artists",
+    "favorites",
+    "chat_sessions",
+    "chat_messages",
+    "music_knowledge",
     "play_records",
     "playlist_songs",
     "playlists",
@@ -22,6 +31,13 @@ EXPECTED_TABLES = {
 def test_database_has_current_schema() -> None:
     """迁移后的数据库应包含 Alembic 和全部核心关系表。"""
     assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES
+
+
+def test_song_embedding_column_matches_model_schema() -> None:
+    """数据库应包含歌曲向量列，且允许尚未生成向量的歌曲为空。"""
+    columns = {column["name"]: column for column in inspect(engine).get_columns("songs")}
+
+    assert columns["embedding"]["nullable"] is True
 
 
 def test_pgvector_extension_is_enabled() -> None:
@@ -39,4 +55,4 @@ def test_database_is_at_expected_revision() -> None:
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
 
-    assert revision == "20260825_04"
+    assert revision == ScriptDirectory.from_config(ALEMBIC_CONFIG).get_current_head()

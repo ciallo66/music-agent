@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { SongBrief } from '../api/playlists'
+import type { SongSummary as SongBrief } from '../types/music'
+import { recordPlay } from '../api/plays'
 
 export const usePlayerStore = defineStore('player', () => {
   const currentSong = ref<SongBrief | null>(null)
@@ -28,11 +29,20 @@ export const usePlayerStore = defineStore('player', () => {
     playing.value = false
   })
 
-  function playSong(song: SongBrief) {
+  async function playSong(song: SongBrief): Promise<void> {
     currentSong.value = song
-    if (song.audio_url) {
-      audio.value.src = song.audio_url
-      audio.value.play()
+    audio.value.pause()
+    audio.value.currentTime = 0
+    currentTime.value = 0
+    duration.value = song.duration ?? 0
+    if (!song.audio_url) return
+    audio.value.src = song.audio_url
+    void recordPlay(song.id).catch(() => undefined)
+    try {
+      await audio.value.play()
+    } catch {
+      // 浏览器自动播放策略或资源不可用时保持暂停状态，由用户再次点击播放。
+      playing.value = false
     }
   }
 
@@ -41,7 +51,9 @@ export const usePlayerStore = defineStore('player', () => {
     if (playing.value) {
       audio.value.pause()
     } else {
-      audio.value.play()
+      void audio.value.play().catch(() => {
+        playing.value = false
+      })
     }
   }
 
@@ -49,7 +61,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (!currentSong.value) return
     const idx = queue.value.findIndex((s) => s.id === currentSong.value!.id)
     if (idx >= 0 && idx < queue.value.length - 1) {
-      playSong(queue.value[idx + 1])
+      void playSong(queue.value[idx + 1])
     }
   }
 
@@ -57,7 +69,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (!currentSong.value) return
     const idx = queue.value.findIndex((s) => s.id === currentSong.value!.id)
     if (idx > 0) {
-      playSong(queue.value[idx - 1])
+      void playSong(queue.value[idx - 1])
     }
   }
 

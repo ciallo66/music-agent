@@ -37,7 +37,6 @@ class CatalogService:
 
     def __init__(self, db: Session) -> None:
         """绑定当前数据库会话及目录仓储。"""
-        self.db = db
         self.artists = ArtistRepository(db)
         self.songs = SongRepository(db)
 
@@ -53,18 +52,16 @@ class CatalogService:
         return self._artist_response(artist)
 
     def create_artist(self, payload: ArtistCreate) -> ArtistResponse:
-        """创建歌手并提交事务。"""
+        """创建歌手并刷新持久化对象。"""
         values = payload.model_dump(mode="json")
         artist = self.artists.create(**values)
-        self.db.commit()
         return self._artist_response(artist)
 
     def update_artist(self, artist_id: int, payload: ArtistUpdate) -> ArtistResponse:
-        """局部更新歌手并提交事务。"""
+        """局部更新歌手并刷新持久化对象。"""
         artist = self._require_artist(artist_id)
         values = payload.model_dump(exclude_unset=True, mode="json")
         artist = self.artists.update(artist, values)
-        self.db.commit()
         return self._artist_response(artist)
 
     def delete_artist(self, artist_id: int) -> None:
@@ -73,7 +70,6 @@ class CatalogService:
         if self.artists.count_songs(artist_id) > 0:
             raise ArtistHasSongsError
         self.artists.delete(artist)
-        self.db.commit()
 
     def list_songs(
         self,
@@ -94,28 +90,25 @@ class CatalogService:
         return SongDetail.model_validate(self._require_song(song_id))
 
     def create_song(self, payload: SongCreate) -> SongDetail:
-        """验证歌手后创建歌曲并提交事务。"""
+        """验证歌手后创建歌曲并刷新持久化对象。"""
         self._require_artist(payload.artist_id)
         song = self.songs.create(payload.model_dump(mode="json"))
-        self.db.commit()
         return SongDetail.model_validate(song)
 
     def update_song(self, song_id: int, payload: SongUpdate) -> SongDetail:
-        """验证关联后局部更新歌曲并提交事务。"""
+        """验证关联后局部更新歌曲并刷新持久化对象。"""
         song = self._require_song(song_id)
         values = payload.model_dump(exclude_unset=True, mode="json")
         artist_id = values.get("artist_id")
         if artist_id is not None:
             self._require_artist(artist_id)
         song = self.songs.update(song, values)
-        self.db.commit()
         return SongDetail.model_validate(song)
 
     def delete_song(self, song_id: int) -> None:
-        """清理歌曲关联后删除歌曲并提交事务。"""
+        """清理歌曲关联后删除歌曲。"""
         song = self._require_song(song_id)
         self.songs.delete_with_relations(song)
-        self.db.commit()
 
     def _require_artist(self, artist_id: int) -> Artist:
         """获取歌手或抛出统一不存在异常。"""

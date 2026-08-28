@@ -43,10 +43,10 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { showError, showSuccess } from '../utils/feedback'
 type Mode = 'login' | 'register' | 'admin'
 const auth = useAuthStore()
 const router = useRouter()
@@ -71,15 +71,15 @@ async function submit() {
   try {
     if (mode.value === 'register') {
       await auth.register(form.username, form.password)
-      ElMessage.success('注册成功，请登录')
+      showSuccess('注册成功，请登录')
       mode.value = 'login'
       return
     }
     await auth.login(form.username, form.password, mode.value === 'admin')
-    ElMessage.success('登录成功')
+    showSuccess('登录成功')
     router.push('/')
   } catch (e) {
-    ElMessage.error(auth.errorMessage(e))
+    showError(e)
   } finally {
     submitting.value = false
   }
@@ -92,7 +92,7 @@ async function submit() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #08090c;
+  background: var(--bg);
   padding: 40px 20px;
 }
 .brand-mark {
@@ -105,7 +105,7 @@ async function submit() {
 .brand-mark span {
   width: 5px;
   border-radius: 8px;
-  background: #59e2a4;
+  background: var(--accent);
 }
 .brand-mark span:nth-child(1) {
   height: 12px;
@@ -120,21 +120,21 @@ async function submit() {
   height: 9px;
 }
 h1 {
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 32px;
   letter-spacing: -0.03em;
   margin: 0 0 8px;
 }
 .sub {
-  color: #858a96;
+  color: var(--text-secondary);
   margin: 0 0 40px;
   font-size: 15px;
 }
 .auth-card {
   width: 100%;
   max-width: 400px;
-  background: #111215;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 32px;
 }
@@ -145,28 +145,28 @@ h1 {
   margin-bottom: 24px;
   padding: 4px;
   border-radius: 10px;
-  background: #16181e;
+  background: var(--surface-raised);
 }
 .mode-switch button {
   padding: 8px;
   border: 0;
   border-radius: 8px;
-  color: #858a96;
+  color: var(--text-secondary);
   background: transparent;
   cursor: pointer;
   font-size: 14px;
 }
 .mode-switch button.active {
-  color: #08090c;
-  background: #59e2a4;
+  color: var(--bg);
+  background: var(--accent);
   font-weight: 700;
 }
 .sub-btn {
   width: 100%;
   height: 44px;
   margin-top: 8px;
-  --el-button-bg-color: #59e2a4;
-  --el-button-border-color: #59e2a4;
-  --el-button-text-color: #07110c;
+  --el-button-bg-color: var(--accent);
+  --el-button-border-color: var(--accent);
+  --el-button-text-color: var(--text-on-accent);
 }
 </style>

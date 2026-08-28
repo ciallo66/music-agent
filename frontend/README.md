@@ -24,7 +24,10 @@ npm run dev
 ## 检查
 
 ```powershell
+npm run lint:check
+npm run format:check
+npm run typecheck
 npm run build
 ```
 
-构建会先执行 `vue-tsc` 类型检查，再生成生产文件到 `dist/`。
+构建会先执行 `vue-tsc` 类型检查，再生成生产文件到 `dist/`；格式和静态检查必须全部通过。

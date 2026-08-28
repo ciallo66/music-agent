@@ -27,6 +27,12 @@ repos:
         language: system
         files: ^frontend/.*\.(js|ts|tsx|vue)$
         pass_filenames: false
+      - id: frontend-format
+        name: frontend format (prettier)
+        entry: npm --prefix frontend run format:check
+        language: system
+        files: ^frontend/.*\.(js|ts|tsx|vue|css)$
+        pass_filenames: false
       - id: frontend-typecheck
         name: frontend typecheck (vue-tsc)
         entry: npm --prefix frontend run typecheck

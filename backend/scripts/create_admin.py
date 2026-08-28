@@ -28,6 +28,7 @@ def main() -> None:
     try:
         with SessionLocal() as db:
             create_admin_account(db, username, password)
+            db.commit()
     except ValidationError as error:
         raise SystemExit(f"输入校验失败：{error}") from error
     except UsernameAlreadyExistsError as error:

@@ -20,7 +20,10 @@ declare module 'vue' {
     ElPagination: typeof import('element-plus/es')['ElPagination']
     ElSelect: typeof import('element-plus/es')['ElSelect']
     GlobalPlayer: typeof import('./src/components/GlobalPlayer.vue')['default']
+    PageHeader: typeof import('./src/components/PageHeader.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SongList: typeof import('./src/components/SongList.vue')['default']
+    StatePanel: typeof import('./src/components/StatePanel.vue')['default']
   }
 }

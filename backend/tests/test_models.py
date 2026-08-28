@@ -7,6 +7,10 @@ from app.core.database import Base
 
 EXPECTED_TABLES = {
     "artists",
+    "favorites",
+    "chat_sessions",
+    "chat_messages",
+    "music_knowledge",
     "play_records",
     "playlist_songs",
     "playlists",
@@ -23,12 +27,12 @@ def test_core_tables_are_registered() -> None:
     assert set(Base.metadata.tables) == EXPECTED_TABLES
 
 
-def test_vector_fields_are_deferred() -> None:
-    """阶段 1 不应提前创建尚未确定维度的向量字段。"""
+def test_vector_fields_allow_provider_selected_dimension() -> None:
+    """歌曲和知识库向量先允许由 Embedding 服务选择维度。"""
     songs = Base.metadata.tables["songs"]
 
-    assert "embedding" not in songs.columns
-    assert "knowledge_chunks" not in Base.metadata.tables
+    assert "embedding" in songs.columns
+    assert "embedding" in Base.metadata.tables["music_knowledge"].columns
 
 
 def test_association_tables_use_composite_primary_keys() -> None:

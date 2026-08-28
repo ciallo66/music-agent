@@ -1,12 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import type { TokenResponse } from '../types/music'
 
 type RetriableRequest = InternalAxiosRequestConfig & { _retry?: boolean }
-
-interface TokenResponse {
-  access_token: string
-  token_type: 'bearer'
-  expires_in: number
-}
 
 let readAccessToken: () => string | null = () => null
 let saveAccessToken: (token: string | null) => void = () => undefined
@@ -21,6 +16,10 @@ export function configureAuthToken(
 ): void {
   readAccessToken = reader
   saveAccessToken = writer
+}
+
+export function getAccessToken(): string | null {
+  return readAccessToken()
 }
 
 export async function refreshAccessToken(): Promise<string> {

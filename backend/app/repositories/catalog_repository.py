@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.artist import Artist
 from app.models.associations import PlaylistSong, SongTag
+from app.models.favorite import Favorite
 from app.models.play_record import PlayRecord
 from app.models.song import Song
+from app.models.tag import Tag
 
 
 class ArtistRepository:
@@ -107,6 +109,69 @@ class SongRepository:
         statement = select(Song).options(joinedload(Song.artist)).where(Song.id == song_id)
         return self.db.scalar(statement)
 
+    def search(
+        self, query: str | None, genre: str | None, tags: list[str], limit: int
+    ) -> list[Song]:
+        """按关键词和风格查询歌曲，供 Agent 只读工具使用。"""
+        conditions = self._conditions(query, genre, None, None)
+        for tag in tags:
+            conditions.append(
+                Song.tag_links.any(SongTag.tag.has(func.lower(Tag.name) == tag.lower()))
+            )
+        statement = (
+            select(Song)
+            .join(Artist)
+            .options(joinedload(Song.artist))
+            .where(*conditions)
+            .order_by(Song.popularity.desc(), Song.id.desc())
+            .limit(limit)
+        )
+        return list(self.db.scalars(statement))
+
+    def find_similar(self, song: Song, limit: int) -> list[Song]:
+        """按结构化音乐特征和风格查询相似歌曲。"""
+        conditions = [Song.id != song.id]
+        if song.genre is not None:
+            conditions.append(func.lower(Song.genre) == song.genre.lower())
+        distance_parts = []
+        for field_name in ("bpm", "energy", "valence", "danceability"):
+            value = getattr(song, field_name)
+            if value is not None:
+                distance_parts.append(func.abs(getattr(Song, field_name) - value))
+        score: Any = Song.popularity * -1
+        if distance_parts:
+            score = distance_parts[0]
+            for distance in distance_parts[1:]:
+                score = score + distance
+        statement = (
+            select(Song)
+            .options(joinedload(Song.artist))
+            .where(*conditions)
+            .order_by(score, Song.popularity.desc(), Song.id.desc())
+            .limit(limit)
+        )
+        return list(self.db.scalars(statement))
+
+    def find_similar_vector(
+        self, song: Song, embedding: list[float], limit: int, threshold: float
+    ) -> list[tuple[Song, float]]:
+        """按歌曲向量余弦相似度查询候选歌曲。"""
+        distance = Song.embedding.cosine_distance(embedding)
+        statement = (
+            select(Song, distance.label("distance"))
+            .options(joinedload(Song.artist))
+            .where(
+                Song.id != song.id,
+                Song.embedding.is_not(None),
+                distance <= 1 - threshold,
+            )
+            .order_by(distance, Song.popularity.desc(), Song.id.desc())
+            .limit(limit)
+        )
+        return [
+            (item, float(distance_value)) for item, distance_value in self.db.execute(statement)
+        ]
+
     def create(self, values: Mapping[str, Any]) -> Song:
         """创建歌曲并加载歌手。"""
         song = Song(**values)
@@ -127,6 +192,7 @@ class SongRepository:
         """显式清理歌曲关联记录后删除歌曲。"""
         self.db.execute(delete(PlaylistSong).where(PlaylistSong.song_id == song.id))
         self.db.execute(delete(SongTag).where(SongTag.song_id == song.id))
+        self.db.execute(delete(Favorite).where(Favorite.song_id == song.id))
         self.db.execute(delete(PlayRecord).where(PlayRecord.song_id == song.id))
         self.db.delete(song)
         self.db.flush()

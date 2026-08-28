@@ -8,6 +8,7 @@
         <router-link to="/playlists">我的歌单</router-link>
         <router-link to="/favorites">收藏</router-link>
         <router-link to="/search">搜索</router-link>
+        <router-link to="/agent">AI 助手</router-link>
       </nav>
       <div class="sidebar-bottom">
         <div class="user-info" v-if="auth.user">
@@ -39,23 +40,24 @@ async function logout() {
 <style scoped>
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   padding-bottom: 64px;
 }
 .sidebar {
-  width: 200px;
-  background: #0e0f12;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  width: 224px;
+  background: linear-gradient(180deg, var(--bg-elevated), var(--bg));
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 20px 0;
   flex-shrink: 0;
 }
 .logo {
-  padding: 0 20px 24px;
-  font-size: 15px;
+  padding: 4px 22px 28px;
+  font-size: 16px;
   font-weight: 700;
-  color: #59e2a4;
+  color: var(--accent-strong);
 }
 nav {
   display: flex;
@@ -64,50 +66,89 @@ nav {
   flex: 1;
 }
 nav a {
-  padding: 10px 20px;
-  color: #858a96;
+  margin: 0 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 14px;
 }
 nav a:hover {
-  color: #f0f1f3;
+  color: var(--text);
+  background: var(--surface-hover);
 }
 nav a.router-link-active {
-  color: #59e2a4;
-  background: rgba(89, 226, 164, 0.08);
+  color: var(--text-on-accent);
+  background: var(--accent-soft);
 }
 .sidebar-bottom {
   padding: 16px 20px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border);
 }
 .user-info {
   margin-bottom: 12px;
 }
 .username {
   display: block;
-  color: #f0f1f3;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
 }
 .role {
-  color: #59e2a4;
+  color: var(--accent-strong);
   font-size: 12px;
 }
 .sidebar-bottom button {
   width: 100%;
   padding: 8px;
-  background: #16181e;
-  border: 1px solid #292c34;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #858a96;
+  color: var(--text-muted);
   cursor: pointer;
 }
 .sidebar-bottom button:hover {
-  color: #f0f1f3;
+  color: var(--text);
 }
 .main-content {
   flex: 1;
-  background: #08090c;
+  min-width: 0;
+  background: transparent;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 760px) {
+  .app-layout {
+    display: block;
+    padding-bottom: 104px;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    padding: 12px;
+    flex-direction: row;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+  }
+  .logo {
+    padding: 0 10px;
+  }
+  nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  nav a {
+    margin: 0;
+    white-space: nowrap;
+  }
+  .sidebar-bottom {
+    display: none;
+  }
+  .main-content {
+    height: calc(100vh - 64px);
+  }
 }
 </style>
