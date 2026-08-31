@@ -133,8 +133,8 @@
 |---|---|---|
 | `users` | id, username, password_hash, role, status, created_at | 用户 + RBAC（user/admin + active/disabled） |
 | `refresh_sessions` | id, user_id, token_hash, expires_at | Refresh Token 会话（SHA-256 摘要） |
-| `artists` | id, name, avatar_url | 歌手 |
-| `songs` | id, title, artist_id, album, genre, language, duration, audio_url, lyrics, popularity, bpm, music_key, energy, valence, danceability, loudness, instruments, song_structure, embedding | 歌曲元数据 + 音乐特征 + 可选向量 |
+| `artists` | id, name, avatar_url, source, source_id | 歌手；外部来源组合键用于幂等导入 |
+| `songs` | id, title, artist_id, album, genre, language, duration, audio_url, lyrics, popularity, bpm, music_key, energy, valence, danceability, loudness, instruments, song_structure, embedding, source, source_id | 歌曲元数据 + 音乐特征 + 可选向量 |
 | `playlists` | id, user_id, name, description, created_at | 歌单 |
 | `playlist_songs` | playlist_id, song_id, position | 歌单-歌曲多对多 |
 | `tags` | id, name | 标签 |
@@ -162,7 +162,7 @@ Song
 └── embedding（可选，迁移已完成）
 ```
 
-> 数据库当前迁移版本：`20260828_08`（会话、知识库表、歌曲向量字段已应用）；全新环境先执行 `cd backend && alembic upgrade head`。
+> 数据库当前迁移版本：`20260831_10`（会话、知识库、歌曲向量、目录来源幂等标识和数据导入任务表已应用）；全新环境先执行 `cd backend && alembic upgrade head`。
 > 大部分歌曲不需要实际音频，只有少量具有明确合法授权的音频用于播放器 Demo 与音频分析演示。
 
 ### 4. 向量检索（pgvector）
@@ -313,18 +313,19 @@ Agent Router（判断用户真实意图）
 - **待完成** ⬜
   - 播放器真实音频联动（产品体验阶段继续增强）
   - ECharts 听歌数据看板（歌曲详情页基础特征雷达图已完成）
-  - Agent 对话界面（阶段 6）
 - **验收**：前后端联调通过；登录后页面和播放状态正常切换。
 
-### 阶段 4：数据管道（Jamendo）⬜ 未开始
+### 阶段 4：数据管道（Jamendo）🔶 代码链路已完成，等待真实凭证验收
 - **目标**：库里真有几万条歌。
 - **任务**
-  - [ ] `backend/scripts/import_jamendo.py`：分页抓取 + 清洗（去重 / 字段映射）+ 幂等批量写入
-  - [ ] 管理接口触发导入（`POST /api/v1/admin/import/jamendo`）
-  - [ ] 记录成功、跳过和失败原因；可重复执行不产生重复数据
-  - [ ] 补充歌曲音乐特征字段（bpm / energy / valence 等）
-- **产出**：`SELECT count(*) FROM songs;` 返回 10000+
-- **验收**：重复执行幂等；ruff / mypy / pytest 通过。
+  - [x] `backend/scripts/import_jamendo.py`：分页抓取 + 清洗（去重 / 字段映射）+ 幂等批量写入
+  - [x] 管理接口触发导入（`POST /api/v1/admin/imports/jamendo`）及任务查询
+  - [x] 持久化任务进度、成功/跳过/失败原因；同源任务并发保护
+  - [x] 网络错误、限流和临时服务端错误的指数退避重试
+  - [x] `source + source_id` 幂等更新，不产生重复歌曲或歌手
+  - [x] 补充歌曲音乐特征字段（bpm / energy / valence 等）
+- **产出**：先用 `--limit 100` 完成小批量验收，再扩展到全量
+- **验收**：自动化测试已覆盖幂等、重试、鉴权和并发冲突；真实 100 条抓取需配置有效的 `JAMENDO_CLIENT_ID` 后执行。
 
 ### 阶段 5：推荐闭环（内容推荐 + 热门兜底 + 可解释）🔶 部分完成
 - **目标**：新用户和老用户都有可解释推荐结果。
@@ -353,34 +354,35 @@ Agent Router（判断用户真实意图）
 - **产出**：能说“推荐适合深夜听的歌”“分析这首歌为什么忧郁”，Agent 调工具返回真实结果。
 - **验收**：能讲清 function calling 循环 + 安全设计；工具白名单 / 参数校验 / 超时 / 最大轮数齐全；pytest 覆盖。
 
-### 阶段 7：RAG + 向量检索（pgvector）🔶 检索编排已完成
+### 阶段 7：RAG + 向量检索（pgvector）🔶 基础闭环完成，进阶评测待做
 - **目标**：相似歌曲 + 音乐知识问答。
 - **任务**
   - [x] 新增 `songs.embedding` 可选字段迁移；模型维度随 Embedding 服务配置
   - [x] Embedding Provider 抽象和 OpenAI-compatible `/embeddings` 客户端
   - [x] pgvector 余弦检索编排；无向量或服务不可用时回退结构化 / 文本检索
   - [x] 检索阈值和 `relevant` 标记，提示模型在无关时不要硬答
-  - [ ] 批量歌曲 / 知识切片向量化与幂等写入
+  - [x] 批量歌曲 / 知识切片向量化与幂等写入（`scripts.embed_catalog`）
   - [ ] 检索质量评测、重排和线上 RAG 效果验收
 - **验收**：问“City Pop 是什么”AI 基于知识库回答；相似歌曲结果合理；能讲清检索流程。
 
-### 阶段 8：产品体验（可视化 + 播放 + 歌词 + 画像）⬜ 未开始
+### 阶段 8：产品体验（可视化 + 播放 + 歌词 + 画像）🔶 基础播放与歌词完成
 - **目标**：体验完整，数据产品感强。
 - **任务**
   - [ ] ECharts 听歌数据看板（总时长 / TOP 歌手风格 / 时段分布 / 月度趋势）
-  - [ ] 歌曲详情页音乐特征可视化（雷达图 / 柱状图）
-  - [ ] HTML5 播放器与阶段 4 音频联动
-  - [ ] LRC 歌词解析 + 逐行高亮同步（无音频用模拟播放）
+  - [x] 歌曲详情页音乐特征可视化（雷达图 / 柱状图）
+  - [x] HTML5 播放器与阶段 4 音频联动
+  - [x] LRC 歌词解析 + 逐行高亮同步（无音频用模拟播放）
   - [ ] 个人音乐画像（常听 Genre / 平均 BPM / 平均 Energy）
 - **验收**：演示流畅；能听歌、看歌词、看统计、看画像。
 
-### 阶段 9：多人在线与部署（JWT + Docker + CI/CD）⬜ 未开始
+### 阶段 9：多人在线与部署（JWT + Docker + CI/CD）🔶 部署骨架已完成
 - **目标**：多用户完整 + 一键部署。
 - **任务**
-  - [ ] 用户系统完善：注册 / 登录 / JWT 完整（复用现有双 Token）、用户数据隔离
-  - [ ] 收藏、播放历史、歌单、聊天历史的用户级绑定
-  - [ ] 后端 Dockerfile + 前端 Dockerfile + Nginx 配置
-  - [ ] `docker-compose.yml`（后端 + 前端 + PostgreSQL）
+  - [x] 用户系统完善：注册 / 登录 / JWT 完整（复用现有双 Token）、用户数据隔离
+  - [x] 收藏、播放历史、歌单、聊天历史的用户级绑定
+  - [x] 后端 Dockerfile + 前端 Dockerfile + Nginx 配置
+  - [x] `docker-compose.yml`（后端 + 前端 + PostgreSQL）
+  - [x] 生产环境变量示例、数据库持久化 volume、容器健康检查和自动迁移
   - [ ] GitHub Actions：构建镜像 → 推 GHCR → 服务器 pull 部署（Secrets 存敏感信息）
 - **产出**：服务器 `docker compose up -d` 一键起，公网 IP 可访问。
 - **验收**：多用户数据隔离正确；新环境按 README 可启动。

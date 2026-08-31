@@ -19,5 +19,6 @@ def test_env_file_is_bound_to_backend_directory() -> None:
 
 def test_default_secret_key_is_rejected() -> None:
     """示例密钥不能用于启动应用。"""
-    with pytest.raises(ValueError, match="SECRET_KEY"):
-        Settings(secret_key="change-me")
+    for secret_key in ("change-me", "replace-with-a-random-secret"):
+        with pytest.raises(ValueError, match="SECRET_KEY"):
+            Settings(secret_key=secret_key)

@@ -41,6 +41,7 @@ class Song(Base):
         Index("ix_songs_language", "language"),
         Index("ix_songs_bpm", "bpm"),
         Index("ix_songs_energy", "energy"),
+        Index("uq_songs_source_source_id", "source", "source_id", unique=True),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -51,6 +52,8 @@ class Song(Base):
     language: Mapped[str | None] = mapped_column(String(50))
     duration: Mapped[int | None]
     audio_url: Mapped[str | None] = mapped_column(String(2048))
+    source: Mapped[str | None] = mapped_column(String(50))
+    source_id: Mapped[str | None] = mapped_column(String(100))
     lyrics: Mapped[str | None] = mapped_column(Text)
     popularity: Mapped[int] = mapped_column(default=0, server_default="0")
 

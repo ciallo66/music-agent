@@ -7,7 +7,9 @@ interface ApiErrorBody {
 
 export function showError(error: unknown, fallback = '请求失败，请稍后重试'): void {
   let message = fallback
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
+  if (typeof error === 'string' && error.trim()) {
+    message = error
+  } else if (axios.isAxiosError<ApiErrorBody>(error)) {
     const detail = error.response?.data?.detail
     if (typeof detail === 'string') message = detail
     else if (Array.isArray(detail)) message = detail[0]?.msg ?? fallback

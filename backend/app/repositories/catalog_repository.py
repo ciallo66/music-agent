@@ -46,14 +46,19 @@ class ArtistRepository:
         """按主键查询歌手。"""
         return self.db.get(Artist, artist_id)
 
+    def get_by_source_id(self, source: str, source_id: str) -> Artist | None:
+        """按外部数据源标识查询歌手。"""
+        statement = select(Artist).where(Artist.source == source, Artist.source_id == source_id)
+        return self.db.scalar(statement)
+
     def count_songs(self, artist_id: int) -> int:
         """统计歌手关联的歌曲数量。"""
         statement = select(func.count()).select_from(Song).where(Song.artist_id == artist_id)
         return self.db.scalar(statement) or 0
 
-    def create(self, name: str, avatar_url: str | None) -> Artist:
+    def create(self, name: str, avatar_url: str | None, **kwargs: Any) -> Artist:
         """创建歌手并刷新数据库字段。"""
-        artist = Artist(name=name, avatar_url=avatar_url)
+        artist = Artist(name=name, avatar_url=avatar_url, **kwargs)
         self.db.add(artist)
         self.db.flush()
         self.db.refresh(artist)
@@ -108,6 +113,22 @@ class SongRepository:
         """按主键查询歌曲并加载歌手。"""
         statement = select(Song).options(joinedload(Song.artist)).where(Song.id == song_id)
         return self.db.scalar(statement)
+
+    def get_by_source_id(self, source: str, source_id: str) -> Song | None:
+        """按外部数据源标识查询歌曲。"""
+        statement = select(Song).where(Song.source == source, Song.source_id == source_id)
+        return self.db.scalar(statement)
+
+    def list_without_embeddings(self, limit: int) -> list[Song]:
+        """按主键顺序读取尚未生成向量的歌曲。"""
+        statement = (
+            select(Song)
+            .options(joinedload(Song.artist))
+            .where(Song.embedding.is_(None))
+            .order_by(Song.id)
+            .limit(limit)
+        )
+        return list(self.db.scalars(statement))
 
     def search(
         self, query: str | None, genre: str | None, tags: list[str], limit: int

@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
 import pytest
 from app.core.config import settings
+from app.models import Artist, Song
+from app.services.embedding_batch_service import EmbeddingBatchService
 from app.services.embedding_provider import (
     EmbeddingProviderError,
     EmbeddingProviderNotConfiguredError,
     OpenAICompatibleEmbeddingProvider,
 )
+from sqlalchemy import select
 
 
 def test_embedding_provider_parses_indexed_vectors(monkeypatch: Any) -> None:
@@ -79,3 +83,26 @@ def test_embedding_provider_rejects_inconsistent_dimensions(monkeypatch: Any) ->
 
     with pytest.raises(EmbeddingProviderError, match="维度不一致"):
         OpenAICompatibleEmbeddingProvider().embed(["第一段", "第二段"])
+
+
+def test_embedding_batch_service_processes_missing_songs_in_batches(db_session: Any) -> None:
+    """批量向量化只处理缺失项，重复执行不会覆盖或新增记录。"""
+    artist = Artist(name="测试歌手")
+    db_session.add(artist)
+    db_session.flush()
+    db_session.add_all([Song(title=f"歌曲 {index}", artist_id=artist.id) for index in range(3)])
+    db_session.flush()
+
+    class FakeProvider:
+        is_configured = True
+
+        def embed(self, texts: Sequence[str]) -> list[list[float]]:
+            return [[float(index), 1.0] for index, _ in enumerate(texts)]
+
+    service = EmbeddingBatchService(db_session, FakeProvider())
+    first = service.embed_missing("songs", limit=2, batch_size=2)
+    second = service.embed_missing("songs", limit=2, batch_size=2)
+
+    assert (first.processed, first.remaining) == (2, 1)
+    assert (second.processed, second.remaining) == (1, 0)
+    assert all(song.embedding is not None for song in db_session.scalars(select(Song)).all())

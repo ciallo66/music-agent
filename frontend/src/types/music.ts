@@ -21,6 +21,13 @@ export interface SongSummary {
   danceability: number | null
 }
 
+export interface SongPage {
+  items: SongSummary[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export interface SongDetail extends SongSummary {
   lyrics: string | null
   loudness: number | null
@@ -38,12 +45,6 @@ export interface PlaylistItem {
 
 export interface PlaylistDetail extends PlaylistItem {
   songs: SongSummary[]
-}
-
-export interface TokenResponse {
-  access_token: string
-  token_type: 'bearer'
-  expires_in: number
 }
 
 export interface RecommendationItem extends SongSummary {

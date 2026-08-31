@@ -8,6 +8,8 @@ venv/
 # 环境变量（密钥绝不进 Git）
 .env
 .env.local
+.env.production
+.env.production.local
 
 # 测试/缓存
 **/.pytest_cache/

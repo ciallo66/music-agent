@@ -61,6 +61,10 @@ npm install
 npm run dev
 ```
 
+## Docker 部署
+
+生产环境部署说明见 [`docs/deployment.md`](docs/deployment.md)。当前 Compose 包含 PostgreSQL + pgvector、FastAPI 和 Nginx，服务器不需要 GPU。
+
 前端与后端代码放在同一仓库、不同目录并分别管理依赖；详细说明见 `frontend/README.md`。
 
 ## 开发规范

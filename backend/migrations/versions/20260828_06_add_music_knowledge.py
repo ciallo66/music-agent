@@ -20,6 +20,8 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """创建音乐知识库切片表。"""
+    # pgvector 镜像只提供扩展文件，不会自动在业务数据库启用扩展。
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.create_table(
         "music_knowledge",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -33,3 +35,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     """删除音乐知识库切片表。"""
     op.drop_table("music_knowledge")
+    op.execute("DROP EXTENSION IF EXISTS vector")

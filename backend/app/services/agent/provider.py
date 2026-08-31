@@ -49,7 +49,7 @@ class DeepSeekProvider:
     ) -> ModelResponse:
         """发送一次模型请求；API Key 未配置时明确失败。"""
         if not settings.deepseek_api_key:
-            raise LLMProviderError("未配置 DEEPSEEK_API_KEY")
+            raise LLMProviderError("AI 服务尚未配置，请联系管理员")
         payload: dict[str, Any] = {
             "model": settings.deepseek_model,
             "messages": messages,
@@ -83,7 +83,7 @@ class DeepSeekProvider:
     ) -> Iterator[ModelStreamUpdate]:
         """以 SSE 读取模型文本，并在结束时产出完整工具调用。"""
         if not settings.deepseek_api_key:
-            raise LLMProviderError("未配置 DEEPSEEK_API_KEY")
+            raise LLMProviderError("AI 服务尚未配置，请联系管理员")
         payload: dict[str, Any] = {
             "model": settings.deepseek_model,
             "messages": messages,

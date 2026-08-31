@@ -1,16 +1,6 @@
 import { getAccessToken, refreshAccessToken } from './http'
-
-export interface AgentEvent {
-  type: string
-  content: string
-}
-
-export interface StreamAgentChatOptions {
-  message: string
-  sessionId: number | null
-  onEvent: (event: AgentEvent) => void
-  signal?: AbortSignal
-}
+import type { AgentEvent, StreamAgentChatOptions } from '../types/agent'
+export type { AgentEvent, StreamAgentChatOptions } from '../types/agent'
 
 /** 发送 Agent SSE 请求，统一处理认证刷新和事件解析。 */
 export async function streamAgentChat(options: StreamAgentChatOptions): Promise<number | null> {

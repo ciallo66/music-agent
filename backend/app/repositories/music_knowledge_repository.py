@@ -40,3 +40,13 @@ class MusicKnowledgeRepository:
         return [
             (item, float(distance_value)) for item, distance_value in self.db.execute(statement)
         ]
+
+    def list_without_embeddings(self, limit: int) -> list[MusicKnowledge]:
+        """按主键顺序读取尚未生成向量的知识切片。"""
+        statement = (
+            select(MusicKnowledge)
+            .where(MusicKnowledge.embedding.is_(None))
+            .order_by(MusicKnowledge.id)
+            .limit(limit)
+        )
+        return list(self.db.scalars(statement))

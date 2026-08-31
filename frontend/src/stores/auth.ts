@@ -1,17 +1,8 @@
-import axios from 'axios'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { configureAuthToken, http, refreshAccessToken } from '../api/http'
-import type { TokenResponse } from '../types/music'
-
-export interface UserProfile {
-  id: number
-  username: string
-  role: 'user' | 'admin'
-  status: 'active' | 'disabled'
-  created_at: string
-}
+import type { TokenResponse, UserProfile } from '../types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
@@ -67,19 +58,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function errorMessage(error: unknown): string {
-    if (axios.isAxiosError<{ detail?: string }>(error)) {
-      return error.response?.data?.detail ?? '请求失败，请稍后重试'
-    }
-    return '发生未知错误，请稍后重试'
-  }
-
   return {
     initialized,
     isAdmin,
     isAuthenticated,
     user,
-    errorMessage,
     initialize,
     login,
     logout,

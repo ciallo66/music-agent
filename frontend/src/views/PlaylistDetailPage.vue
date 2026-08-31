@@ -21,7 +21,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPlaylist } from '../api/playlists'
-import type { PlaylistDetail, SongBrief } from '../api/playlists'
+import type { PlaylistDetail, SongSummary } from '../types/music'
 import { usePlayerStore } from '../stores/player'
 import { showError } from '../utils/feedback'
 import StatePanel from '../components/StatePanel.vue'
@@ -38,7 +38,7 @@ async function load() {
     showError(error, '歌单加载失败')
   }
 }
-function play(s: SongBrief) {
+function play(s: SongSummary) {
   player.playSong(s)
   if (playlist.value) player.setQueue(playlist.value.songs)
 }

@@ -1,13 +1,9 @@
 import { http } from './http'
-
-export interface FavoriteItem {
-  id: number
-  song_id: number
-  created_at: string
-}
+import type { FavoritePage } from '../types/library'
+export type { FavoriteItem } from '../types/library'
 
 export function listFavorites() {
-  return http.get<{ items: FavoriteItem[] }>('/favorites')
+  return http.get<FavoritePage>('/favorites')
 }
 
 export function addFavorite(songId: number) {

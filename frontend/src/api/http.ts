@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import type { TokenResponse } from '../types/music'
+import type { TokenResponse } from '../types/auth'
 
 type RetriableRequest = InternalAxiosRequestConfig & { _retry?: boolean }
 

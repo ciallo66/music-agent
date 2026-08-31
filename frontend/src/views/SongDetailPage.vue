@@ -69,7 +69,19 @@
     </div>
     <div class="lyrics-section" v-if="song.lyrics">
       <h3>歌词</h3>
-      <pre class="lyrics-text">{{ song.lyrics }}</pre>
+      <div v-if="lyricLines.length" class="lyrics-list">
+        <button
+          v-for="(line, index) in lyricLines"
+          :key="`${line.time}-${index}`"
+          class="lyric-line"
+          :class="{ active: activeLyricIndex === index }"
+          type="button"
+          @click="seekLyric(line.time)"
+        >
+          {{ line.text }}
+        </button>
+      </div>
+      <pre v-else class="lyrics-text">{{ song.lyrics }}</pre>
     </div>
   </div>
   <div v-else class="loading">加载中...</div>
@@ -85,6 +97,7 @@ import { getSong, type SongDetail } from '../api/songs'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { usePlayerStore } from '../stores/player'
 import { showError, showSuccess } from '../utils/feedback'
+import { parseLrc } from '../utils/lyrics'
 
 echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
@@ -92,7 +105,6 @@ const route = useRoute()
 const player = usePlayerStore()
 const song = ref<SongDetail | null>(null)
 const isFav = ref(false)
-const favId = ref<number | null>(null)
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: echarts.ECharts | null = null
 
@@ -102,6 +114,18 @@ const instruments = computed(() =>
     .map((item) => item.trim())
     .filter(Boolean),
 )
+
+const lyricLines = computed(() => parseLrc(song.value?.lyrics ?? ''))
+const activeLyricIndex = computed(() => {
+  if (!song.value || player.currentSong?.id !== song.value.id || lyricLines.value.length === 0) {
+    return -1
+  }
+  let activeIndex = -1
+  lyricLines.value.forEach((line, index) => {
+    if (line.time <= player.currentTime) activeIndex = index
+  })
+  return activeIndex
+})
 
 async function load() {
   try {
@@ -116,10 +140,7 @@ async function load() {
   try {
     const { data: favData } = await listFavorites()
     const found = favData.items.find((item) => item.song_id === song.value?.id)
-    if (found) {
-      isFav.value = true
-      favId.value = found.id
-    }
+    if (found) isFav.value = true
   } catch {
     // 收藏状态接口暂不可用时保持未收藏，不影响详情与特征展示
   }
@@ -204,12 +225,10 @@ async function toggleFav() {
     if (isFav.value) {
       await removeFavorite(song.value.id)
       isFav.value = false
-      favId.value = null
       showSuccess('已取消收藏')
     } else {
-      const { data } = await addFavorite(song.value.id)
+      await addFavorite(song.value.id)
       isFav.value = true
-      favId.value = data.id
       showSuccess('已收藏')
     }
   } catch (error) {
@@ -219,6 +238,12 @@ async function toggleFav() {
 
 function playSong() {
   if (song.value) player.playSong(song.value)
+}
+
+function seekLyric(time: number) {
+  if (!song.value) return
+  if (player.currentSong?.id !== song.value.id) player.playSong(song.value)
+  player.seek(time)
 }
 
 onMounted(() => {
@@ -356,6 +381,38 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 20px;
   margin: 0;
+}
+.lyrics-list {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 12px 20px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.lyric-line {
+  display: block;
+  width: 100%;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  line-height: 1.7;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+.lyric-line:hover,
+.lyric-line.active {
+  color: var(--accent);
+}
+.lyric-line.active {
+  font-weight: 700;
+  transform: translateX(4px);
 }
 @media (max-width: 640px) {
   .feature-grid {

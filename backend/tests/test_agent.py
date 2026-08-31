@@ -85,7 +85,7 @@ def test_agent_chat_reports_missing_provider_key(client: TestClient, monkeypatch
 
     assert response.status_code == 200
     assert "event: error" in response.text
-    assert "DEEPSEEK_API_KEY" in response.text
+    assert "AI 服务尚未配置，请联系管理员" in response.text
 
 
 def test_agent_chat_does_not_duplicate_streamed_content(

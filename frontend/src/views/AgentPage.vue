@@ -32,7 +32,8 @@
 import { ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
-import { streamAgentChat, type AgentEvent } from '../api/agent'
+import { streamAgentChat } from '../api/agent'
+import type { AgentEvent } from '../types/agent'
 import { showError } from '../utils/feedback'
 
 interface Message {

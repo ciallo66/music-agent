@@ -1,21 +1,26 @@
 import { http } from './http'
-import type { PlaylistDetail, PlaylistItem, SongSummary } from '../types/music'
-export type { PlaylistDetail, PlaylistItem } from '../types/music'
-export type SongBrief = SongSummary
+import type {
+  PlaylistCreatePayload,
+  PlaylistDetail,
+  PlaylistItem,
+  PlaylistPage,
+  PlaylistUpdatePayload,
+} from '../types/library'
+export type { PlaylistDetail, PlaylistItem } from '../types/library'
 
 export function listPlaylists() {
-  return http.get<{ items: PlaylistItem[] }>('/playlists')
+  return http.get<PlaylistPage>('/playlists')
 }
 
 export function getPlaylist(id: number) {
   return http.get<PlaylistDetail>(`/playlists/${id}`)
 }
 
-export function createPlaylist(payload: { name: string; description?: string }) {
+export function createPlaylist(payload: PlaylistCreatePayload) {
   return http.post<PlaylistItem>('/playlists', payload)
 }
 
-export function updatePlaylist(id: number, payload: { name?: string; description?: string }) {
+export function updatePlaylist(id: number, payload: PlaylistUpdatePayload) {
   return http.patch<PlaylistItem>(`/playlists/${id}`, payload)
 }
 

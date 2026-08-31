@@ -48,6 +48,9 @@ class Settings(BaseSettings):
 
     jamendo_client_id: str = ""
     jamendo_base_url: str = "https://api.jamendo.com/v3.0"
+    jamendo_timeout_seconds: float = 30.0
+    jamendo_max_retries: int = 3
+    jamendo_retry_base_seconds: float = 1.0
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",
@@ -58,7 +61,10 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_secret_key(self) -> Settings:
         """拒绝空值和示例密钥，避免使用默认 JWT 密钥启动。"""
-        if not self.secret_key or self.secret_key == "change-me":
+        if not self.secret_key or self.secret_key in {
+            "change-me",
+            "replace-with-a-random-secret",
+        }:
             raise ValueError("SECRET_KEY 必须在 .env 中配置为随机密钥")
         if self.deepseek_timeout_seconds <= 0:
             raise ValueError("DEEPSEEK_TIMEOUT_SECONDS 必须大于 0")
@@ -76,6 +82,17 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_TIMEOUT_SECONDS 必须大于 0")
         if not 0 <= self.embedding_similarity_threshold <= 1:
             raise ValueError("EMBEDDING_SIMILARITY_THRESHOLD 必须在 0 到 1 之间")
+        return self
+
+    @model_validator(mode="after")
+    def validate_jamendo_timeout(self) -> Settings:
+        """确保 Jamendo 请求、重试配置有效。"""
+        if self.jamendo_timeout_seconds <= 0:
+            raise ValueError("JAMENDO_TIMEOUT_SECONDS 必须大于 0")
+        if self.jamendo_max_retries < 0:
+            raise ValueError("JAMENDO_MAX_RETRIES 不能小于 0")
+        if self.jamendo_retry_base_seconds < 0:
+            raise ValueError("JAMENDO_RETRY_BASE_SECONDS 不能小于 0")
         return self
 
 

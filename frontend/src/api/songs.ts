@@ -1,13 +1,6 @@
 import { http } from './http'
-import type { SongDetail, SongSummary } from '../types/music'
-export type { SongDetail, SongSummary } from '../types/music'
-
-export interface SongPage {
-  items: SongSummary[]
-  total: number
-  page: number
-  page_size: number
-}
+import type { SongDetail, SongPage } from '../types/music'
+export type { SongDetail, SongPage, SongSummary } from '../types/music'
 
 export function listSongs(params: {
   page?: number
