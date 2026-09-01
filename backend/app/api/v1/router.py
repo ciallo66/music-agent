@@ -12,6 +12,7 @@ from app.api.v1.routes import (
     auth,
     catalog,
     library,
+    profile,
     recommendation,
 )
 
@@ -20,6 +21,7 @@ router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(admin_auth.router, prefix="/admin/auth", tags=["admin-auth"])
 router.include_router(catalog.router, tags=["catalog"])
 router.include_router(library.router, tags=["library"])
+router.include_router(profile.router, tags=["profile"])
 router.include_router(recommendation.router, tags=["recommendation"])
 router.include_router(agent.router, tags=["agent"])
 router.include_router(admin_catalog.router, prefix="/admin", tags=["admin-catalog"])

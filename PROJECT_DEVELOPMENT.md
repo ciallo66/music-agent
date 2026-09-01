@@ -113,13 +113,13 @@
 | 后端 | SQLAlchemy | `sqlalchemy==2.0.46`（Mapped / mapped_column 写法） |
 | 后端 | Alembic | `alembic==1.19.1` |
 | 后端 | PostgreSQL 驱动 | `psycopg[binary]>=3.2` |
-| 后端 | 向量扩展 | `pgvector>=0.3.6`（歌曲 / 知识向量字段与检索已接入，批量向量化待做） |
+| 后端 | 向量扩展 | `pgvector>=0.3.6`（歌曲 / 知识向量字段、检索和批量幂等向量化已接入） |
 | 后端 | 认证 | `PyJWT==2.13.0` + `pwdlib[argon2]==0.3.1`（双 Token + Argon2id） |
 | 后端 | 配置 | `pydantic-settings==2.13.1` + `python-dotenv==1.2.2` |
 | AI | 大模型 | DeepSeek API（基于现有 `httpx` 直连 OpenAI-compatible Chat Completions，无额外 SDK） |
 | 前端 | Vue | Vue 3 + Vite + TypeScript + Element Plus + Pinia + vue-router + axios + ESLint + Prettier（`frontend/package.json`） |
 | 质量 | 工具 | `ruff==0.6.9` + `mypy==1.10.1` + `pytest==9.0.2` + pre-commit |
-| 部署 | 编排 | Docker + Nginx（待做） |
+| 部署 | 编排 | Docker Compose + Nginx（本地构建与配置校验已通过；服务器实机部署待做） |
 
 > 新增任何后端依赖必须先改 `backend/pyproject.toml` 并说明原因，禁止编造不存在的依赖 / API。
 
@@ -148,7 +148,7 @@
 | `songs.embedding vector(n)` | 歌曲特征向量 | 相似歌曲检索（pgvector）；维度由 Embedding 服务配置 |
 | `chat_sessions` | id, user_id, created_at | Agent 多轮对话会话（已迁移） |
 | `chat_messages` | id, session_id, role, content, created_at | Agent 消息历史（已迁移） |
-| `music_knowledge` | id, content, source, embedding | RAG 音乐知识库（表已迁移，向量导入待做） |
+| `music_knowledge` | id, content, source, embedding | RAG 音乐知识库（表和批量向量化链路已完成，真实知识数据与质量评测待做） |
 
 ### 3. Song 数据结构（《Music_Agent_项目开发书》第十五章 + 实际 model）
 
@@ -310,9 +310,11 @@ Agent Router（判断用户真实意图）
   - axios 封装 + 登录态（Token 自动注入 + 401 刷新重放）
   - 登录 / 注册页面、路由守卫
   - 音乐库列表、歌曲详情、搜索、歌单、歌单详情、收藏、首页、全局播放器组件
-- **待完成** ⬜
-  - 播放器真实音频联动（产品体验阶段继续增强）
-  - ECharts 听歌数据看板（歌曲详情页基础特征雷达图已完成）
+- **已补齐** ✅
+  - HTML5 播放器与歌曲真实音频地址联动
+  - 歌曲详情页音乐特征可视化和 LRC 歌词同步
+- **后续产品体验** ⬜
+  - 用户听歌数据看板与个人音乐画像（归入阶段 8）
 - **验收**：前后端联调通过；登录后页面和播放状态正常切换。
 
 ### 阶段 4：数据管道（Jamendo）🔶 代码链路已完成，等待真实凭证验收
@@ -334,7 +336,8 @@ Agent Router（判断用户真实意图）
   - [x] 热门推荐兜底（popularity 排序，冷启动路径）
   - [x] 推荐依据组装（来自真实结构化数据）
   - [x] 接口 `GET /api/v1/recommendations`
-  - [ ] 标签/音乐特征相似度增强
+  - [x] BPM / Energy / Valence / Danceability 特征画像与距离排序
+  - [ ] 标签相似度增强（进阶，不阻断基础推荐闭环）
   - [ ] 协同过滤实现 / 评测（进阶，离线对比，不作为线上主路径）
 - **验收**：新用户有兜底结果；老用户推荐有变化；推荐理由可解释；pytest 覆盖。
 
@@ -365,14 +368,14 @@ Agent Router（判断用户真实意图）
   - [ ] 检索质量评测、重排和线上 RAG 效果验收
 - **验收**：问“City Pop 是什么”AI 基于知识库回答；相似歌曲结果合理；能讲清检索流程。
 
-### 阶段 8：产品体验（可视化 + 播放 + 歌词 + 画像）🔶 基础播放与歌词完成
+### 阶段 8：产品体验（可视化 + 播放 + 歌词 + 画像）✅ 基础功能完成，真实数据验收待做
 - **目标**：体验完整，数据产品感强。
 - **任务**
-  - [ ] ECharts 听歌数据看板（总时长 / TOP 歌手风格 / 时段分布 / 月度趋势）
+  - [x] ECharts 听歌数据看板（播放趋势 / TOP 歌手 / 风格分布）
   - [x] 歌曲详情页音乐特征可视化（雷达图 / 柱状图）
   - [x] HTML5 播放器与阶段 4 音频联动
   - [x] LRC 歌词解析 + 逐行高亮同步（无音频用模拟播放）
-  - [ ] 个人音乐画像（常听 Genre / 平均 BPM / 平均 Energy）
+  - [x] 个人音乐画像（常听 Genre / 平均 BPM / 平均 Energy）
 - **验收**：演示流畅；能听歌、看歌词、看统计、看画像。
 
 ### 阶段 9：多人在线与部署（JWT + Docker + CI/CD）🔶 部署骨架已完成
@@ -397,9 +400,9 @@ Agent Router（判断用户真实意图）
 
 **里程碑**：
 - M1（骨架跑通）：阶段 0-1 ✅
-- M2（基础可用）：阶段 2-3 🔶 基本完成
-- M3（AI 有亮点）：阶段 5-6 🔶（推荐与 Agent 基础闭环已跑通）
-- M4（完整 + 上线）：阶段 7-9 ⬜
+- M2（基础可用）：阶段 2-3 ✅
+- M3（AI 有亮点）：阶段 5-6 ✅ 基础闭环已跑通，推荐进阶增强后续再做
+- M4（完整 + 上线）：阶段 7-9 🔶 向量、播放和 Docker 骨架已完成；画像、真实数据验收与 CI/CD 待做
 
 ---
 
@@ -431,4 +434,4 @@ Agent Router（判断用户真实意图）
 
 ## 十三、简历一句话描述（Agent 版）
 
-> 正在实现多用户 AI 音乐智能体平台：Vue 3 + FastAPI + PostgreSQL + pgvector + DeepSeek；已完成认证、音乐库 / 歌单 / 收藏、内容推荐与热门兜底，以及基于 Tool Registry + Function Calling 的 Agent 工具调用和 SSE 流式对话。向量批量生成、RAG 质量评测、Jamendo 数据管道、完整播放器与 Docker / CI/CD 部署仍在后续阶段。
+> 实现多用户 AI 音乐智能体平台：Vue 3 + FastAPI + PostgreSQL + pgvector + DeepSeek；已完成认证、音乐库 / 歌单 / 收藏、内容推荐与热门兜底、Tool Registry + Function Calling、SSE 流式对话、向量批处理、Jamendo 幂等导入链路、播放器 / 滚动歌词及 Docker 部署骨架。后续补充真实数据验收、个人音乐画像、RAG 质量评测与 CI/CD。

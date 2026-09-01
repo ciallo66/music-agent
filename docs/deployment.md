@@ -12,13 +12,33 @@
 
 防火墙只开放 SSH（22）和网站端口（80、443）。PostgreSQL 不映射到公网，只允许 Compose 内部网络访问。
 
+## 外部账号与配置位置
+
+当前页面和业务代码开发不依赖外部密钥。进行真实联调时按需准备：
+
+| 能力 | 需要的配置 | 官方入口 | 是否现在必须 |
+|---|---|---|---|
+| Agent 对话 | `DEEPSEEK_API_KEY` | [DeepSeek API Keys](https://platform.deepseek.com/api_keys) / [官方接入文档](https://api-docs.deepseek.com/) | 真实 AI 联调必须 |
+| Jamendo 导入 | `JAMENDO_CLIENT_ID` | [Jamendo Developer Portal](https://devportal.jamendo.com/) / [认证文档](https://developer.jamendo.com/v3.0/authentication) | 真实 100 条导入必须 |
+| RAG 向量化 | `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL`、`EMBEDDING_MODEL` | 可选使用 [OpenAI API Keys](https://platform.openai.com/api-keys) / [Embedding 文档](https://developers.openai.com/api/docs/guides/embeddings) | 非必须；未配置时走文本检索兜底 |
+
+密钥填写位置：
+
+- 本地 Docker：`C:\Users\28265\Desktop\music-agent\.env.production`
+- 本地直接运行 FastAPI：`C:\Users\28265\Desktop\music-agent\backend\.env`
+- 服务器 Docker：计划放在 `/opt/music-agent/.env.production`
+- GitHub Actions（CI/CD 开发完成后）：[仓库 Actions Secrets](https://github.com/ciallo66/music-agent/settings/secrets/actions)
+
+不要把任何 API Key、数据库密码或 SSH 私钥发到聊天中，也不要提交到 Git；只需要告诉开发者“已配置”即可。
+
 ## 首次部署
 
 在服务器执行：
 
 ```bash
-git clone <你的 GitHub 仓库地址> music-agent
-cd music-agent
+cd /opt
+git clone https://github.com/ciallo66/music-agent.git music-agent
+cd /opt/music-agent
 cp .env.production.example .env.production
 ```
 

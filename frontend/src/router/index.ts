@@ -32,6 +32,12 @@ const router = createRouter({
         },
         { path: 'search', name: 'search', component: () => import('../views/SearchPage.vue') },
         { path: 'agent', name: 'agent', component: () => import('../views/AgentPage.vue') },
+        {
+          path: 'admin/imports',
+          name: 'admin-imports',
+          component: () => import('../views/AdminImportsPage.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
     {
@@ -49,6 +55,9 @@ router.beforeEach(async (to) => {
     return '/login'
   }
   if (to.path === '/login' && auth.isAuthenticated) {
+    return '/'
+  }
+  if (to.meta.requiresAdmin === true && !auth.isAdmin) {
     return '/'
   }
 })

@@ -2,6 +2,14 @@
 
 导入脚本只保存歌曲元数据和 Jamendo 外链，不下载或托管音频。歌曲和歌手使用 `source + source_id` 唯一索引，重复执行会更新已有记录而不会重复插入。
 
+## 获取 Client ID
+
+1. 打开 [Jamendo Developer Portal](https://devportal.jamendo.com/) 注册开发者账号。
+2. 创建一个应用并选择只读权限；当前项目只调用公开读取接口，不需要 OAuth 写权限。
+3. 将应用的 `client_id` 写入本地或服务器的环境文件，禁止粘贴到源码、聊天记录或 GitHub。
+
+认证方式和权限说明见 [Jamendo API Authentication](https://developer.jamendo.com/v3.0/authentication)。官方公共测试 ID 只适合临时接口测试，不能作为本项目生产凭证。
+
 ## 100 条本地验收
 
 在 `backend` 目录执行：
@@ -19,7 +27,7 @@ Docker 环境应把有效的 `JAMENDO_CLIENT_ID` 写入本机或服务器的 `.e
 docker compose --env-file .env.production run --rm backend python -m scripts.import_jamendo --limit 100 --batch-size 50
 ```
 
-后端镜像已包含 `scripts` 维护工具。Client ID 只放环境文件，不写入源码或 Git；Jamendo 公共测试 ID 不能作为生产凭证。
+后端镜像已包含 `scripts` 维护工具。Client ID 只放环境文件，不写入源码或 Git。
 
 ## 管理员后台任务
 

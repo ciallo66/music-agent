@@ -9,6 +9,7 @@
         <router-link to="/favorites">收藏</router-link>
         <router-link to="/search">搜索</router-link>
         <router-link to="/agent">AI 助手</router-link>
+        <router-link v-if="auth.isAdmin" to="/admin/imports">数据导入</router-link>
       </nav>
       <div class="sidebar-bottom">
         <div class="user-info" v-if="auth.user">
