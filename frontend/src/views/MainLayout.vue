@@ -7,6 +7,7 @@
         <router-link to="/songs">音乐库</router-link>
         <router-link to="/playlists">我的歌单</router-link>
         <router-link to="/favorites">收藏</router-link>
+        <router-link to="/profile">音乐画像</router-link>
         <router-link to="/search">搜索</router-link>
         <router-link to="/agent">AI 助手</router-link>
         <router-link v-if="auth.isAdmin" to="/admin/imports">数据导入</router-link>

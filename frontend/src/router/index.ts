@@ -30,6 +30,11 @@ const router = createRouter({
           name: 'favorites',
           component: () => import('../views/FavoritesPage.vue'),
         },
+        {
+          path: 'profile',
+          name: 'music-profile',
+          component: () => import('../views/MusicProfilePage.vue'),
+        },
         { path: 'search', name: 'search', component: () => import('../views/SearchPage.vue') },
         { path: 'agent', name: 'agent', component: () => import('../views/AgentPage.vue') },
         {

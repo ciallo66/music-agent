@@ -402,7 +402,7 @@ Agent Router（判断用户真实意图）
 - M1（骨架跑通）：阶段 0-1 ✅
 - M2（基础可用）：阶段 2-3 ✅
 - M3（AI 有亮点）：阶段 5-6 ✅ 基础闭环已跑通，推荐进阶增强后续再做
-- M4（完整 + 上线）：阶段 7-9 🔶 向量、播放和 Docker 骨架已完成；画像、真实数据验收与 CI/CD 待做
+- M4（完整 + 上线）：阶段 7-9 🔶 向量、播放、画像和 Docker 骨架已完成；真实数据验收、RAG 质量评测与 CI/CD 待做
 
 ---
 
@@ -434,4 +434,4 @@ Agent Router（判断用户真实意图）
 
 ## 十三、简历一句话描述（Agent 版）
 
-> 实现多用户 AI 音乐智能体平台：Vue 3 + FastAPI + PostgreSQL + pgvector + DeepSeek；已完成认证、音乐库 / 歌单 / 收藏、内容推荐与热门兜底、Tool Registry + Function Calling、SSE 流式对话、向量批处理、Jamendo 幂等导入链路、播放器 / 滚动歌词及 Docker 部署骨架。后续补充真实数据验收、个人音乐画像、RAG 质量评测与 CI/CD。
+> 实现多用户 AI 音乐智能体平台：Vue 3 + FastAPI + PostgreSQL + pgvector + DeepSeek；已完成认证、音乐库 / 歌单 / 收藏、内容推荐与热门兜底、Tool Registry + Function Calling、SSE 流式对话、向量批处理、Jamendo 幂等导入链路、播放器 / 滚动歌词、个人音乐画像和 Docker 部署骨架。后续补充真实数据验收、RAG 质量评测与 CI/CD。
