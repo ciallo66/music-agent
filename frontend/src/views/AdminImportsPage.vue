@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .admin-imports-page {
-  padding: 40px;
+  padding: var(--page-gutter);
 }
 .notice-card {
   display: flex;
@@ -234,9 +234,9 @@ onBeforeUnmount(() => {
 }
 .jobs-table {
   --el-table-bg-color: transparent;
-  --el-table-tr-bg-color: rgba(31, 39, 61, 0.72);
-  --el-table-row-hover-bg-color: rgba(55, 57, 101, 0.78);
-  --el-table-header-bg-color: rgba(27, 33, 49, 0.82);
+  --el-table-tr-bg-color: rgba(39, 56, 85, 0.72);
+  --el-table-row-hover-bg-color: rgba(50, 69, 102, 0.82);
+  --el-table-header-bg-color: rgba(29, 42, 65, 0.88);
   --el-table-border-color: var(--border);
   --el-table-text-color: var(--text-secondary);
   --el-table-header-text-color: var(--text-muted);

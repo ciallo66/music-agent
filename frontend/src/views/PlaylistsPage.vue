@@ -1,151 +1,273 @@
 <template>
-  <div class="playlists-page">
-    <PageHeader title="我的歌单" subtitle="整理你的专属播放列表">
+  <section class="playlists-page">
+    <PageHeader
+      eyebrow="COLLECTIONS"
+      title="我的歌单"
+      subtitle="把喜欢的歌曲整理成适合不同场景的专属播放列表"
+    >
       <template #actions
-        ><el-button type="primary" @click="showCreate = true">+ 新建歌单</el-button></template
+        ><el-button type="primary" @click="showCreate = true">＋ 新建歌单</el-button></template
       >
     </PageHeader>
-    <StatePanel v-if="loading" type="loading" title="正在加载歌单" />
-    <StatePanel
-      v-else-if="playlists.length === 0"
-      title="还没有歌单"
-      message="创建一个歌单，开始整理喜欢的歌曲"
-    />
-    <div v-else class="playlist-grid">
-      <div v-for="pl in playlists" :key="pl.id" class="playlist-card" @click="go(pl.id)">
-        <div class="pl-cover">{{ pl.name.slice(0, 1) }}</div>
-        <div class="pl-info">
-          <p class="pl-name">{{ pl.name }}</p>
-          <p class="pl-count">{{ pl.song_count }} 首</p>
-        </div>
-      </div>
+
+    <div v-if="loading" class="state-surface page-surface">
+      <StatePanel type="loading" title="正在加载歌单" />
     </div>
-    <el-dialog v-model="showCreate" title="新建歌单" width="400px">
-      <el-form :model="createForm" label-position="top">
+    <div v-else-if="loadFailed" class="state-surface page-surface">
+      <StatePanel type="error" title="歌单加载失败" message="服务暂时不可用，请稍后重试">
+        <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
+      </StatePanel>
+    </div>
+    <div v-else-if="playlists.length === 0" class="state-surface page-surface">
+      <StatePanel title="还没有歌单" message="创建一个歌单，开始整理喜欢的歌曲">
+        <template #action
+          ><el-button type="primary" @click="showCreate = true">创建第一个歌单</el-button></template
+        >
+      </StatePanel>
+    </div>
+    <div v-else class="playlist-grid">
+      <article
+        v-for="(playlist, index) in playlists"
+        :key="playlist.id"
+        class="playlist-card page-surface"
+        role="button"
+        tabindex="0"
+        @click="go(playlist.id)"
+        @keydown.enter="go(playlist.id)"
+      >
+        <div class="cover" :class="`tone-${index % 4}`">
+          <span>{{ playlist.name.slice(0, 1) }}</span
+          ><small>PLAYLIST</small>
+        </div>
+        <div class="playlist-copy">
+          <strong>{{ playlist.name }}</strong>
+          <span>{{ playlist.song_count }} 首歌曲</span>
+          <p>{{ playlist.description || '还没有添加描述' }}</p>
+        </div>
+        <span class="open-mark" aria-hidden="true">→</span>
+      </article>
+      <button class="create-card" type="button" @click="showCreate = true">
+        <span>＋</span><strong>新建歌单</strong><small>创建新的音乐收藏</small>
+      </button>
+    </div>
+
+    <el-dialog v-model="showCreate" title="新建歌单" width="420px" @closed="resetForm">
+      <el-form :model="createForm" label-position="top" @submit.prevent="createPl">
         <el-form-item label="歌单名称">
-          <el-input v-model="createForm.name" maxlength="50" placeholder="输入歌单名称" />
+          <el-input
+            v-model="createForm.name"
+            maxlength="50"
+            show-word-limit
+            placeholder="例如：夜晚放松"
+            autofocus
+            @keyup.enter="createPl"
+          />
         </el-form-item>
         <el-form-item label="描述（可选）">
           <el-input
             v-model="createForm.description"
             maxlength="200"
-            placeholder="输入描述"
+            show-word-limit
+            :rows="3"
+            placeholder="简单描述这个歌单适合的场景"
             type="textarea"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreate = false">取消</el-button>
-        <el-button type="primary" @click="createPl">创建</el-button>
+        <el-button :disabled="creating" @click="showCreate = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="creating"
+          :disabled="createForm.name.trim().length === 0"
+          @click="createPl"
+          >创建歌单</el-button
+        >
       </template>
     </el-dialog>
-  </div>
+  </section>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { createPlaylist, listPlaylists } from '../api/playlists'
-import type { PlaylistItem } from '../api/playlists'
+import { createPlaylist, listPlaylists, type PlaylistItem } from '../api/playlists'
 import { showError, showSuccess } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
+
 const router = useRouter()
 const playlists = ref<PlaylistItem[]>([])
 const loading = ref(false)
+const loadFailed = ref(false)
+const creating = ref(false)
 const showCreate = ref(false)
-const createForm = ref({ name: '', description: '' })
-async function load() {
+const createForm = reactive({ name: '', description: '' })
+
+async function load(): Promise<void> {
   loading.value = true
+  loadFailed.value = false
   try {
     const { data } = await listPlaylists()
     playlists.value = data.items
   } catch (error) {
+    playlists.value = []
+    loadFailed.value = true
     showError(error, '歌单加载失败')
   } finally {
     loading.value = false
   }
 }
-async function createPl() {
-  if (!createForm.value.name.trim()) {
-    showError(null, '请输入歌单名称')
-    return
-  }
+
+async function createPl(): Promise<void> {
+  const name = createForm.name.trim()
+  if (!name || creating.value) return
+  creating.value = true
   try {
-    await createPlaylist(createForm.value)
+    await createPlaylist({ name, description: createForm.description.trim() || undefined })
     showSuccess('歌单创建成功')
     showCreate.value = false
-    createForm.value = { name: '', description: '' }
-    load()
+    await load()
   } catch (error) {
     showError(error, '歌单创建失败')
+  } finally {
+    creating.value = false
   }
 }
-function go(id: number) {
-  router.push(`/playlists/${id}`)
+
+function resetForm(): void {
+  createForm.name = ''
+  createForm.description = ''
 }
+
+async function go(id: number): Promise<void> {
+  await router.push(`/playlists/${id}`)
+}
+
 onMounted(load)
 </script>
+
 <style scoped>
 .playlists-page {
-  padding: 40px;
+  padding: var(--page-gutter);
 }
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-}
-.page-header h2 {
-  color: var(--text);
-  font-size: 24px;
-  margin: 0;
-}
-.loading,
-.empty {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: 60px 0;
+.state-surface {
+  min-height: 330px;
 }
 .playlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 14px;
 }
 .playlist-card {
-  display: flex;
-  gap: 14px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
   align-items: center;
-  padding: 16px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  gap: 15px;
+  min-height: 112px;
+  padding: 14px;
   cursor: pointer;
-  transition: border-color 0.2s;
 }
 .playlist-card:hover {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
+  transform: translateY(-3px);
 }
-.pl-cover {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+.cover {
   display: grid;
+  width: 82px;
+  height: 82px;
   place-items: center;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-on-accent);
-  flex-shrink: 0;
+  border-radius: 15px;
+  color: rgba(9, 22, 31, 0.8);
+  font-size: 28px;
+  font-weight: 900;
 }
-.pl-name {
+.cover small {
+  align-self: end;
+  margin-bottom: 8px;
+  font-size: 7px;
+  letter-spacing: 0.14em;
+}
+.cover span {
+  align-self: end;
+}
+.tone-0 {
+  background: linear-gradient(145deg, #76ead8, #7cbcf4);
+}
+.tone-1 {
+  background: linear-gradient(145deg, #afa8ff, #e7a4cf);
+}
+.tone-2 {
+  background: linear-gradient(145deg, #f5c876, #f18f91);
+}
+.tone-3 {
+  background: linear-gradient(145deg, #8bc8ff, #a3e4ba);
+}
+.playlist-copy {
+  min-width: 0;
+}
+.playlist-copy strong,
+.playlist-copy span,
+.playlist-copy p {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.playlist-copy strong {
   color: var(--text);
   font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 4px;
 }
-.pl-count {
+.playlist-copy span {
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-size: 10px;
+}
+.playlist-copy p {
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.open-mark {
+  color: var(--text-muted);
+}
+.playlist-card:hover .open-mark {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+.create-card {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+}
+.create-card span {
+  font-size: 24px;
+  color: var(--accent);
+}
+.create-card strong {
   color: var(--text-secondary);
   font-size: 12px;
-  margin: 0;
+}
+.create-card small {
+  font-size: 9px;
+}
+.create-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-3px);
+}
+@media (max-width: 520px) {
+  .playlist-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

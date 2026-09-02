@@ -1,62 +1,80 @@
 <template>
-  <div class="songs-page">
-    <PageHeader title="音乐库" subtitle="按风格、语言和歌手探索歌曲">
+  <section class="songs-page">
+    <PageHeader
+      eyebrow="LIBRARY"
+      title="音乐库"
+      subtitle="按歌曲、歌手与风格浏览音乐，音频特征让每次发现更有依据"
+    >
       <template #actions>
         <div class="filters">
           <el-input
             v-model="keyword"
-            placeholder="搜索歌曲/歌手"
+            placeholder="搜索歌曲或歌手"
             clearable
-            @clear="loadSongs"
-            @keyup.enter="loadSongs"
-            style="width: 220px"
-          />
-          <el-select
-            v-model="genre"
-            placeholder="风格"
-            clearable
-            @change="loadSongs"
-            style="width: 140px"
+            @clear="applyFilters"
+            @keyup.enter="applyFilters"
           >
-            <el-option v-for="g in genres" :key="g" :label="g" :value="g" />
+            <template #prefix>⌕</template>
+          </el-input>
+          <el-select v-model="genre" placeholder="全部风格" clearable @change="applyFilters">
+            <el-option v-for="item in genres" :key="item" :label="item" :value="item" />
           </el-select>
-          <el-button @click="loadSongs">搜索</el-button>
+          <el-button type="primary" @click="applyFilters">搜索</el-button>
         </div>
       </template>
     </PageHeader>
-    <StatePanel v-if="loading" type="loading" title="正在加载音乐库" />
-    <StatePanel
-      v-else-if="songs.length === 0"
-      title="暂无歌曲"
-      message="可以尝试更换搜索关键词或筛选条件"
-    />
+
+    <div class="library-meta">
+      <span
+        ><strong>{{ total }}</strong> 首歌曲</span
+      >
+      <button v-if="hasFilters" type="button" @click="clearFilters">清除筛选 ×</button>
+    </div>
+
+    <div v-if="loading" class="state-surface page-surface">
+      <StatePanel type="loading" title="正在加载音乐库" />
+    </div>
+    <div v-else-if="loadFailed" class="state-surface page-surface">
+      <StatePanel type="error" title="音乐库加载失败" message="服务暂时不可用，请稍后重新加载">
+        <template #action
+          ><el-button type="primary" @click="loadSongs">重新加载</el-button></template
+        >
+      </StatePanel>
+    </div>
+    <div v-else-if="songs.length === 0" class="state-surface page-surface">
+      <StatePanel
+        title="暂无歌曲"
+        :message="hasFilters ? '没有匹配当前筛选条件的歌曲' : '歌曲数据导入后会展示在这里'"
+      >
+        <template v-if="hasFilters" #action
+          ><el-button @click="clearFilters">清除筛选</el-button></template
+        >
+      </StatePanel>
+    </div>
     <SongList v-else :songs="songs" variant="catalog" @play="play" />
-    <div class="pagination">
+
+    <div v-if="total > pageSize" class="pagination">
       <el-pagination
         v-model:current-page="page"
-        :page-size="20"
+        :page-size="pageSize"
         :total="total"
         layout="prev, pager, next"
         @current-change="loadSongs"
       />
     </div>
-  </div>
+  </section>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { usePlayerStore } from '../stores/player'
 import { listSongs, type SongSummary } from '../api/songs'
 import { showError } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
-const player = usePlayerStore()
-const songs = ref<SongSummary[]>([])
-const loading = ref(false)
-const page = ref(1)
-const total = ref(0)
-const keyword = ref('')
-const genre = ref('')
+
+const pageSize = 20
 const genres = [
   'Pop',
   'Rock',
@@ -69,55 +87,103 @@ const genres = [
   'Folk',
   'Metal',
 ]
-function play(s: SongSummary) {
-  player.playSong(s)
+const player = usePlayerStore()
+const songs = ref<SongSummary[]>([])
+const loading = ref(false)
+const loadFailed = ref(false)
+const page = ref(1)
+const total = ref(0)
+const keyword = ref('')
+const genre = ref('')
+const hasFilters = computed(() => keyword.value.trim().length > 0 || genre.value.length > 0)
+
+function play(song: SongSummary): void {
+  player.playSong(song)
   player.setQueue(songs.value)
 }
-async function loadSongs() {
+
+async function loadSongs(): Promise<void> {
   loading.value = true
+  loadFailed.value = false
   try {
     const { data } = await listSongs({
       page: page.value,
-      page_size: 20,
-      q: keyword.value || undefined,
+      page_size: pageSize,
+      q: keyword.value.trim() || undefined,
       genre: genre.value || undefined,
     })
     songs.value = data.items
     total.value = data.total
   } catch (error) {
+    songs.value = []
+    total.value = 0
+    loadFailed.value = true
     showError(error, '歌曲加载失败')
   } finally {
     loading.value = false
   }
 }
+
+async function applyFilters(): Promise<void> {
+  page.value = 1
+  await loadSongs()
+}
+
+async function clearFilters(): Promise<void> {
+  keyword.value = ''
+  genre.value = ''
+  await applyFilters()
+}
+
 onMounted(loadSongs)
 </script>
+
 <style scoped>
 .songs-page {
-  padding: 40px;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.page-header h2 {
-  color: var(--text);
-  font-size: 24px;
-  margin: 0;
+  padding: var(--page-gutter);
 }
 .filters {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) 140px auto;
+  gap: 9px;
   align-items: center;
-  flex-wrap: wrap;
+}
+.library-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+  margin: -12px 2px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.library-meta strong {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.library-meta button {
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+}
+.state-surface {
+  min-height: 310px;
 }
 .pagination {
   display: flex;
   justify-content: center;
   margin-top: 24px;
+}
+@media (max-width: 680px) {
+  .filters {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 112px;
+  }
+  .filters .el-button {
+    grid-column: 1 / -1;
+  }
 }
 </style>

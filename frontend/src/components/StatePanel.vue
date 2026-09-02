@@ -4,7 +4,7 @@
     <span class="icon" aria-hidden="true">{{ icon }}</span>
     <strong>{{ title }}</strong>
     <p v-if="message">{{ message }}</p>
-    <el-button v-if="$slots.action" text type="primary"><slot name="action" /></el-button>
+    <div v-if="$slots.action" class="action"><slot name="action" /></div>
   </div>
 </template>
 
@@ -25,24 +25,26 @@ const icon = computed(() => ({ loading: '◌', empty: '♪', error: '!' })[props
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
+  padding: 38px 20px;
   color: var(--text-secondary);
   text-align: center;
 }
 .icon {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: 16px;
   color: var(--accent-strong);
   background: var(--accent-soft);
-  font-size: 22px;
+  font-size: 23px;
+  box-shadow: 0 12px 30px rgba(22, 186, 165, 0.11);
 }
 .state-panel strong {
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px;
 }
 .state-panel p {
   max-width: 340px;
@@ -58,6 +60,9 @@ const icon = computed(() => ({ loading: '◌', empty: '♪', error: '!' })[props
   border-top-color: var(--accent-strong);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+.action {
+  margin-top: 6px;
 }
 .state-loading .icon {
   opacity: 0;

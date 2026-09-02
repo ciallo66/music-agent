@@ -329,7 +329,7 @@ onBeforeUnmount(disposeCharts)
 
 <style scoped>
 .profile-page {
-  padding: 40px;
+  padding: var(--page-gutter);
   max-width: 1380px;
 }
 .stat-grid {
@@ -342,8 +342,8 @@ onBeforeUnmount(disposeCharts)
 .panel {
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(31, 39, 61, 0.88), rgba(20, 25, 40, 0.8));
-  box-shadow: 0 12px 30px rgba(3, 7, 18, 0.2);
+  background: linear-gradient(145deg, rgba(39, 56, 85, 0.78), rgba(24, 36, 58, 0.68));
+  box-shadow: var(--shadow-soft);
 }
 .stat-card {
   display: flex;
@@ -420,10 +420,10 @@ onBeforeUnmount(disposeCharts)
   align-items: center;
   gap: 7px;
   padding: 9px 12px;
-  border: 1px solid rgba(139, 124, 246, 0.25);
+  border: 1px solid rgba(110, 231, 210, 0.25);
   border-radius: 10px;
   color: var(--text);
-  background: rgba(139, 124, 246, 0.12);
+  background: var(--accent-soft);
   font-size: 13px;
 }
 .genre-tag small {

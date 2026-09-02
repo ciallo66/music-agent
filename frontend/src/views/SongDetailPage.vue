@@ -1,5 +1,5 @@
 <template>
-  <div class="detail-page" v-if="song">
+  <section v-if="song" class="detail-page">
     <div class="song-header">
       <div class="cover-placeholder">{{ song.title.slice(0, 1) }}</div>
       <div class="info">
@@ -83,8 +83,20 @@
       </div>
       <pre v-else class="lyrics-text">{{ song.lyrics }}</pre>
     </div>
-  </div>
-  <div v-else class="loading">加载中...</div>
+  </section>
+  <section v-else class="detail-page">
+    <div class="detail-state page-surface">
+      <StatePanel v-if="loading" type="loading" title="正在加载歌曲详情" />
+      <StatePanel
+        v-else
+        type="error"
+        title="歌曲详情加载失败"
+        message="歌曲可能不存在，或服务暂时不可用"
+      >
+        <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
+      </StatePanel>
+    </div>
+  </section>
 </template>
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
@@ -98,12 +110,14 @@ import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { usePlayerStore } from '../stores/player'
 import { showError, showSuccess } from '../utils/feedback'
 import { parseLrc } from '../utils/lyrics'
+import StatePanel from '../components/StatePanel.vue'
 
 echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const route = useRoute()
 const player = usePlayerStore()
 const song = ref<SongDetail | null>(null)
+const loading = ref(false)
 const isFav = ref(false)
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: echarts.ECharts | null = null
@@ -127,13 +141,16 @@ const activeLyricIndex = computed(() => {
   return activeIndex
 })
 
-async function load() {
+async function load(): Promise<void> {
+  loading.value = true
   try {
     const { data } = await getSong(Number(route.params.id))
     song.value = data
   } catch (error) {
     showError(error, '歌曲详情加载失败')
     return
+  } finally {
+    loading.value = false
   }
   await nextTick()
   renderRadar()
@@ -259,25 +276,31 @@ onUnmounted(() => {
 </script>
 <style scoped>
 .detail-page {
-  padding: 40px;
-  max-width: 800px;
+  max-width: 1040px;
+  padding: var(--page-gutter);
 }
-.loading {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: 60px;
+.detail-state {
+  min-height: 420px;
 }
 .song-header {
   display: flex;
   gap: 32px;
   align-items: flex-start;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 92% 15%, rgba(110, 231, 210, 0.18), transparent 28%),
+    linear-gradient(145deg, rgba(40, 58, 89, 0.82), rgba(24, 37, 61, 0.74));
+  box-shadow: var(--shadow-soft);
 }
 .cover-placeholder {
   width: 160px;
   height: 160px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--accent), var(--accent-blue));
+  box-shadow: 0 22px 50px rgba(22, 186, 165, 0.2);
   display: grid;
   place-items: center;
   font-size: 48px;
@@ -287,7 +310,8 @@ onUnmounted(() => {
 }
 .info h2 {
   color: var(--text);
-  font-size: 28px;
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -0.04em;
   margin: 0 0 8px;
 }
 .artist {
@@ -308,7 +332,12 @@ onUnmounted(() => {
 .radar-block,
 .detail-block,
 .lyrics-section {
-  margin-bottom: 32px;
+  margin-bottom: 18px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, rgba(37, 53, 81, 0.72), rgba(24, 35, 56, 0.62));
+  box-shadow: var(--shadow-soft);
 }
 .features h3,
 .radar-block h3,
@@ -415,6 +444,14 @@ onUnmounted(() => {
   transform: translateX(4px);
 }
 @media (max-width: 640px) {
+  .song-header {
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+  }
+  .actions {
+    justify-content: center;
+  }
   .feature-grid {
     grid-template-columns: repeat(2, 1fr);
   }

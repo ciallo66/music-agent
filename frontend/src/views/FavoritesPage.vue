@@ -1,14 +1,27 @@
 <template>
-  <div class="fav-page">
-    <PageHeader title="我的收藏" subtitle="收藏的歌曲会出现在这里" />
-    <StatePanel v-if="loading" type="loading" title="正在加载收藏" />
-    <StatePanel
-      v-else-if="favSongs.length === 0"
-      title="还没有收藏任何歌曲"
-      message="在歌曲详情页点击收藏即可添加"
+  <section class="fav-page">
+    <PageHeader
+      eyebrow="FAVORITES"
+      title="我的收藏"
+      subtitle="把打动你的声音留在这里，随时回来重温"
     />
+    <div v-if="loading" class="state-surface page-surface">
+      <StatePanel type="loading" title="正在加载收藏" />
+    </div>
+    <div v-else-if="loadFailed" class="state-surface page-surface">
+      <StatePanel type="error" title="收藏加载失败" message="服务暂时不可用，请稍后重新加载">
+        <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
+      </StatePanel>
+    </div>
+    <div v-else-if="favSongs.length === 0" class="state-surface page-surface">
+      <StatePanel title="还没有收藏任何歌曲" message="在歌曲详情页点击收藏即可添加">
+        <template #action
+          ><router-link class="browse-link" to="/songs">浏览音乐库</router-link></template
+        >
+      </StatePanel>
+    </div>
     <SongList v-else :songs="favSongs" variant="favorites" @play="play" @remove="remove" />
-  </div>
+  </section>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
@@ -22,8 +35,10 @@ import SongList from '../components/SongList.vue'
 const player = usePlayerStore()
 const favSongs = ref<SongDetail[]>([])
 const loading = ref(false)
+const loadFailed = ref(false)
 async function load() {
   loading.value = true
+  loadFailed.value = false
   try {
     const { data } = await listFavorites()
     const songs = await Promise.all(
@@ -35,6 +50,8 @@ async function load() {
     )
     favSongs.value = songs.filter((s): s is SongDetail => s !== null)
   } catch (error) {
+    favSongs.value = []
+    loadFailed.value = true
     showError(error, '收藏加载失败')
   } finally {
     loading.value = false
@@ -57,11 +74,21 @@ onMounted(load)
 </script>
 <style scoped>
 .fav-page {
-  padding: 40px;
+  padding: var(--page-gutter);
 }
-.fav-page h2 {
-  color: var(--text);
-  font-size: 24px;
-  margin: 0 0 28px;
+.state-surface {
+  min-height: 330px;
+}
+.browse-link {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 10px;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
 }
 </style>
