@@ -61,6 +61,7 @@ class JamendoClient:
     """访问 Jamendo tracks API，并校验响应结构。"""
 
     def __init__(self, client: httpx.Client | None = None) -> None:
+        """允许测试注入 HTTP 客户端；仅对内部创建的客户端负责关闭。"""
         self._client = client or httpx.Client(timeout=settings.jamendo_timeout_seconds)
         self._owns_client = client is None
 
@@ -180,6 +181,7 @@ class JamendoImportService:
     """在数据库事务中批量幂等写入 Jamendo 歌曲。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定导入写入所需的艺术家和歌曲仓储。"""
         self.artists = ArtistRepository(db)
         self.songs = SongRepository(db)
 
@@ -235,6 +237,7 @@ class JamendoImportService:
 
 
 def _text(value: object) -> str | None:
+    """清理文本字段；空字符串统一转换为缺失值。"""
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
@@ -251,6 +254,7 @@ def _api_error_message(headers: Mapping[object, object]) -> str:
 
 
 def _integer(value: object) -> int | None:
+    """将外部数值安全转换为整数，异常值返回缺失。"""
     if not isinstance(value, int | float | str):
         return None
     try:
@@ -260,6 +264,7 @@ def _integer(value: object) -> int | None:
 
 
 def _number(value: object) -> float | None:
+    """将外部数值安全转换为浮点数，异常值返回缺失。"""
     if not isinstance(value, int | float | str):
         return None
     try:

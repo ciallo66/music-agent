@@ -1,3 +1,4 @@
+<!-- 可复用歌曲列表：通过 variant 适配目录、搜索、收藏和歌单场景。 -->
 <template>
   <div class="song-list page-surface" :class="`variant-${variant}`">
     <div class="song-row header" aria-hidden="true">
@@ -83,6 +84,7 @@ const emit = defineEmits<{
 }>()
 const player = usePlayerStore()
 
+// 将歌曲时长格式化为列表展示文本。
 function formatDuration(duration: number | null): string {
   if (duration === null) return '-'
   const minutes = Math.floor(duration / 60)

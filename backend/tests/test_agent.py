@@ -29,6 +29,7 @@ def test_agent_chat_streams_expected_events(client: TestClient, monkeypatch: Any
         messages: list[dict[str, object]],
         tools: list[dict[str, object]],
     ) -> object:
+        """模拟两轮模型响应，覆盖工具调用后继续生成文本。"""
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -102,6 +103,7 @@ def test_agent_chat_does_not_duplicate_streamed_content(
         _messages: list[dict[str, object]],
         _tools: list[dict[str, object]],
     ) -> object:
+        """模拟增量文本与完整响应同时返回的供应商。"""
         yield ModelStreamUpdate(content_delta="流式文本")
         yield ModelStreamUpdate(response=ModelResponse(content="流式文本", tool_calls=[]))
 
@@ -130,6 +132,7 @@ def test_agent_chat_recovers_from_tool_runtime_error(client: TestClient, monkeyp
         messages: list[dict[str, object]],
         _tools: list[dict[str, object]],
     ) -> object:
+        """模拟工具失败后仍能继续生成最终文本。"""
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -149,6 +152,7 @@ def test_agent_chat_recovers_from_tool_runtime_error(client: TestClient, monkeyp
     def failing_call(
         _registry: ToolRegistry, _name: str, _arguments: dict[str, object]
     ) -> dict[str, object]:
+        """模拟工具运行时异常。"""
         raise RuntimeError("database unavailable")
 
     monkeypatch.setattr(DeepSeekProvider, "stream", fake_stream)

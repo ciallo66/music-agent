@@ -12,6 +12,7 @@ class ChatRepository:
     """封装用户会话隔离和消息读写。"""
 
     def __init__(self, db: Session) -> None:
+        """保存请求级数据库会话，后续读写都复用该会话。"""
         self.db = db
 
     def create_session(self, user_id: int) -> ChatSession:

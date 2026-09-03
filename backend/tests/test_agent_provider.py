@@ -16,10 +16,14 @@ def test_provider_parses_tool_call_response(monkeypatch: Any) -> None:
     captured: dict[str, Any] = {}
 
     class FakeResponse:
+        """模拟非流式模型响应。"""
+
         def raise_for_status(self) -> None:
+            """模拟成功响应的状态检查。"""
             return None
 
         def json(self) -> dict[str, Any]:
+            """返回带工具调用的 Chat Completions 响应。"""
             return {
                 "choices": [
                     {
@@ -40,6 +44,7 @@ def test_provider_parses_tool_call_response(monkeypatch: Any) -> None:
             }
 
     def fake_post(url: str, **kwargs: Any) -> FakeResponse:
+        """记录请求参数并返回模拟响应。"""
         captured["url"] = url
         captured.update(kwargs)
         return FakeResponse()
@@ -63,6 +68,7 @@ def test_provider_reports_timeout(monkeypatch: Any) -> None:
     monkeypatch.setattr(settings, "deepseek_api_key", "test-key")
 
     def fake_post(*_args: Any, **_kwargs: Any) -> None:
+        """模拟网络超时。"""
         raise httpx.ReadTimeout("timed out")
 
     monkeypatch.setattr(httpx, "post", fake_post)
@@ -75,14 +81,19 @@ def test_provider_stream_merges_content_and_tool_fragments(monkeypatch: Any) -> 
     """Provider 应合并 SSE 文本和跨 chunk 的工具参数。"""
 
     class FakeStreamResponse:
+        """模拟可迭代的流式模型响应。"""
+
         def raise_for_status(self) -> None:
+            """模拟流式响应的状态检查。"""
             return None
 
         def iter_lines(self) -> list[str]:
+            """返回跨行拆分的文本和工具参数片段。"""
             first_arguments = '{"query":"am'
             second_arguments = 'bient"}'
 
             def sse_data(payload: dict[str, Any]) -> str:
+                """把对象编码成单行 SSE 数据。"""
                 return f"data: {json.dumps(payload)}"
 
             return [
@@ -127,12 +138,15 @@ def test_provider_stream_merges_content_and_tool_fragments(monkeypatch: Any) -> 
             ]
 
         def __enter__(self) -> FakeStreamResponse:
+            """进入响应上下文。"""
             return self
 
         def __exit__(self, *_args: object) -> None:
+            """退出响应上下文。"""
             return None
 
     def fake_stream(*_args: Any, **_kwargs: Any) -> FakeStreamResponse:
+        """返回可迭代的模拟 SSE 响应。"""
         return FakeStreamResponse()
 
     monkeypatch.setattr(settings, "deepseek_api_key", "test-key")

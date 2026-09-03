@@ -1,7 +1,9 @@
+// 歌曲目录查询与详情接口。
 import { http } from './http'
 import type { SongDetail, SongPage } from '../types/music'
 export type { SongDetail, SongPage, SongSummary } from '../types/music'
 
+// 分页查询歌曲目录，参数保持与后端筛选协议一致。
 export function listSongs(params: {
   page?: number
   page_size?: number
@@ -15,6 +17,7 @@ export function listSongs(params: {
   return http.get<SongPage>('/songs', { params })
 }
 
+// 获取单首歌曲详情及音频特征。
 export function getSong(id: number) {
   return http.get<SongDetail>(`/songs/${id}`)
 }

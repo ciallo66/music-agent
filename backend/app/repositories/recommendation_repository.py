@@ -14,6 +14,7 @@ class RecommendationRepository:
     """封装推荐候选歌曲和用户偏好查询。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定推荐查询使用的数据库会话。"""
         self.db = db
 
     def get_song(self, song_id: int) -> Song | None:

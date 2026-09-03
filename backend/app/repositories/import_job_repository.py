@@ -15,6 +15,7 @@ class ImportJobRepository:
     """封装导入任务查询与写入。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定数据库会话；仓储不自行提交事务。"""
         self.db = db
 
     def get(self, job_id: int) -> ImportJob | None:

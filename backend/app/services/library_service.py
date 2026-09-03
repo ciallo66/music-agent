@@ -38,6 +38,7 @@ class LibraryService:
     """编排用户歌单和收藏业务。"""
 
     def __init__(self, db: Session) -> None:
+        """注入用户音乐库仓储，集中执行权限与业务校验。"""
         self.repository = LibraryRepository(db)
 
     def list_playlists(self, user_id: int) -> PlaylistPage:
@@ -113,17 +114,20 @@ class LibraryService:
         self.repository.delete_favorite(favorite)
 
     def _require_playlist(self, playlist_id: int, user_id: int) -> Playlist:
+        """读取当前用户歌单；不存在或越权时统一抛出业务异常。"""
         playlist = self.repository.get_playlist(playlist_id, user_id)
         if playlist is None:
             raise PlaylistNotFoundError
         return playlist
 
     def _require_song(self, song_id: int) -> None:
+        """确认歌曲存在，避免关联接口产生悬空关系。"""
         if self.repository.get_song(song_id) is None:
             raise SongNotFoundError
 
     @staticmethod
     def _playlist_item(playlist: Playlist, song_count: int) -> PlaylistItem:
+        """将 ORM 歌单和实时歌曲数转换为接口响应模型。"""
         return PlaylistItem(
             id=playlist.id,
             name=playlist.name,

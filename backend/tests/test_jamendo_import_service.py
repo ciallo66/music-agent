@@ -87,6 +87,7 @@ def test_client_retries_temporary_failure(monkeypatch) -> None:
     attempts = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        """首请求返回临时错误，第二次返回成功，验证退避重试。"""
         nonlocal attempts
         attempts += 1
         if attempts == 1:
@@ -138,24 +139,33 @@ def test_import_service_is_idempotent(monkeypatch) -> None:
     from app.services import jamendo_import_service as module
 
     class FakeArtist:
+        """模拟艺术家仓储返回的最小对象。"""
+
         id: int = 10
         name: str = "Artist"
         avatar_url: str | None = None
 
     class FakeSong:
+        """模拟歌曲仓储返回的最小对象。"""
+
         pass
 
     artists: dict[str, FakeArtist] = {}
     songs: dict[str, FakeSong] = {}
 
     class FakeArtists:
+        """模拟艺术家仓储的幂等读写。"""
+
         def __init__(self, db) -> None:
+            """模拟仓储构造，不使用真实数据库。"""
             del db
 
         def get_by_source_id(self, source: str, source_id: str):
+            """按外部 ID 查询模拟艺术家。"""
             return artists.get(f"{source}:{source_id}")
 
         def create(self, name: str, avatar_url: str | None, **kwargs):
+            """创建并保存模拟艺术家。"""
             artist = FakeArtist()
             artist.name = name
             artist.avatar_url = avatar_url
@@ -163,23 +173,30 @@ def test_import_service_is_idempotent(monkeypatch) -> None:
             return artist
 
         def update(self, artist, values):
+            """更新模拟艺术家字段。"""
             for key, value in values.items():
                 setattr(artist, key, value)
             return artist
 
     class FakeSongs:
+        """模拟歌曲仓储的幂等读写。"""
+
         def __init__(self, db) -> None:
+            """模拟歌曲仓储构造，不使用真实数据库。"""
             del db
 
         def get_by_source_id(self, source: str, source_id: str):
+            """按外部 ID 查询模拟歌曲。"""
             return songs.get(f"{source}:{source_id}")
 
         def create(self, values):
+            """创建并保存模拟歌曲。"""
             song = FakeSong()
             songs[values["source"] + ":" + values["source_id"]] = song
             return song
 
         def update(self, song, values):
+            """模拟更新操作；幂等测试只关心调用分支。"""
             del song, values
 
     monkeypatch.setattr(module, "ArtistRepository", FakeArtists)

@@ -28,6 +28,7 @@ class AgentService:
     """协调会话隔离、历史读取和 Agent 编排。"""
 
     def __init__(self, db: Session, user_id: int) -> None:
+        """绑定当前用户和会话仓储，确保历史消息按用户隔离。"""
         self.db = db
         self.user_id = user_id
         self.chats = ChatRepository(db)

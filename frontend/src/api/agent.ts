@@ -1,3 +1,4 @@
+// Agent SSE 通信：处理鉴权刷新、事件拆包与类型收窄。
 import { getAccessToken, refreshAccessToken } from './http'
 import type { AgentEvent, StreamAgentChatOptions } from '../types/agent'
 export type { AgentEvent, StreamAgentChatOptions } from '../types/agent'
@@ -21,6 +22,7 @@ export async function streamAgentChat(options: StreamAgentChatOptions): Promise<
     while (true) {
       const { value, done } = await reader.read()
       buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+      // SSE 事件以空行分隔；保留最后一个不完整片段，防止跨网络包截断 JSON。
       const chunks = buffer.split(/\r?\n\r?\n/)
       buffer = chunks.pop() ?? ''
       for (const chunk of chunks) emitChunk(chunk, options.onEvent)
@@ -35,6 +37,7 @@ export async function streamAgentChat(options: StreamAgentChatOptions): Promise<
   return Number.isInteger(returnedSessionId) ? returnedSessionId : null
 }
 
+// 发起一次带认证信息的 Agent SSE 请求。
 async function request(options: StreamAgentChatOptions, token: string | null): Promise<Response> {
   return fetch('/api/v1/agent/chat', {
     method: 'POST',
@@ -47,6 +50,7 @@ async function request(options: StreamAgentChatOptions, token: string | null): P
   })
 }
 
+// 解析单个 SSE 事件块，并将未知字段收窄为前端事件类型。
 function emitChunk(chunk: string, onEvent: (event: AgentEvent) => void): void {
   const dataLine = chunk.split(/\r?\n/).find((line) => line.startsWith('data:'))
   if (!dataLine) return

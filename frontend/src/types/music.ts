@@ -1,3 +1,4 @@
+// 音乐领域对象：歌手、歌曲、歌单和推荐结果。
 export interface ArtistBrief {
   id: number
   name: string

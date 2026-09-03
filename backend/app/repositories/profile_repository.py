@@ -17,6 +17,7 @@ class ProfileRepository:
     """封装当前用户的播放、收藏和歌曲聚合查询。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定画像统计使用的数据库会话。"""
         self.db = db
 
     def total_plays(self, user_id: int) -> int:

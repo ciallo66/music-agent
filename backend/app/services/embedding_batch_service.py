@@ -32,6 +32,7 @@ class EmbeddingBatchService:
     """为尚未向量化的歌曲或知识切片生成并写入 embedding。"""
 
     def __init__(self, db: Session, provider: EmbeddingProvider) -> None:
+        """绑定数据库和向量供应商，统一处理歌曲与知识两类目标。"""
         self.db = db
         self.provider = provider
         self.songs = SongRepository(db)
@@ -55,6 +56,7 @@ class EmbeddingBatchService:
 
         processed = 0
         while processed < limit:
+            # 分批读取并 flush，控制单次请求和内存；不在 service 内 commit，事务由调用边界管理。
             current_limit = min(batch_size, limit - processed)
             items = self._list_missing(target, current_limit)
             if not items:
@@ -65,6 +67,7 @@ class EmbeddingBatchService:
             self.db.flush()
             processed += len(items)
             if dry_run:
+                # dry-run 只验证首批可处理数量，不写入后续批次。
                 break
 
         remaining = len(self._list_missing(target, 1))

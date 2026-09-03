@@ -1,3 +1,4 @@
+<!-- 收藏页面：加载用户收藏并复用歌曲列表进行播放或取消收藏。 -->
 <template>
   <section class="fav-page">
     <PageHeader
@@ -36,6 +37,7 @@ const player = usePlayerStore()
 const favSongs = ref<SongDetail[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
+// 先取收藏 ID，再并发加载歌曲详情；单条歌曲失效不影响其他收藏。
 async function load() {
   loading.value = true
   loadFailed.value = false
@@ -57,6 +59,7 @@ async function load() {
     loading.value = false
   }
 }
+// 删除收藏并同步更新本地列表，避免等待再次查询。
 async function remove(id: number) {
   try {
     await removeFavorite(id)
@@ -66,6 +69,7 @@ async function remove(id: number) {
     showError(error, '取消收藏失败')
   }
 }
+// 播放收藏歌曲并使用收藏顺序作为队列。
 function play(s: SongSummary) {
   player.playSong(s)
   player.setQueue(favSongs.value)

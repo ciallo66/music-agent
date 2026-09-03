@@ -20,6 +20,7 @@ class ProfileService:
     """编排当前用户的音乐画像统计。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定画像和推荐仓储，供统计用例组合读取。"""
         self.repository = ProfileRepository(db)
         self.recommendations = RecommendationRepository(db)
 

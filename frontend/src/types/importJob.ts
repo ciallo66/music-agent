@@ -1,3 +1,4 @@
+// 数据导入请求、状态和响应的共享类型。
 export type ImportJobStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 export interface JamendoImportRequest {

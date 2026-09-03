@@ -1,3 +1,4 @@
+// 解析带时间戳的 LRC 歌词，并提供播放器定位所需的行数据。
 export interface LyricLine {
   time: number
   text: string

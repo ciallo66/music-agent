@@ -1,3 +1,4 @@
+<!-- 固定播放器：只展示当前歌曲，进度与音量操作统一写入 Pinia。 -->
 <template>
   <div v-if="player.currentSong" class="player-bar" aria-label="当前播放器">
     <router-link class="song-info" :to="`/songs/${player.currentSong.id}`">
@@ -55,6 +56,7 @@ import { usePlayerStore } from '../stores/player'
 
 const player = usePlayerStore()
 
+// 将秒数格式化为播放器常用的分:秒。
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return '0:00'
   const minutes = Math.floor(seconds / 60)

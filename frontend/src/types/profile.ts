@@ -1,3 +1,4 @@
+// 音乐画像接口返回的统计、趋势和偏好类型。
 import type { SongSummary } from './music'
 
 export interface MusicFeatureProfile {

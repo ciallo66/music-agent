@@ -37,6 +37,7 @@ class AgentOrchestrator:
         history: list[dict[str, str]],
         provider: DeepSeekProvider | None = None,
     ) -> None:
+        """装配会话历史、模型供应商和工具注册表，准备一次流式 Agent 对话。"""
         self.db = db
         self.chat = ChatRepository(db)
         self.session_id = session_id
@@ -65,6 +66,7 @@ class AgentOrchestrator:
         ]
         current_turn_index = len(messages) - 1
         for _ in range(settings.agent_max_tool_rounds):
+            # 每轮先压缩历史，保证长对话不会超过模型上下文；工具结果仍保留在当前轮。
             messages, current_turn_index = compact_messages(
                 messages,
                 settings.agent_context_token_budget,
@@ -87,6 +89,7 @@ class AgentOrchestrator:
                     yield self._event(AgentEvent(type="content", content=content))
                 yield self._event(AgentEvent(type="end", content="分析完成"))
                 return
+            # 一个模型响应可能包含多个工具调用，按返回顺序执行并逐个写回上下文。
             for call in response.tool_calls:
                 yield from self._execute_tool(messages, call)
         yield self._event(AgentEvent(type="error", content="工具调用次数超过限制"))
@@ -96,6 +99,7 @@ class AgentOrchestrator:
         self._last_response = None
         self._streamed_content = False
         try:
+            # 内容增量立即推送，完整响应只用于判断下一步是否需要工具调用。
             for update in self.provider.stream(messages, self.registry.definitions()):
                 if update.content_delta:
                     self._streamed_content = True

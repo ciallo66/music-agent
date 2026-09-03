@@ -1,3 +1,4 @@
+// 路由表与认证守卫；守卫先等待认证恢复再决定页面访问权限。
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -53,6 +54,7 @@ const router = createRouter({
   ],
 })
 
+// 所有受保护路由等待认证恢复，避免未登录页面短暂闪现。
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (!auth.initialized) await auth.initialize()

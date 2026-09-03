@@ -1,3 +1,4 @@
+<!-- 歌单管理页面：查询、创建并进入用户歌单。 -->
 <template>
   <section class="playlists-page">
     <PageHeader
@@ -104,6 +105,7 @@ const creating = ref(false)
 const showCreate = ref(false)
 const createForm = reactive({ name: '', description: '' })
 
+// 查询当前用户歌单，并把失败显式转换为页面状态。
 async function load(): Promise<void> {
   loading.value = true
   loadFailed.value = false
@@ -119,6 +121,7 @@ async function load(): Promise<void> {
   }
 }
 
+// 校验并创建歌单；成功后等待列表刷新，保证页面立即反映新数据。
 async function createPl(): Promise<void> {
   const name = createForm.name.trim()
   if (!name || creating.value) return
@@ -135,11 +138,13 @@ async function createPl(): Promise<void> {
   }
 }
 
+// 弹窗关闭后清理表单，避免下次打开残留上次输入。
 function resetForm(): void {
   createForm.name = ''
   createForm.description = ''
 }
 
+// 进入指定歌单详情。
 async function go(id: number): Promise<void> {
   await router.push(`/playlists/${id}`)
 }

@@ -1,3 +1,4 @@
+<!-- 歌单详情页：展示歌单信息并复用歌曲列表播放歌曲。 -->
 <template>
   <section v-if="playlist" class="detail-page">
     <div class="page-header legacy-header">
@@ -47,6 +48,7 @@ const router = useRouter()
 const player = usePlayerStore()
 const playlist = ref<PlaylistDetail | null>(null)
 const loading = ref(false)
+// 读取歌单详情；失败时保留页面并显示返回/重试入口。
 async function load() {
   loading.value = true
   try {
@@ -58,6 +60,7 @@ async function load() {
     loading.value = false
   }
 }
+// 播放歌单歌曲，并按歌单顺序设置队列。
 function play(s: SongSummary) {
   player.playSong(s)
   if (playlist.value) player.setQueue(playlist.value.songs)

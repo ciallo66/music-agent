@@ -1,3 +1,4 @@
+// 歌单与收藏相关的请求、分页类型。
 import type { PlaylistDetail, PlaylistItem } from './music'
 
 export interface FavoriteItem {

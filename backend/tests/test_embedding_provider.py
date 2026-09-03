@@ -23,10 +23,14 @@ def test_embedding_provider_parses_indexed_vectors(monkeypatch: Any) -> None:
     captured: dict[str, Any] = {}
 
     class FakeResponse:
+        """模拟正常向量响应。"""
+
         def raise_for_status(self) -> None:
+            """模拟成功响应的状态检查。"""
             return None
 
         def json(self) -> dict[str, Any]:
+            """返回乱序但带 index 的向量结果。"""
             return {
                 "data": [
                     {"index": 1, "embedding": [0.3, 0.4]},
@@ -35,6 +39,7 @@ def test_embedding_provider_parses_indexed_vectors(monkeypatch: Any) -> None:
             }
 
     def fake_post(url: str, **kwargs: Any) -> FakeResponse:
+        """记录请求参数并返回模拟向量响应。"""
         captured["url"] = url
         captured.update(kwargs)
         return FakeResponse()
@@ -65,10 +70,14 @@ def test_embedding_provider_rejects_inconsistent_dimensions(monkeypatch: Any) ->
     """不同文本返回不同维度时应拒绝写入向量库。"""
 
     class FakeResponse:
+        """模拟维度不一致的向量响应。"""
+
         def raise_for_status(self) -> None:
+            """模拟成功响应的状态检查。"""
             return None
 
         def json(self) -> dict[str, Any]:
+            """返回维度不一致的向量结果。"""
             return {
                 "data": [
                     {"index": 0, "embedding": [0.1, 0.2]},
@@ -94,9 +103,12 @@ def test_embedding_batch_service_processes_missing_songs_in_batches(db_session: 
     db_session.flush()
 
     class FakeProvider:
+        """模拟批量向量供应商。"""
+
         is_configured = True
 
         def embed(self, texts: Sequence[str]) -> list[list[float]]:
+            """为每条输入返回固定二维向量。"""
             return [[float(index), 1.0] for index, _ in enumerate(texts)]
 
     service = EmbeddingBatchService(db_session, FakeProvider())

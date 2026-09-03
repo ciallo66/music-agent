@@ -16,6 +16,7 @@ class RecommendationService:
     """根据真实用户行为生成可解释推荐。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定推荐仓储，保证推荐逻辑不直接操作数据库查询。"""
         self.repository = RecommendationRepository(db)
 
     def record_play(self, user_id: int, song_id: int) -> None:

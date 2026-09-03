@@ -18,6 +18,7 @@ class LibraryRepository:
     """封装用户音乐库相关查询和写入。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定用户音乐库所需的数据库会话。"""
         self.db = db
 
     def list_playlists(self, user_id: int) -> list[tuple[Playlist, int]]:

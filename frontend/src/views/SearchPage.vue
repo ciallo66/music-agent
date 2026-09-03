@@ -1,3 +1,4 @@
+<!-- 搜索页面：提交关键词并展示可直接播放的结果列表。 -->
 <template>
   <section class="search-page">
     <PageHeader
@@ -85,6 +86,7 @@ const loading = ref(false)
 const searched = ref(false)
 const loadFailed = ref(false)
 
+// 提交非空关键词并保存最后一次查询，用于空结果提示。
 async function doSearch(): Promise<void> {
   const query = keyword.value.trim()
   if (!query || loading.value) return
@@ -104,11 +106,13 @@ async function doSearch(): Promise<void> {
   }
 }
 
+// 将推荐关键词写入输入框并复用统一搜索流程。
 async function searchSuggestion(suggestion: string): Promise<void> {
   keyword.value = suggestion
   await doSearch()
 }
 
+// 清除输入时同时重置结果和搜索状态。
 function resetSearch(): void {
   searched.value = false
   loadFailed.value = false
@@ -116,6 +120,7 @@ function resetSearch(): void {
   results.value = []
 }
 
+// 播放搜索结果并使用当前结果作为队列。
 function play(song: SongSummary): void {
   player.playSong(song)
   player.setQueue(results.value)

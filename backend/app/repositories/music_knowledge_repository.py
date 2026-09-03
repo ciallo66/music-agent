@@ -12,6 +12,7 @@ class MusicKnowledgeRepository:
     """封装音乐知识切片的只读检索。"""
 
     def __init__(self, db: Session) -> None:
+        """绑定知识库查询使用的数据库会话。"""
         self.db = db
 
     def search(self, query: str, limit: int) -> list[MusicKnowledge]:

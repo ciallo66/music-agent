@@ -53,6 +53,7 @@ def test_knowledge_search_falls_back_to_lexical_when_embedding_fails(
         """始终失败的测试服务。"""
 
         def embed(self, _texts: Sequence[str]) -> list[list[float]]:
+            """模拟向量服务不可用，验证关键词降级路径。"""
             raise EmbeddingProviderError("provider unavailable")
 
     result = MusicKnowledgeService(db_session, FailingProvider()).search("Ambient", 5)

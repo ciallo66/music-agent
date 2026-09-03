@@ -1,3 +1,4 @@
+// 将后端异常转换为统一、可理解的中文提示。
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 

@@ -1,3 +1,4 @@
+<!-- Agent 对话页面：展示流式回复、工具状态和可复用的提问入口。 -->
 <template>
   <section class="agent-page">
     <PageHeader
@@ -134,12 +135,14 @@ const hasPendingAssistant = computed(
   () => messages.value[messages.value.length - 1]?.role === 'assistant',
 )
 
+// 流式回复期间滚动到底部，保证用户始终看到最新内容。
 async function scrollToLatest(): Promise<void> {
   await nextTick()
   const element = conversationElement.value
   if (element !== null) element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
 }
 
+// 发送消息并消费 SSE；文本增量直接更新最后一条助手消息。
 async function sendMessage(): Promise<void> {
   const message = draft.value.trim()
   if (!message || loading.value) return
@@ -181,11 +184,13 @@ async function sendMessage(): Promise<void> {
   }
 }
 
+// 将快捷提问交给同一发送流程，保持行为一致。
 async function useStarterPrompt(message: string): Promise<void> {
   draft.value = message
   await sendMessage()
 }
 
+// 清空当前展示和会话 ID，下一次提问会创建新会话。
 function startNewConversation(): void {
   messages.value = []
   sessionId.value = null
@@ -193,6 +198,7 @@ function startNewConversation(): void {
   draft.value = ''
 }
 
+// Enter 发送、Shift+Enter 换行；输入法组合期间不抢占回车。
 function handleComposerKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
   event.preventDefault()

@@ -1,3 +1,4 @@
+<!-- 首页聚合入口：提供快捷操作和个性化推荐。 -->
 <template>
   <section class="home-page">
     <div class="hero page-surface">
@@ -116,6 +117,7 @@ const hotSongs = ref<RecommendationItem[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
 
+// 拉取推荐；失败时转为空状态，避免首页被异常打断。
 async function loadRecommendations(): Promise<void> {
   loading.value = true
   loadFailed.value = false
@@ -130,11 +132,13 @@ async function loadRecommendations(): Promise<void> {
   }
 }
 
+// 播放推荐歌曲，并将当前推荐结果设为播放队列。
 function play(song: RecommendationItem): void {
   player.playSong(song)
   player.setQueue(hotSongs.value)
 }
 
+// 跳转到歌曲详情页。
 async function goDetail(id: number): Promise<void> {
   await router.push(`/songs/${id}`)
 }

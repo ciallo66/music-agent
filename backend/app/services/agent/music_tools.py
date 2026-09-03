@@ -41,6 +41,7 @@ class MusicAgentTools:
     def __init__(
         self, db: Session, user_id: int, embedding_provider: EmbeddingProvider | None = None
     ) -> None:
+        """为当前用户装配只读音乐工具，并共享同一数据库会话。"""
         self.db = db
         self.songs = SongRepository(db)
         self.recommendations = RecommendationRepository(db)

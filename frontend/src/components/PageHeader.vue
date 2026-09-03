@@ -1,3 +1,4 @@
+<!-- 统一页面标题、说明和右侧操作区，避免页面重复实现头部布局。 -->
 <template>
   <header class="page-header">
     <div class="heading-copy">

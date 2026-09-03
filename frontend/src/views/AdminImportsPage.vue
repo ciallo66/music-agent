@@ -1,3 +1,4 @@
+<!-- 管理员导入任务页面：提交任务并轮询展示进度与失败原因。 -->
 <template>
   <div class="admin-imports-page">
     <PageHeader title="数据导入" subtitle="管理 Jamendo 音乐元数据导入任务">
@@ -126,6 +127,7 @@ const statusTypes: Record<ImportJobStatus, 'info' | 'warning' | 'success' | 'dan
   failed: 'danger',
 }
 
+// 拉取最近导入任务，并根据任务状态同步轮询定时器。
 async function loadJobs(): Promise<void> {
   loading.value = true
   try {
@@ -139,6 +141,7 @@ async function loadJobs(): Promise<void> {
   }
 }
 
+// 校验导入参数并创建后台任务，任务进度由轮询更新。
 async function createJob(): Promise<void> {
   submitting.value = true
   try {
@@ -153,6 +156,7 @@ async function createJob(): Promise<void> {
   }
 }
 
+// 仅在存在运行中任务时轮询，避免空闲页面持续请求。
 function syncPolling(): void {
   const hasActiveJob = jobs.value.some((job) => activeStatuses.has(job.status))
   if (hasActiveJob && refreshTimer.value === null) {
@@ -163,24 +167,29 @@ function syncPolling(): void {
   }
 }
 
+// 将已处理数量换算为 Element Plus 进度条百分比。
 function progress(job: ImportJobResponse): number {
   if (job.status === 'completed') return 100
   if (job.requested_limit <= 0) return 0
   return Math.min(99, Math.round((job.fetched / job.requested_limit) * 100))
 }
 
+// 将后端状态码转换为用户可读中文。
 function statusLabel(status: ImportJobStatus): string {
   return { pending: '等待中', running: '执行中', completed: '已完成', failed: '失败' }[status]
 }
 
+// 为不同任务状态选择一致的视觉语义。
 function statusTagType(status: ImportJobStatus): 'info' | 'warning' | 'success' | 'danger' {
   return statusTypes[status]
 }
 
+// 将 ISO 时间转换为本地化展示文本。
 function formatDate(value: string): string {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
+// 合并失败原因统计，减少表格中的重复信息。
 function failureSummary(job: ImportJobResponse): string {
   return Object.entries(job.failure_reasons)
     .map(([reason, count]) => `${reason}（${count}）`)

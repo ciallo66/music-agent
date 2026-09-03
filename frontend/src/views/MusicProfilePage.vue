@@ -1,3 +1,4 @@
+<!-- 音乐画像页面：将播放、收藏数据转换为统计卡片和趋势图。 -->
 <template>
   <section class="profile-page">
     <PageHeader title="我的音乐画像" subtitle="从你的播放和收藏记录里，看看自己真正偏爱的声音">
@@ -157,6 +158,7 @@ const artistChart = ref<HTMLDivElement | null>(null)
 const charts = shallowRef<ECharts[]>([])
 let resizeObserver: ResizeObserver | null = null
 
+// 将接口统计映射成统一卡片结构，模板无需关心字段来源。
 const stats = computed(() => {
   if (!profile.value) return []
   return [
@@ -166,6 +168,7 @@ const stats = computed(() => {
   ]
 })
 
+// 计算特征进度条的展示值和百分比，缺失值保持为空态。
 const features = computed(() => {
   const feature = profile.value?.feature_profile
   if (!feature) return []
@@ -193,6 +196,7 @@ const features = computed(() => {
   ]
 })
 
+// 加载画像；图表渲染放在数据更新后，避免读取空 DOM。
 async function loadProfile(): Promise<void> {
   loading.value = true
   errorMessage.value = ''
@@ -209,6 +213,7 @@ async function loadProfile(): Promise<void> {
   }
 }
 
+// 根据画像数据创建趋势、风格和歌手图表。
 function renderCharts(): void {
   disposeCharts()
   const data = profile.value
@@ -256,6 +261,7 @@ function renderCharts(): void {
   )
 }
 
+// 创建横向柱状图，统一处理颜色、排序和空数据。
 function createBarChart(
   element: HTMLDivElement | null,
   items: { name: string; count: number }[],
@@ -291,6 +297,7 @@ function createBarChart(
   charts.value.push(chart)
 }
 
+// 页面卸载或刷新前释放 ECharts 实例，避免重复监听和内存泄漏。
 function disposeCharts(): void {
   resizeObserver?.disconnect()
   resizeObserver = null
@@ -298,24 +305,29 @@ function disposeCharts(): void {
   charts.value = []
 }
 
+// 播放最近记录中的歌曲并设置最近播放队列。
 function play(song: SongSummary): void {
   player.playSong(song)
   if (profile.value) player.setQueue(profile.value.recent_plays.map((item) => item.song))
 }
 
+// 将统计值限制在进度条允许的 0~100 区间。
 function scale(value: number | null, max: number): number {
   if (value === null) return 0
   return Math.max(0, Math.min(100, (value / max) * 100))
 }
 
+// 格式化数值，缺失数据用统一占位符。
 function formatNumber(value: number | null): string {
   return value === null ? '—' : value.toFixed(1)
 }
 
+// 格式化比例为百分数。
 function formatPercent(value: number | null): string {
   return value === null ? '—' : `${Math.round(value * 100)}%`
 }
 
+// 将播放时间格式化为中文短日期。
 function formatDate(value: string): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime())

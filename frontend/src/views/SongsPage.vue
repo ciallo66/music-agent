@@ -1,3 +1,4 @@
+<!-- 音乐库页面：分页查询并按关键词、风格筛选歌曲。 -->
 <template>
   <section class="songs-page">
     <PageHeader
@@ -97,11 +98,13 @@ const keyword = ref('')
 const genre = ref('')
 const hasFilters = computed(() => keyword.value.trim().length > 0 || genre.value.length > 0)
 
+// 播放当前页歌曲，并保留列表顺序供上一首/下一首使用。
 function play(song: SongSummary): void {
   player.playSong(song)
   player.setQueue(songs.value)
 }
 
+// 按当前页和筛选条件查询歌曲；请求失败时展示可重试状态。
 async function loadSongs(): Promise<void> {
   loading.value = true
   loadFailed.value = false
@@ -124,11 +127,13 @@ async function loadSongs(): Promise<void> {
   }
 }
 
+// 筛选条件变化后回到第一页，避免新条件落在不存在的页码。
 async function applyFilters(): Promise<void> {
   page.value = 1
   await loadSongs()
 }
 
+// 清空筛选并重新加载完整目录。
 async function clearFilters(): Promise<void> {
   keyword.value = ''
   genre.value = ''

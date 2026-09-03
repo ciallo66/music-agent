@@ -1,3 +1,4 @@
+<!-- 受保护页面的主布局：侧边导航、内容区和全局播放器。 -->
 <template>
   <div class="app-layout" :class="{ 'has-player': player.currentSong }">
     <aside class="sidebar">
@@ -77,6 +78,7 @@ const auth = useAuthStore()
 const player = usePlayerStore()
 const router = useRouter()
 
+// 先撤销本地认证状态，再返回登录页。
 async function logout(): Promise<void> {
   await auth.logout()
   await router.push('/login')

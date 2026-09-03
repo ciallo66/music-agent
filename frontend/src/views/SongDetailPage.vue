@@ -1,3 +1,4 @@
+<!-- 歌曲详情页：展示音频特征、雷达图、歌词并处理收藏与播放。 -->
 <template>
   <section v-if="song" class="detail-page">
     <div class="song-header">
@@ -141,6 +142,7 @@ const activeLyricIndex = computed(() => {
   return activeIndex
 })
 
+// 加载详情后绘制特征图，再单独查询收藏状态；后者失败不阻断详情展示。
 async function load(): Promise<void> {
   loading.value = true
   try {
@@ -163,20 +165,24 @@ async function load(): Promise<void> {
   }
 }
 
+// 将 -60~0 dB 映射到雷达图使用的 0~100 区间并限制边界。
 function normalizeLoudness(value: number | null) {
   if (value === null) return 0
   return Math.min(100, Math.max(0, ((value + 60) / 60) * 100))
 }
 
+// 将 BPM 按 0~180 归一化，供不同量纲特征共用雷达图。
 function normalizeBpm(value: number | null) {
   if (value === null) return 0
   return Math.min(100, (value / 180) * 100)
 }
 
+// 从全局设计令牌读取图表颜色，保证 ECharts 与页面主题同步。
 function cssVariable(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
+// 将歌曲特征转换为雷达图配置；缺失值按 0 展示而不伪造数据。
 function renderRadar() {
   if (!song.value || !chartEl.value) return
   if (!chart) chart = echarts.init(chartEl.value)
@@ -232,10 +238,12 @@ function renderRadar() {
   })
 }
 
+// 页面尺寸变化时重算图表，避免容器变化导致绘制溢出。
 function onResize() {
   chart?.resize()
 }
 
+// 按当前状态调用收藏/取消收藏接口，并在成功后更新按钮状态。
 async function toggleFav() {
   if (!song.value) return
   try {
@@ -253,10 +261,12 @@ async function toggleFav() {
   }
 }
 
+// 将详情歌曲交给全局播放器。
 function playSong() {
   if (song.value) player.playSong(song.value)
 }
 
+// 点击歌词时确保歌曲已进入播放器，再跳转到对应时间。
 function seekLyric(time: number) {
   if (!song.value) return
   if (player.currentSong?.id !== song.value.id) player.playSong(song.value)

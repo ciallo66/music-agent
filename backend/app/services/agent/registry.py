@@ -32,6 +32,7 @@ class ToolRegistry:
     """管理 Agent 可调用工具，拒绝未注册工具。"""
 
     def __init__(self) -> None:
+        """初始化工具表；注册阶段完成后只按白名单名称调用。"""
         self._tools: dict[str, AgentTool] = {}
 
     def register(self, tool: AgentTool) -> None:

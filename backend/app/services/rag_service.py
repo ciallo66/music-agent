@@ -22,6 +22,7 @@ class MusicKnowledgeService:
     """编排知识库向量检索、阈值过滤和文本兜底。"""
 
     def __init__(self, db: Session, embedding_provider: EmbeddingProvider | None = None) -> None:
+        """注入知识库仓储和可选向量服务；未配置时保持可查询的降级路径。"""
         self.repository = MusicKnowledgeRepository(db)
         self.embedding_provider = embedding_provider
 

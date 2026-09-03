@@ -1,3 +1,4 @@
+<!-- 统一加载、空数据和错误状态，保证反馈文案与操作入口一致。 -->
 <template>
   <div class="state-panel" :class="`state-${type}`" role="status">
     <span v-if="type === 'loading'" class="spinner" aria-hidden="true"></span>

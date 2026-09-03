@@ -27,6 +27,7 @@ class ImportJobService:
     """编排导入任务的创建和查询。"""
 
     def __init__(self, db: Session) -> None:
+        """创建导入任务用例并注入仓储。"""
         self.jobs = ImportJobRepository(db)
 
     def create_jamendo_job(self, payload: JamendoImportRequest) -> ImportJobResponse:

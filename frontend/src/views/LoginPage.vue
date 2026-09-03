@@ -1,3 +1,4 @@
+<!-- 登录、注册和管理员入口共用表单，只切换认证模式与提示文案。 -->
 <template>
   <main class="login-page">
     <section class="brand-panel">
@@ -121,11 +122,13 @@ const submitLabel = computed(
   () => ({ login: '登录', register: '创建账号', admin: '管理员登录' })[mode.value],
 )
 
+// 切换认证模式，并清除旧模式遗留的校验提示。
 function changeMode(nextMode: Mode): void {
   mode.value = nextMode
   formRef.value?.clearValidate()
 }
 
+// 统一处理登录、注册和管理员登录，避免三套表单逻辑分叉。
 async function submit(): Promise<void> {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid || submitting.value) return
