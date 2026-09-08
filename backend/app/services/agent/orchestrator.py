@@ -77,14 +77,17 @@ class AgentOrchestrator:
             except LLMProviderError as error:
                 yield self._event(AgentEvent(type="error", content=str(error)))
                 return
+
             response = self._last_response
             if response is None:
                 yield self._event(AgentEvent(type="error", content="DeepSeek 未返回有效响应"))
                 return
+
             messages.append(self._assistant_message(response))
             if not response.tool_calls:
                 content = response.content or "模型没有返回文本。"
                 self.chat.add_message(self.session_id, "assistant", content)
+
                 if not self._streamed_content:
                     yield self._event(AgentEvent(type="content", content=content))
                 yield self._event(AgentEvent(type="end", content="分析完成"))

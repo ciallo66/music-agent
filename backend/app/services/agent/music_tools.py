@@ -1,32 +1,32 @@
 """音乐 Agent 的只读业务工具。"""
 
-from __future__ import annotations
+from __future__ import annotations  # 惯例：类型注解延迟求值（见 registry.py 说明）
 
-import logging
-from typing import Any
+import logging  # 标准库：打日志
+from typing import Any  # 类型提示：Any = 类型不限
 
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy import text  # 写原生 SQL（给查询设超时用）
+from sqlalchemy.exc import SQLAlchemyError  # 数据库出错的异常类型（用来捕获）
+from sqlalchemy.orm import Session  # 数据库会话类型（标注函数入参）
 
-from app.core.config import settings
-from app.models.song import Song
-from app.repositories.catalog_repository import SongRepository
-from app.repositories.recommendation_repository import RecommendationRepository
-from app.schemas.agent import (
-    KnowledgeSearchInput,
-    SearchSongsInput,
-    SimilarSongsInput,
-    SongIdInput,
+from app.core.config import settings  # 读 .env 配置（超时秒数、向量阈值等）
+from app.models.song import Song  # 歌曲"表"的模型（查询结果的类型）
+from app.repositories.catalog_repository import SongRepository  # 仓库：去数据库搜歌
+from app.repositories.recommendation_repository import RecommendationRepository  # 仓库：查用户口味
+from app.schemas.agent import (  # 工具的"入参校验器"：生成参数 schema + 校验模型传参
+    KnowledgeSearchInput,  # 知识问答工具的入参
+    SearchSongsInput,  # 搜歌工具的入参
+    SimilarSongsInput,  # 相似歌工具的入参
+    SongIdInput,  # 按歌曲 ID 查询的入参
 )
-from app.schemas.catalog import SongDetail, SongSummary
-from app.services.agent.registry import AgentTool, ToolRegistry
-from app.services.embedding_provider import (
-    EmbeddingProvider,
-    EmbeddingProviderError,
-    OpenAICompatibleEmbeddingProvider,
+from app.schemas.catalog import SongDetail, SongSummary  # 歌曲的"返回格式"（查询结果转成什么样）
+from app.services.agent.registry import AgentTool, ToolRegistry  # 工具格式 + 工具箱（登记用）
+from app.services.embedding_provider import (  # 生成"向量"的服务（相似歌/知识库要用）
+    EmbeddingProvider,  # 向量服务接口
+    EmbeddingProviderError,  # 向量服务异常
+    OpenAICompatibleEmbeddingProvider,  # 向量服务实现（真干活那个）
 )
-from app.services.rag_service import MusicKnowledgeService
+from app.services.rag_service import MusicKnowledgeService  # RAG 音乐知识库服务
 
 logger = logging.getLogger(__name__)
 
