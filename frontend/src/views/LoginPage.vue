@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { showError, showSuccess } from '../utils/feedback'
 
@@ -92,6 +92,7 @@ const modes: Array<{ value: Mode; label: string }> = [
 ]
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const mode = ref<Mode>('login')
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
@@ -142,7 +143,8 @@ async function submit(): Promise<void> {
     }
     await auth.login(form.username, form.password, mode.value === 'admin')
     showSuccess('登录成功')
-    await router.push('/')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    await router.push(redirect.startsWith('/') ? redirect : '/')
   } catch (error) {
     showError(error)
   } finally {

@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.repositories.recommendation_repository import RecommendationRepository
+from app.schemas.catalog import SongSummary
 from app.schemas.recommendation import RecommendationItem, RecommendationPage
 
 
@@ -25,8 +26,14 @@ class RecommendationService:
             raise SongNotFoundError
         self.repository.record_play(user_id, song_id)
 
-    def recommend(self, user_id: int, limit: int = 20) -> RecommendationPage:
-        """优先按偏好风格推荐，不足时使用热门歌曲兜底。"""
+    def recommend(self, user_id: int | None, limit: int = 20) -> RecommendationPage:
+        """登录用户按偏好推荐，游客直接使用热门歌曲兜底。"""
+        if user_id is None:
+            popular = self.repository.list_popular(set(), limit)
+            return RecommendationPage(
+                items=[self._item(song, "按平台热度推荐") for song in popular],
+                strategy="popular_fallback",
+            )
         excluded_ids = self.repository.engaged_song_ids(user_id)
         genres = self.repository.preferred_genres(user_id)
         profile = self.repository.feature_profile(user_id)
@@ -47,8 +54,8 @@ class RecommendationService:
     @staticmethod
     def _item(song: object, reason: str) -> RecommendationItem:
         """将歌曲 ORM 对象转换为带理由的推荐项。"""
-        item = RecommendationItem.model_validate(song, from_attributes=True)
-        return item.model_copy(update={"reason": reason})
+        song_summary = SongSummary.model_validate(song, from_attributes=True)
+        return RecommendationItem(**song_summary.model_dump(), reason=reason)
 
     @staticmethod
     def _content_reason(song: object, profile: dict[str, float]) -> str:

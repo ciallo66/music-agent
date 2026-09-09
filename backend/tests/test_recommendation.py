@@ -27,6 +27,23 @@ def test_recommendations_return_stable_empty_fallback(client: TestClient) -> Non
     assert response.json() == {"items": [], "strategy": "popular_fallback"}
 
 
+def test_recommendations_allow_anonymous_hot_fallback(
+    client: TestClient, db_session: Session
+) -> None:
+    """游客可以读取公开推荐，不应被个人推荐鉴权阻断。"""
+    artist = Artist(name="Public Artist")
+    db_session.add(artist)
+    db_session.flush()
+    db_session.add(Song(title="Public Song", artist_id=artist.id, popularity=10))
+    db_session.flush()
+
+    response = client.get("/api/v1/recommendations")
+
+    assert response.status_code == 200
+    assert response.json()["strategy"] == "popular_fallback"
+    assert response.json()["items"][0]["title"] == "Public Song"
+
+
 def test_record_play_validates_song_and_persists_record(
     client: TestClient, db_session: Session
 ) -> None:

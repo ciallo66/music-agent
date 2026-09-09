@@ -20,29 +20,38 @@ const router = createRouter({
           path: 'playlists',
           name: 'playlists',
           component: () => import('../views/PlaylistsPage.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'playlists/:id',
           name: 'playlist-detail',
           component: () => import('../views/PlaylistDetailPage.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'favorites',
           name: 'favorites',
           component: () => import('../views/FavoritesPage.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'profile',
           name: 'music-profile',
           component: () => import('../views/MusicProfilePage.vue'),
+          meta: { requiresAuth: true },
         },
         { path: 'search', name: 'search', component: () => import('../views/SearchPage.vue') },
-        { path: 'agent', name: 'agent', component: () => import('../views/AgentPage.vue') },
+        {
+          path: 'agent',
+          name: 'agent',
+          component: () => import('../views/AgentPage.vue'),
+          meta: { requiresAuth: true },
+        },
         {
           path: 'admin/imports',
           name: 'admin-imports',
           component: () => import('../views/AdminImportsPage.vue'),
-          meta: { requiresAdmin: true },
+          meta: { requiresAuth: true, requiresAdmin: true },
         },
       ],
     },
@@ -58,8 +67,8 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (!auth.initialized) await auth.initialize()
-  if (to.path !== '/login' && !auth.isAuthenticated) {
-    return '/login'
+  if (to.meta.requiresAuth === true && !auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.path === '/login' && auth.isAuthenticated) {
     return '/'

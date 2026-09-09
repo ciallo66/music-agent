@@ -35,6 +35,19 @@ def get_current_user(
         raise _unauthorized_error() from error
 
 
+def get_optional_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User | None:
+    """尝试读取当前用户；公开接口未登录时返回匿名状态。"""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+    try:
+        return AuthService(db).get_user_from_access_token(credentials.credentials)
+    except (AccountDisabledError, InvalidCredentialsError, UserNotFoundError):
+        return None
+
+
 def require_admin(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     """要求当前有效用户具备管理员角色。"""
     if current_user.role != UserRole.ADMIN.value:

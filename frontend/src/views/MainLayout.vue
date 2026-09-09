@@ -12,14 +12,36 @@
 
       <nav aria-label="主要导航">
         <p class="nav-label">发现音乐</p>
-        <router-link v-for="item in discoveryItems" :key="item.to" :to="item.to">
+        <router-link
+          v-for="item in discoveryItems"
+          :key="item.to"
+          :to="item.to"
+          :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+        >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
+          <span
+            v-if="item.requiresAuth && !auth.isAuthenticated"
+            class="nav-lock"
+            aria-hidden="true"
+            >🔒</span
+          >
         </router-link>
         <p class="nav-label">我的空间</p>
-        <router-link v-for="item in personalItems" :key="item.to" :to="item.to">
+        <router-link
+          v-for="item in personalItems"
+          :key="item.to"
+          :to="item.to"
+          :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+        >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
+          <span
+            v-if="item.requiresAuth && !auth.isAuthenticated"
+            class="nav-lock"
+            aria-hidden="true"
+            >🔒</span
+          >
         </router-link>
         <template v-if="auth.isAdmin">
           <p class="nav-label">管理</p>
@@ -39,7 +61,7 @@
             <strong>{{ auth.user.username }}</strong>
             <small>{{ auth.isAdmin ? '管理员' : '音乐探索者' }}</small>
           </span>
-          <button type="button" aria-label="退出登录" title="退出登录" @click="logout">↗</button>
+          <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
         </div>
       </div>
     </aside>
@@ -61,18 +83,19 @@ interface NavigationItem {
   to: string
   label: string
   icon: string
+  requiresAuth?: boolean
 }
 
 const discoveryItems: NavigationItem[] = [
   { to: '/', label: '首页', icon: '⌂' },
   { to: '/songs', label: '音乐库', icon: '♫' },
   { to: '/search', label: '搜索', icon: '⌕' },
-  { to: '/agent', label: 'AI 助手', icon: '✦' },
+  { to: '/agent', label: 'AI 助手', icon: '✦', requiresAuth: true },
 ]
 const personalItems: NavigationItem[] = [
-  { to: '/playlists', label: '我的歌单', icon: '▤' },
-  { to: '/favorites', label: '收藏', icon: '♡' },
-  { to: '/profile', label: '音乐画像', icon: '◫' },
+  { to: '/playlists', label: '我的歌单', icon: '▤', requiresAuth: true },
+  { to: '/favorites', label: '收藏', icon: '♡', requiresAuth: true },
+  { to: '/profile', label: '音乐画像', icon: '◫', requiresAuth: true },
 ]
 const auth = useAuthStore()
 const player = usePlayerStore()
@@ -202,6 +225,12 @@ nav a {
   text-decoration: none;
 }
 
+.nav-lock {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.72;
+}
+
 nav a:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.045);
@@ -282,13 +311,14 @@ nav a.router-link-exact-active .nav-icon {
 }
 
 .user-card button {
-  width: 30px;
+  width: 42px;
   height: 30px;
   border: 0;
   border-radius: 9px;
   color: var(--text-muted);
   background: transparent;
   cursor: pointer;
+  font-size: 10px;
 }
 
 .user-card button:hover {

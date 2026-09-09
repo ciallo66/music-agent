@@ -4,11 +4,13 @@
     <div class="hero page-surface">
       <div class="hero-copy">
         <p class="eyebrow">GOOD TO SEE YOU</p>
-        <h1>欢迎回来，{{ auth.user?.username }}</h1>
+        <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '发现下一首喜欢的歌' }}</h1>
         <p>从音乐库开始探索，或让 AI 根据你的播放与收藏记录给出更懂你的建议。</p>
         <div class="hero-actions">
           <router-link class="primary-link" to="/songs">探索音乐库 <span>→</span></router-link>
-          <router-link class="secondary-link" to="/agent">问问 AI 助手</router-link>
+          <router-link class="secondary-link" to="/agent">
+            {{ auth.user ? '问问 AI 助手' : '登录后问 AI' }}
+          </router-link>
         </div>
       </div>
       <div class="hero-orbit" aria-hidden="true">
@@ -22,23 +24,35 @@
         <p>QUICK ACCESS</p>
         <h2>快速开始</h2>
       </div>
-      <span>把常用功能放在触手可及的位置</span>
+      <span>{{
+        auth.user ? '把常用功能放在触手可及的位置' : '先浏览音乐，登录后解锁个人空间'
+      }}</span>
     </div>
     <div class="quick-actions">
-      <router-link v-for="item in quickActions" :key="item.to" :to="item.to" class="action-card">
+      <router-link
+        v-for="item in quickActions"
+        :key="item.to"
+        :to="item.to"
+        class="action-card"
+        :class="{ locked: item.requiresAuth && !auth.isAuthenticated }"
+        :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+      >
         <span class="action-icon" :class="item.tone" aria-hidden="true">{{ item.icon }}</span>
         <span class="action-copy"
           ><strong>{{ item.label }}</strong
           ><small>{{ item.description }}</small></span
         >
-        <span class="arrow" aria-hidden="true">→</span>
+        <span v-if="item.requiresAuth && !auth.isAuthenticated" class="lock-mark" aria-hidden="true"
+          >🔒</span
+        >
+        <span v-else class="arrow" aria-hidden="true">→</span>
       </router-link>
     </div>
 
     <div class="section-heading recommendation-heading">
       <div>
-        <p>MADE FOR YOU</p>
-        <h2>为你推荐</h2>
+        <p>{{ auth.user ? 'MADE FOR YOU' : 'POPULAR NOW' }}</p>
+        <h2>{{ auth.user ? '为你推荐' : '热门推荐' }}</h2>
       </div>
       <router-link to="/profile">查看音乐画像 →</router-link>
     </div>
@@ -103,11 +117,19 @@ const quickActions = [
   {
     to: '/playlists',
     label: '我的歌单',
-    description: '整理属于你的播放列表',
+    description: '登录后整理你的播放列表',
     icon: '▤',
     tone: 'purple',
+    requiresAuth: true,
   },
-  { to: '/favorites', label: '收藏', description: '重温你标记过的声音', icon: '♡', tone: 'rose' },
+  {
+    to: '/favorites',
+    label: '收藏',
+    description: '登录后重温你标记过的声音',
+    icon: '♡',
+    tone: 'rose',
+    requiresAuth: true,
+  },
   { to: '/search', label: '搜索', description: '快速定位歌曲与歌手', icon: '⌕', tone: 'blue' },
 ]
 const auth = useAuthStore()
@@ -403,6 +425,11 @@ onMounted(loadRecommendations)
 
 .arrow {
   color: var(--text-muted);
+}
+
+.lock-mark {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .action-card:hover .arrow {
