@@ -38,7 +38,16 @@ class Settings(BaseSettings):
     agent_response_token_budget: int = 2000
     agent_tool_result_max_chars: int = 12000
     agent_tool_timeout_seconds: float = 10.0
-    agent_max_tool_rounds: int = 5
+    # 工具调用轮数上限：仅作防事故保险丝，正常终止由无进展检测和时间预算决定。
+    agent_max_tool_rounds: int = 20
+    # 单次对话的时间预算，耗尽后走兜底收尾而不是报错。
+    agent_total_timeout_seconds: float = 90.0
+    # 连续出现完全相同的工具调用达到该次数，即判定模型在原地打转。
+    agent_no_progress_limit: int = 2
+    agent_tool_retry_max: int = 2
+    agent_tool_retry_backoff_seconds: float = 0.5
+    # 高风险工具调用的待确认有效期，超时后必须重新发起。
+    agent_confirmation_ttl_seconds: int = 600
 
     embedding_api_key: str = ""
     embedding_base_url: str = ""
@@ -82,6 +91,21 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_TIMEOUT_SECONDS 必须大于 0")
         if not 0 <= self.embedding_similarity_threshold <= 1:
             raise ValueError("EMBEDDING_SIMILARITY_THRESHOLD 必须在 0 到 1 之间")
+        return self
+
+    @model_validator(mode="after")
+    def validate_agent_limits(self) -> Settings:
+        """确保 Agent 兜底与工具重试配置有效。"""
+        if self.agent_total_timeout_seconds <= 0:
+            raise ValueError("AGENT_TOTAL_TIMEOUT_SECONDS 必须大于 0")
+        if self.agent_no_progress_limit <= 0:
+            raise ValueError("AGENT_NO_PROGRESS_LIMIT 必须大于 0")
+        if self.agent_tool_retry_max < 0:
+            raise ValueError("AGENT_TOOL_RETRY_MAX 不能小于 0")
+        if self.agent_tool_retry_backoff_seconds < 0:
+            raise ValueError("AGENT_TOOL_RETRY_BACKOFF_SECONDS 不能小于 0")
+        if self.agent_confirmation_ttl_seconds <= 0:
+            raise ValueError("AGENT_CONFIRMATION_TTL_SECONDS 必须大于 0")
         return self
 
     @model_validator(mode="after")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import httpx
 import pytest
 from app.models import Artist, Song
@@ -202,7 +204,7 @@ def test_import_service_is_idempotent(monkeypatch) -> None:
     monkeypatch.setattr(module, "ArtistRepository", FakeArtists)
     monkeypatch.setattr(module, "SongRepository", FakeSongs)
     track = JamendoTrack("1", "Song", "2", "Artist", None, "https://x", 1, None, None, {})
-    service = JamendoImportService(object())
+    service = JamendoImportService(cast(Session, object()))
     first = service.import_tracks([track])
     second = service.import_tracks([track])
     assert (first.created, first.updated) == (1, 0)

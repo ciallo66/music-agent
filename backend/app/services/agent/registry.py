@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
+
+
+class ToolOperation(str, Enum):
+    """工具的操作类型，供运行时安全策略判断。"""
+
+    READ = "read"
+    WRITE = "write"
+    DELETE = "delete"
 
 
 @dataclass(frozen=True)
@@ -15,6 +24,7 @@ class AgentTool:
     description: str
     parameters: dict[str, Any]
     handler: Callable[[dict[str, Any]], dict[str, Any]]
+    operation: ToolOperation = ToolOperation.READ
 
     def definition(self) -> dict[str, Any]:
         """转换为模型 API 使用的 function tool 定义。"""
@@ -40,6 +50,10 @@ class ToolRegistry:
         if tool.name in self._tools:
             raise ValueError(f"工具已注册：{tool.name}")
         self._tools[tool.name] = tool
+
+    def get(self, name: str) -> AgentTool | None:
+        """按名称返回工具定义；未注册时返回 None。"""
+        return self._tools.get(name)
 
     def call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """调用白名单工具。"""

@@ -11,6 +11,7 @@ from app.models.playlist import Playlist
 from app.models.refresh_session import RefreshSession
 from app.models.song import Song
 from app.models.tag import Tag
+from app.models.tool_confirmation import ToolConfirmation, ToolConfirmationStatus
 from app.models.user import User, UserRole, UserStatus
 
 __all__ = [
@@ -27,6 +28,8 @@ __all__ = [
     "Song",
     "SongTag",
     "Tag",
+    "ToolConfirmation",
+    "ToolConfirmationStatus",
     "MusicKnowledge",
     "User",
     "UserRole",

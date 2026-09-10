@@ -7,6 +7,22 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ToolConfirmationDecision(BaseModel):
+    """用户对单条待确认工具调用的决定。"""
+
+    confirmation_id: Annotated[int, Field(gt=0)]
+    approved: bool
+
+
+class ToolConfirmationRequest(BaseModel):
+    """提交待确认工具调用的处理结果。"""
+
+    session_id: Annotated[int, Field(gt=0)]
+    decisions: Annotated[list[ToolConfirmationDecision], Field(min_length=1)]
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class AgentMessage(BaseModel):
     """Agent 用户消息。"""
 
