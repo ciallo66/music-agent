@@ -25,6 +25,7 @@ EXPECTED_TABLES = {
     "song_tags",
     "songs",
     "tags",
+    "tool_confirmations",
     "users",
 }
 

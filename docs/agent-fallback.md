@@ -50,8 +50,10 @@
 | 不可重试（确定性） | `AgentToolError`、`KeyError`、`ValueError`（含 Pydantic `ValidationError`）、`EmbeddingProviderNotConfiguredError` | 不重试，**保留原始错误文本**交给模型修正参数 |
 | 未知 | 其它异常 | 不重试，记 `exception` 日志（带 `session_id`、工具名），对外统一降级 |
 
-**重试的安全前提**：当前 5 个工具全部是只读查询，重试没有副作用。若将来引入写操作工具，
-必须先把它们排除出重试范围，否则会重复执行。
+**重试的安全前提**：**只有只读工具才重试**，编排层直接按工具的操作类型判断
+（`_run_tool(..., allow_retry=tool.operation is ToolOperation.READ)`）。写操作（如
+`create_playlist`）失败不重试——重复执行会重复建数据；并且写操作的执行包在自己的保存点里，
+失败只回滚这一步，不污染本轮其它步骤。
 
 降级后的错误信息带区分度，不再是同一句话：
 

@@ -1,6 +1,6 @@
-# AI 音乐发现平台（music-agent）
+# AI 智能体工具（music-agent）
 
-多用户 AI 音乐平台：推荐引擎 + AI 辅助 + RAG 知识问答 + 播放/滚动歌词。
+多用户 AI 智能体工具：以音乐数据作为当前演示载体，提供工具调用、推荐分析、RAG 知识问答和可控播放。
 
 ## 技术栈
 - 后端：FastAPI + SQLAlchemy 2.0 + PostgreSQL + pgvector + DeepSeek API

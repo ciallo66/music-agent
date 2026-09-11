@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings==2.13.1",
     "python-dotenv==1.2.2",
     "httpx==0.28.1",
+    "ddgs==9.16.0",  # 联网搜索（DuckDuckGo），要求 Python >= 3.10
     "PyJWT==2.13.0",
     "pwdlib[argon2]==0.3.1",
 ]

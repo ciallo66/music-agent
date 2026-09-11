@@ -4,16 +4,16 @@
     <section class="brand-panel">
       <div class="brand-lockup">
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span><strong>Music Agent</strong><small>AI 音乐发现平台</small></span>
+        <span><strong>Music Agent</strong><small>AI 智能体工具</small></span>
       </div>
       <div class="brand-copy">
-        <p>DISCOVER YOUR SOUND</p>
-        <h1>让每一次播放，<br />更懂你的情绪。</h1>
-        <span>从音乐发现到个性化画像，用数据与 AI 帮你理解自己的声音偏好。</span>
+        <p>AI AGENT WORKSPACE</p>
+        <h1>让数据进入对话，<br />让智能体真正工作。</h1>
+        <span>音乐数据只是当前演示载体，智能体负责检索、分析和组织可解释的结果。</span>
       </div>
       <div class="feature-row">
-        <span><i>✦</i> AI 音乐助手</span><span><i>♫</i> 智能推荐</span
-        ><span><i>◫</i> 音乐画像</span>
+        <span><i>✦</i> AI 智能体</span><span><i>♫</i> 数据工具</span
+        ><span><i>◫</i> 可解释分析</span>
       </div>
       <div class="decor-record" aria-hidden="true"><span>♫</span></div>
     </section>

@@ -29,7 +29,8 @@ def _read_tool(counter: list[str]) -> AgentTool:
         counter.append("read")
         return {"items": [], "count": 0}
 
-    return AgentTool("list_songs", "列出歌曲。", {"type": "object", "properties": {}}, handler)
+    schema = {"type": "object", "properties": {"query": {"type": "string"}}}
+    return AgentTool("list_songs", "列出歌曲。", schema, handler)
 
 
 def _write_tool(counter: list[dict[str, Any]]) -> AgentTool:

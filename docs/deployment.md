@@ -1,6 +1,6 @@
 # Docker 部署说明
 
-本项目生产环境使用三个容器：PostgreSQL + pgvector、FastAPI、Nginx（同时提供 Vue 静态文件和 `/api` 反向代理）。模型通过 API 调用，不要求服务器具备 GPU。
+本项目生产环境使用三个容器：PostgreSQL + pgvector、FastAPI、Nginx（同时提供 Vue 静态文件和 `/api` 反向代理）。产品定位是 AI 智能体工具，音乐数据仅作为当前演示与知识载体；模型通过 API 调用，不要求服务器具备 GPU。
 
 ## 服务器准备
 

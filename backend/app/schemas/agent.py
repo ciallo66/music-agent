@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -71,3 +71,13 @@ class AgentEvent(BaseModel):
 
     type: str
     content: str
+
+
+class WebSearchInput(BaseModel):
+    """联网搜索工具参数。"""
+
+    query: Annotated[str, Field(min_length=1, max_length=200)]
+    limit: Annotated[int, Field(ge=1, le=8)] = 4
+    freshness: Literal["day", "week", "month", "year"] | None = None
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)

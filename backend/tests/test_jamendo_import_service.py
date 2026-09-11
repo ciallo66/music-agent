@@ -44,6 +44,21 @@ def test_normalize_track_maps_musicinfo() -> None:
     assert track.features["bpm"] == 120.0
 
 
+def test_normalize_track_does_not_store_download_url() -> None:
+    """只有在线播放地址可进入歌曲记录，避免暴露下载链接。"""
+    track = normalize_track(
+        {
+            "id": "43",
+            "name": "Stream only",
+            "artist_id": "8",
+            "artist_name": "Artist",
+            "audiodownload": "https://cdn.example/download.mp3",
+        }
+    )
+    assert track is not None
+    assert track.audio_url is None
+
+
 def test_normalize_track_skips_missing_identity() -> None:
     """缺少稳定外部 ID 的记录不能进入数据库。"""
     assert normalize_track({"id": "1", "name": "No artist"}) is None

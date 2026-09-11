@@ -169,7 +169,8 @@ def normalize_track_result(item: object) -> tuple[JamendoTrack | None, str | Non
         artist_source_id=artist_source_id,
         artist_name=artist_name,
         album=_text(item.get("album_name")),
-        audio_url=_text(item.get("audio")) or _text(item.get("audiodownload")),
+        # 只保存 Jamendo 提供的在线播放地址，不保存下载地址。
+        audio_url=_text(item.get("audio")),
         duration=_integer(item.get("duration")),
         genre=genre,
         avatar_url=_text(item.get("image")),

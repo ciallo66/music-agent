@@ -6,7 +6,7 @@
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>
           <strong>Music Agent</strong>
-          <small>AI 音乐发现平台</small>
+          <small>AI 智能体工具</small>
         </span>
       </router-link>
 
@@ -59,7 +59,7 @@
           }}</span>
           <span class="user-copy">
             <strong>{{ auth.user.username }}</strong>
-            <small>{{ auth.isAdmin ? '管理员' : '音乐探索者' }}</small>
+            <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
           </span>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
         </div>
@@ -67,7 +67,12 @@
     </aside>
 
     <main class="main-content">
-      <div class="content-frame"><router-view /></div>
+      <div class="content-frame">
+        <router-view />
+        <footer class="site-footer">
+          AI 智能体工具 · 音乐数据仅用于检索、分析与演示 · 不提供音乐下载或交易
+        </footer>
+      </div>
     </main>
     <GlobalPlayer />
   </div>
@@ -339,6 +344,14 @@ nav a.router-link-exact-active .nav-icon {
   max-width: var(--content-width);
   min-height: 100%;
   margin: 0 auto;
+}
+
+.site-footer {
+  padding: 18px var(--page-gutter) 28px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .has-player .main-content {

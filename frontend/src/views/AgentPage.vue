@@ -2,9 +2,9 @@
 <template>
   <section class="agent-page">
     <PageHeader
-      eyebrow="MUSIC INTELLIGENCE"
-      title="AI 音乐助手"
-      subtitle="结合音乐库与个人记录，用自然语言获得可解释的音乐建议"
+      eyebrow="AI AGENT WORKSPACE"
+      title="AI 智能体"
+      subtitle="调用音乐数据工具，完成检索、分析和可解释的知识问答"
     >
       <template #actions
         ><el-button v-if="messages.length" :disabled="loading" @click="startNewConversation"
@@ -16,11 +16,9 @@
     <div ref="conversationElement" class="conversation page-surface" aria-live="polite">
       <div v-if="messages.length === 0" class="welcome-state">
         <div class="assistant-mark" aria-hidden="true"><span>✦</span><i></i></div>
-        <p>AI MUSIC ASSISTANT</p>
-        <h2>今天想从音乐里发现什么？</h2>
-        <span
-          >我可以分析你的偏好、搜索音乐、解释推荐原因，并调用平台内已经接入的工具完成任务。</span
-        >
+        <p>AI AGENT</p>
+        <h2>今天想让智能体处理什么？</h2>
+        <span>我可以调用已接入的数据工具，检索资料、分析偏好并说明判断依据。</span>
         <div class="prompt-grid">
           <button
             v-for="prompt in starterPrompts"
@@ -42,19 +40,45 @@
             item.role === 'user' ? userInitial : '✦'
           }}</span>
           <div class="message">
-            <span class="role-label">{{ item.role === 'user' ? '你' : '音乐助手' }}</span>
+            <span class="role-label">{{ item.role === 'user' ? '你' : 'AI 智能体' }}</span>
             <p>{{ item.content }}</p>
           </div>
         </div>
         <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
           <span class="message-avatar" aria-hidden="true">✦</span>
           <div class="message">
-            <span class="role-label">音乐助手</span>
+            <span class="role-label">AI 智能体</span>
             <p class="typing"><i></i><i></i><i></i></p>
           </div>
         </div>
         <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
       </template>
+    </div>
+
+    <div v-if="awaitingConfirmation" class="confirmation-panel page-surface">
+      <div class="confirmation-head">
+        <span class="confirmation-badge">需要确认</span>
+        <div>
+          <strong>以下操作会修改数据，确认后才会执行</strong>
+          <small>执行前你可以拒绝，智能体会改用其它方式回答</small>
+        </div>
+      </div>
+      <ul class="confirmation-list">
+        <li v-for="item in pendingConfirmations" :key="item.confirmationId">
+          <span class="op-tag">{{ operationLabel(item.operation) }}</span>
+          <div class="confirmation-detail">
+            <strong>{{ item.name }}</strong>
+            <small v-if="item.reason">{{ item.reason }}</small>
+            <code>{{ formatArguments(item.arguments) }}</code>
+          </div>
+        </li>
+      </ul>
+      <div class="confirmation-actions">
+        <el-button :disabled="loading" @click="respondToConfirmations(false)">拒绝</el-button>
+        <el-button type="primary" :loading="loading" @click="respondToConfirmations(true)">
+          确认执行
+        </el-button>
+      </div>
     </div>
 
     <form class="composer page-surface" @submit.prevent="sendMessage">
@@ -65,7 +89,7 @@
         maxlength="2000"
         resize="none"
         placeholder="输入问题，例如：根据我的偏好推荐几首歌…"
-        :disabled="loading"
+        :disabled="loading || awaitingConfirmation"
         @keydown="handleComposerKeydown"
       />
       <div class="composer-footer">
@@ -74,7 +98,7 @@
           native-type="submit"
           type="primary"
           :loading="loading"
-          :disabled="draft.trim().length === 0"
+          :disabled="draft.trim().length === 0 || awaitingConfirmation"
         >
           {{ loading ? '分析中' : '发送' }} <span v-if="!loading" aria-hidden="true">↗</span>
         </el-button>
@@ -87,8 +111,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
-import { streamAgentChat } from '../api/agent'
-import type { AgentEvent } from '../types/agent'
+import { parseToolConfirmation, streamAgentChat, streamToolConfirmations } from '../api/agent'
+import type { AgentEvent, PendingToolConfirmation } from '../types/agent'
 import { showError } from '../utils/feedback'
 import { useAuthStore } from '../stores/auth'
 
@@ -129,11 +153,14 @@ const loading = ref(false)
 const messages = ref<Message[]>([])
 const sessionId = ref<number | null>(null)
 const toolStatus = ref('')
+const pendingConfirmations = ref<PendingToolConfirmation[]>([])
 const conversationElement = ref<HTMLElement | null>(null)
 const userInitial = computed(() => auth.user?.username.slice(0, 1).toUpperCase() || '你')
 const hasPendingAssistant = computed(
   () => messages.value[messages.value.length - 1]?.role === 'assistant',
 )
+// 有未确认的高风险操作时，先让用户处理完再继续对话。
+const awaitingConfirmation = computed(() => pendingConfirmations.value.length > 0)
 
 // 流式回复期间滚动到底部，保证用户始终看到最新内容。
 async function scrollToLatest(): Promise<void> {
@@ -142,46 +169,104 @@ async function scrollToLatest(): Promise<void> {
   if (element !== null) element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
 }
 
-// 发送消息并消费 SSE；文本增量直接更新最后一条助手消息。
-async function sendMessage(): Promise<void> {
-  const message = draft.value.trim()
-  if (!message || loading.value) return
-  messages.value.push({ role: 'user', content: message })
-  draft.value = ''
-  loading.value = true
-  toolStatus.value = ''
+// 创建一次流式消费的事件处理器，内部维护当前助手消息的位置。
+function createEventHandler(): {
+  handle: (event: AgentEvent) => void
+  ensureAssistantText: () => void
+} {
   let assistantIndex: number | null = null
-  await scrollToLatest()
-  try {
-    const returnedSessionId = await streamAgentChat({
-      message,
-      sessionId: sessionId.value,
-      onEvent: (event: AgentEvent) => {
-        if (event.type === 'tool') toolStatus.value = event.content
-        if (event.type === 'tool_error') toolStatus.value = `工具调用失败：${event.content}`
-        if (event.type === 'error') throw new Error(event.content)
-        if (event.type !== 'content' && event.type !== 'content_delta') return
-        if (assistantIndex === null)
-          assistantIndex = messages.value.push({ role: 'assistant', content: '' }) - 1
-        const assistantMessage = messages.value[assistantIndex]
-        if (event.type === 'content') {
-          if (assistantMessage.content.length === 0) assistantMessage.content = event.content
-        } else {
-          assistantMessage.content += event.content
-        }
-        void scrollToLatest()
-      },
-    })
-    if (returnedSessionId !== null) sessionId.value = returnedSessionId
+  const handle = (event: AgentEvent): void => {
+    if (event.type === 'tool') toolStatus.value = event.content
+    if (event.type === 'tool_error') toolStatus.value = `工具调用失败：${event.content}`
+    if (event.type === 'tool_rejected') toolStatus.value = '已按你的选择拒绝该操作'
+    if (event.type === 'confirmation_required') {
+      const pending = parseToolConfirmation(event.content)
+      if (pending !== null) {
+        pendingConfirmations.value.push(pending)
+        toolStatus.value = '有高风险操作等待你确认'
+      }
+      return
+    }
+    if (event.type === 'error') throw new Error(event.content)
+    if (event.type !== 'content' && event.type !== 'content_delta') return
+    if (assistantIndex === null)
+      assistantIndex = messages.value.push({ role: 'assistant', content: '' }) - 1
+    const assistantMessage = messages.value[assistantIndex]
+    if (event.type === 'content') {
+      if (assistantMessage.content.length === 0) assistantMessage.content = event.content
+    } else {
+      assistantMessage.content += event.content
+    }
+    void scrollToLatest()
+  }
+  const ensureAssistantText = (): void => {
     if (assistantIndex === null)
       messages.value.push({ role: 'assistant', content: '暂时没有分析结果，请换一种方式提问。' })
+  }
+  return { handle, ensureAssistantText }
+}
+
+// 消费一段 Agent 流，统一处理加载状态、会话 ID 和错误提示。
+async function consumeStream(
+  run: (onEvent: (event: AgentEvent) => void) => Promise<number | null>,
+  failureHint: string,
+): Promise<void> {
+  loading.value = true
+  toolStatus.value = ''
+  const { handle, ensureAssistantText } = createEventHandler()
+  await scrollToLatest()
+  try {
+    const returnedSessionId = await run(handle)
+    if (returnedSessionId !== null) sessionId.value = returnedSessionId
+    ensureAssistantText()
   } catch (error) {
-    showError(error, '助手暂时不可用，请稍后重试')
+    showError(error, failureHint)
   } finally {
     loading.value = false
     toolStatus.value = ''
     await scrollToLatest()
   }
+}
+
+// 发送消息并消费 SSE；文本增量直接更新最后一条助手消息。
+async function sendMessage(): Promise<void> {
+  const message = draft.value.trim()
+  if (!message || loading.value || awaitingConfirmation.value) return
+  messages.value.push({ role: 'user', content: message })
+  draft.value = ''
+  await consumeStream(
+    (onEvent) => streamAgentChat({ message, sessionId: sessionId.value, onEvent }),
+    '助手暂时不可用，请稍后重试',
+  )
+}
+
+// 提交用户对高风险操作的决定，并继续消费同一条 Agent 流。
+async function respondToConfirmations(approved: boolean): Promise<void> {
+  const currentSessionId = sessionId.value
+  if (currentSessionId === null || loading.value || !awaitingConfirmation.value) return
+  const decisions = pendingConfirmations.value.map((item) => ({
+    confirmationId: item.confirmationId,
+    approved,
+  }))
+  pendingConfirmations.value = []
+  messages.value.push({ role: 'user', content: approved ? '确认执行该操作' : '拒绝该操作' })
+  await consumeStream(
+    (onEvent) => streamToolConfirmations({ sessionId: currentSessionId, decisions, onEvent }),
+    '确认操作失败，请重试',
+  )
+}
+
+// 展示操作类型的中文标签。
+function operationLabel(operation: string): string {
+  if (operation === 'delete') return '删除'
+  if (operation === 'write') return '写入'
+  return '操作'
+}
+
+// 待确认参数只用于展示，截断过长内容避免撑破面板。
+function formatArguments(args: Record<string, unknown>): string {
+  const text = JSON.stringify(args)
+  return text.length > 160 ? `${text.slice(0, 160)}…` : text
 }
 
 // 将快捷提问交给同一发送流程，保持行为一致。
@@ -196,6 +281,7 @@ function startNewConversation(): void {
   sessionId.value = null
   toolStatus.value = ''
   draft.value = ''
+  pendingConfirmations.value = []
 }
 
 // Enter 发送、Shift+Enter 换行；输入法组合期间不抢占回车。
@@ -414,6 +500,89 @@ function handleComposerKeydown(event: KeyboardEvent): void {
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 12px var(--accent);
+}
+.confirmation-panel {
+  margin-top: 13px;
+  padding: 14px 16px;
+  border-color: rgba(232, 172, 96, 0.35);
+}
+.confirmation-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.confirmation-badge {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: 1px solid rgba(232, 172, 96, 0.45);
+  border-radius: 999px;
+  color: #e8ac60;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.confirmation-head strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+}
+.confirmation-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.confirmation-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.confirmation-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.op-tag {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: #e8ac60;
+  background: rgba(232, 172, 96, 0.13);
+  font-size: 9px;
+  font-weight: 800;
+}
+.confirmation-detail {
+  min-width: 0;
+}
+.confirmation-detail strong {
+  display: block;
+  color: var(--text);
+  font-size: 11px;
+}
+.confirmation-detail small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.confirmation-detail code {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  word-break: break-all;
+}
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 13px;
 }
 .composer {
   margin-top: 13px;

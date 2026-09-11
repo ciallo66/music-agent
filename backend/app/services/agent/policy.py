@@ -16,6 +16,13 @@ from app.services.agent.registry import AgentTool, ToolOperation
 # 这些字段代表"谁在操作"，只能由服务端根据登录态确定，禁止由模型填写。
 IDENTITY_ARGUMENT_KEYS = frozenset({"user_id", "owner_id", "account_id", "session_id"})
 
+# 操作类型的中文标签，用于给用户看的确认说明。
+OPERATION_LABELS = {
+    ToolOperation.READ: "读取",
+    ToolOperation.WRITE: "写入",
+    ToolOperation.DELETE: "删除",
+}
+
 
 class ToolDecision(str, Enum):
     """一次工具调用的处置结论。"""
@@ -56,4 +63,5 @@ def evaluate_tool_call(
         )
     if tool.operation is ToolOperation.READ or confirmed:
         return ToolPolicyResult(ToolDecision.ALLOW)
-    return ToolPolicyResult(ToolDecision.CONFIRM, f"{tool.operation.value} 操作需要用户确认")
+    label = OPERATION_LABELS.get(tool.operation, tool.operation.value)
+    return ToolPolicyResult(ToolDecision.CONFIRM, f"{label}操作需要用户确认")

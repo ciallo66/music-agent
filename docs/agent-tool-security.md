@@ -9,7 +9,8 @@
 ## 一、工具标记操作类型
 
 `AgentTool` 新增 `operation` 字段（`ToolOperation`：`READ` / `WRITE` / `DELETE`），
-**默认 `READ`**——现有 5 个工具全部是只读查询，注册代码无需改动。
+**默认 `READ`**——只读工具沿用默认值即可；写操作显式标注，例如 `create_playlist` 传入
+`ToolOperation.WRITE`，于是自动进入"需要用户确认"的流程，无需改动编排层。
 
 `definition()` 保持原样，**不把 operation 发给模型**：模型看到的信息和以前完全一致，
 操作类型只用于服务端运行时判定。
@@ -71,7 +72,9 @@
 - 接口级：按 `confirmation_id` 确认后才真正执行；
 - 接口级：用户拒绝时不执行，模型收到拒绝结果后继续作答；
 - 接口级：同一条确认记录重复提交返回 409；参数由服务端记录决定；
-- 接口级：参数带 `user_id` 时工具不执行，返回 `tool_error`。
+- 接口级：参数带 `user_id` 时工具不执行，返回 `tool_error`；
+- 接口级（真实写工具 `create_playlist`，`tests/test_agent_write_tool.py`）：确认前**不落库**、
+  确认后落库到**当前用户名下**、拒绝不落库、写操作失败**不重试**且只回滚自身。
 
 ## 六、未纳入本次范围
 

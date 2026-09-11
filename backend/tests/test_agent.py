@@ -41,7 +41,7 @@ def test_agent_chat_streams_expected_events(client: TestClient, monkeypatch: Any
             )
             return
         assert messages[-1]["role"] == "tool"
-        assert len(tools) == 5
+        assert len(tools) == 7
         yield ModelStreamUpdate(
             response=ModelResponse(content="你的偏好数据还不充分。", tool_calls=[])
         )

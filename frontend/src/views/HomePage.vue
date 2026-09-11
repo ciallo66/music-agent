@@ -4,12 +4,12 @@
     <div class="hero page-surface">
       <div class="hero-copy">
         <p class="eyebrow">GOOD TO SEE YOU</p>
-        <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '发现下一首喜欢的歌' }}</h1>
-        <p>从音乐库开始探索，或让 AI 根据你的播放与收藏记录给出更懂你的建议。</p>
+        <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '让智能体帮你理解数据' }}</h1>
+        <p>Music Agent 以音乐数据作为演示载体，帮助你检索、分析和获得可解释的 AI 建议。</p>
         <div class="hero-actions">
-          <router-link class="primary-link" to="/songs">探索音乐库 <span>→</span></router-link>
+          <router-link class="primary-link" to="/agent">使用 AI 智能体 <span>→</span></router-link>
           <router-link class="secondary-link" to="/agent">
-            {{ auth.user ? '问问 AI 助手' : '登录后问 AI' }}
+            {{ auth.user ? '继续对话' : '登录后使用' }}
           </router-link>
         </div>
       </div>
@@ -25,7 +25,7 @@
         <h2>快速开始</h2>
       </div>
       <span>{{
-        auth.user ? '把常用功能放在触手可及的位置' : '先浏览音乐，登录后解锁个人空间'
+        auth.user ? '把智能体和数据工具放在触手可及的位置' : '先了解工具，登录后使用智能体'
       }}</span>
     </div>
     <div class="quick-actions">
@@ -113,7 +113,13 @@ import { useAuthStore } from '../stores/auth'
 import { usePlayerStore } from '../stores/player'
 
 const quickActions = [
-  { to: '/songs', label: '音乐库', description: '浏览全部歌曲与音频特征', icon: '♫', tone: 'mint' },
+  {
+    to: '/songs',
+    label: '数据浏览',
+    description: '查看可供智能体调用的音乐数据',
+    icon: '♫',
+    tone: 'mint',
+  },
   {
     to: '/playlists',
     label: '我的歌单',

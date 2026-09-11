@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     # 高风险工具调用的待确认有效期，超时后必须重新发起。
     agent_confirmation_ttl_seconds: int = 600
 
+    web_search_enabled: bool = True
+    web_search_region: str = "cn-zh"
+    web_search_max_results: int = 5
+    web_search_timeout_seconds: int = 8
+
     embedding_api_key: str = ""
     embedding_base_url: str = ""
     embedding_model: str = ""
@@ -106,6 +111,15 @@ class Settings(BaseSettings):
             raise ValueError("AGENT_TOOL_RETRY_BACKOFF_SECONDS 不能小于 0")
         if self.agent_confirmation_ttl_seconds <= 0:
             raise ValueError("AGENT_CONFIRMATION_TTL_SECONDS 必须大于 0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_web_search(self) -> Settings:
+        """确保联网搜索配置有效。"""
+        if self.web_search_max_results <= 0:
+            raise ValueError("WEB_SEARCH_MAX_RESULTS 必须大于 0")
+        if self.web_search_timeout_seconds <= 0:
+            raise ValueError("WEB_SEARCH_TIMEOUT_SECONDS 必须大于 0")
         return self
 
     @model_validator(mode="after")
