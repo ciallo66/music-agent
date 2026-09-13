@@ -40,7 +40,11 @@ const router = createRouter({
           component: () => import('../views/MusicProfilePage.vue'),
           meta: { requiresAuth: true },
         },
-        { path: 'search', name: 'search', component: () => import('../views/SearchPage.vue') },
+        {
+          path: 'search',
+          name: 'search',
+          redirect: (to) => ({ name: 'songs', query: { q: to.query.q } }),
+        },
         {
           path: 'agent',
           name: 'agent',
@@ -52,6 +56,11 @@ const router = createRouter({
           name: 'admin-imports',
           component: () => import('../views/AdminImportsPage.vue'),
           meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
+          path: 'access-required',
+          name: 'access-required',
+          component: () => import('../views/AuthRequiredPage.vue'),
         },
       ],
     },
@@ -68,7 +77,13 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (!auth.initialized) await auth.initialize()
   if (to.meta.requiresAuth === true && !auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return {
+      name: 'access-required',
+      query: {
+        redirect: to.fullPath,
+        title: to.meta.requiresAdmin ? '登录后进入管理工作区' : undefined,
+      },
+    }
   }
   if (to.path === '/login' && auth.isAuthenticated) {
     return '/'

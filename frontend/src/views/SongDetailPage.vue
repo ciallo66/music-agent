@@ -1,4 +1,4 @@
-<!-- 歌曲详情页：展示音频特征、雷达图、歌词并处理收藏与播放。 -->
+<!-- 内容详情页：展示结构化特征、雷达图、歌词和收藏操作。 -->
 <template>
   <section v-if="song" class="detail-page">
     <div class="song-header">
@@ -11,7 +11,6 @@
           {{ song.bpm ? Math.round(song.bpm) + ' BPM' : '' }}
         </p>
         <div class="actions">
-          <el-button type="primary" @click="playSong">▶ 播放</el-button>
           <el-button @click="toggleFav">{{ isFav ? '已收藏' : '收藏' }}</el-button>
         </div>
       </div>
@@ -68,21 +67,9 @@
       <h3>歌曲结构</h3>
       <p class="structure-text">{{ song.song_structure }}</p>
     </div>
-    <div class="lyrics-section" v-if="song.lyrics">
-      <h3>歌词</h3>
-      <div v-if="lyricLines.length" class="lyrics-list">
-        <button
-          v-for="(line, index) in lyricLines"
-          :key="`${line.time}-${index}`"
-          class="lyric-line"
-          :class="{ active: activeLyricIndex === index }"
-          type="button"
-          @click="seekLyric(line.time)"
-        >
-          {{ line.text }}
-        </button>
-      </div>
-      <pre v-else class="lyrics-text">{{ song.lyrics }}</pre>
+    <div v-if="song.lyrics" class="notice-block">
+      <h3>文本字段</h3>
+      <p>文本内容不在平台直接展示，仅作为智能体分析的受控数据来源。</p>
     </div>
   </section>
   <section v-else class="detail-page">
@@ -108,15 +95,12 @@ import { LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
-import { usePlayerStore } from '../stores/player'
 import { showError, showSuccess } from '../utils/feedback'
-import { parseLrc } from '../utils/lyrics'
 import StatePanel from '../components/StatePanel.vue'
 
 echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const route = useRoute()
-const player = usePlayerStore()
 const song = ref<SongDetail | null>(null)
 const loading = ref(false)
 const isFav = ref(false)
@@ -129,18 +113,6 @@ const instruments = computed(() =>
     .map((item) => item.trim())
     .filter(Boolean),
 )
-
-const lyricLines = computed(() => parseLrc(song.value?.lyrics ?? ''))
-const activeLyricIndex = computed(() => {
-  if (!song.value || player.currentSong?.id !== song.value.id || lyricLines.value.length === 0) {
-    return -1
-  }
-  let activeIndex = -1
-  lyricLines.value.forEach((line, index) => {
-    if (line.time <= player.currentTime) activeIndex = index
-  })
-  return activeIndex
-})
 
 // 加载详情后绘制特征图，再单独查询收藏状态；后者失败不阻断详情展示。
 async function load(): Promise<void> {
@@ -259,18 +231,6 @@ async function toggleFav() {
   } catch (error) {
     showError(error, '收藏操作失败')
   }
-}
-
-// 将详情歌曲交给全局播放器。
-function playSong() {
-  if (song.value) player.playSong(song.value)
-}
-
-// 点击歌词时确保歌曲已进入播放器，再跳转到对应时间。
-function seekLyric(time: number) {
-  if (!song.value) return
-  if (player.currentSong?.id !== song.value.id) player.playSong(song.value)
-  player.seek(time)
 }
 
 onMounted(() => {

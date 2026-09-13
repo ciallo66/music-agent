@@ -1,10 +1,10 @@
-<!-- 歌单管理页面：查询、创建并进入用户歌单。 -->
+<!-- 内容集合页面：查询、创建并进入用户集合。 -->
 <template>
   <section class="playlists-page">
     <PageHeader
       eyebrow="COLLECTIONS"
-      title="我的歌单"
-      subtitle="把喜欢的歌曲整理成适合不同场景的专属播放列表"
+      title="我的空间"
+      subtitle="把关注的内容整理成适合不同场景的专属集合"
     >
       <template #actions
         ><el-button type="primary" @click="showCreate = true">＋ 新建歌单</el-button></template

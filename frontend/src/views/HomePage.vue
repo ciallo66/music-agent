@@ -5,7 +5,9 @@
       <div class="hero-copy">
         <p class="eyebrow">GOOD TO SEE YOU</p>
         <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '让智能体帮你理解数据' }}</h1>
-        <p>Music Agent 以音乐数据作为演示载体，帮助你检索、分析和获得可解释的 AI 建议。</p>
+        <p>
+          Agent Workspace 是一个可调用数据工具的 AI 工作区，帮助你检索、分析并获得可解释的建议。
+        </p>
         <div class="hero-actions">
           <router-link class="primary-link" to="/agent">使用 AI 智能体 <span>→</span></router-link>
           <router-link class="secondary-link" to="/agent">
@@ -14,7 +16,7 @@
         </div>
       </div>
       <div class="hero-orbit" aria-hidden="true">
-        <div class="record"><span>♫</span></div>
+        <div class="record"><span>✦</span></div>
         <i class="orbit-dot dot-one"></i><i class="orbit-dot dot-two"></i>
       </div>
     </div>
@@ -25,7 +27,7 @@
         <h2>快速开始</h2>
       </div>
       <span>{{
-        auth.user ? '把智能体和数据工具放在触手可及的位置' : '先了解工具，登录后使用智能体'
+        auth.user ? '把智能体和数据工具放在触手可及的位置' : '先了解工具，登录后解锁个人工作区'
       }}</span>
     </div>
     <div class="quick-actions">
@@ -54,17 +56,17 @@
         <p>{{ auth.user ? 'MADE FOR YOU' : 'POPULAR NOW' }}</p>
         <h2>{{ auth.user ? '为你推荐' : '热门推荐' }}</h2>
       </div>
-      <router-link to="/profile">查看音乐画像 →</router-link>
+      <router-link to="/profile">查看个人分析 →</router-link>
     </div>
     <div v-if="loading" class="recommendation-state page-surface">
       <StatePanel type="loading" title="正在生成推荐" message="结合你的偏好寻找合适的音乐" />
     </div>
     <div v-else-if="hotSongs.length" class="hot-grid">
-      <article
+      <router-link
         v-for="(song, index) in hotSongs"
         :key="song.id"
         class="hot-card page-surface"
-        @click="goDetail(song.id)"
+        :to="`/songs/${song.id}`"
       >
         <div class="hot-cover" :class="`tone-${index % 4}`">
           <span>{{ song.title.slice(0, 1) }}</span
@@ -79,8 +81,7 @@
             }}<template v-if="song.bpm"> · {{ Math.round(song.bpm) }} BPM</template>
           </p>
         </div>
-        <button type="button" :aria-label="`播放 ${song.title}`" @click.stop="play(song)">▶</button>
-      </article>
+      </router-link>
     </div>
     <div v-else class="recommendation-state page-surface">
       <StatePanel
@@ -89,14 +90,14 @@
         :message="
           loadFailed
             ? '检查服务状态后可以重新加载'
-            : '导入歌曲并产生播放记录后，这里会出现个性化推荐'
+            : '导入示例数据并产生互动记录后，这里会出现个性化推荐'
         "
       >
         <template #action>
           <el-button v-if="loadFailed" type="primary" @click="loadRecommendations"
             >重新加载</el-button
           >
-          <router-link v-else class="state-link" to="/songs">先去音乐库看看</router-link>
+          <router-link v-else class="state-link" to="/songs">先去内容数据看看</router-link>
         </template>
       </StatePanel>
     </div>
@@ -105,25 +106,23 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { listRecommendations } from '../api/recommendations'
 import StatePanel from '../components/StatePanel.vue'
 import type { RecommendationItem } from '../types/music'
 import { useAuthStore } from '../stores/auth'
-import { usePlayerStore } from '../stores/player'
 
 const quickActions = [
   {
     to: '/songs',
     label: '数据浏览',
-    description: '查看可供智能体调用的音乐数据',
-    icon: '♫',
+    description: '查看可供智能体调用的示例数据',
+    icon: '▦',
     tone: 'mint',
   },
   {
     to: '/playlists',
-    label: '我的歌单',
-    description: '登录后整理你的播放列表',
+    label: '我的空间',
+    description: '登录后整理你的内容集合',
     icon: '▤',
     tone: 'purple',
     requiresAuth: true,
@@ -139,8 +138,6 @@ const quickActions = [
   { to: '/search', label: '搜索', description: '快速定位歌曲与歌手', icon: '⌕', tone: 'blue' },
 ]
 const auth = useAuthStore()
-const router = useRouter()
-const player = usePlayerStore()
 const hotSongs = ref<RecommendationItem[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
@@ -158,17 +155,6 @@ async function loadRecommendations(): Promise<void> {
   } finally {
     loading.value = false
   }
-}
-
-// 播放推荐歌曲，并将当前推荐结果设为播放队列。
-function play(song: RecommendationItem): void {
-  player.playSong(song)
-  player.setQueue(hotSongs.value)
-}
-
-// 跳转到歌曲详情页。
-async function goDetail(id: number): Promise<void> {
-  await router.push(`/songs/${id}`)
 }
 
 onMounted(loadRecommendations)
@@ -453,7 +439,8 @@ onMounted(loadRecommendations)
   position: relative;
   min-width: 0;
   padding: 10px 10px 16px;
-  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
 }
 
 .hot-card:hover {
@@ -524,23 +511,6 @@ onMounted(loadRecommendations)
 .hot-info p {
   margin: 5px 0 0;
   color: var(--text-muted);
-  font-size: 10px;
-}
-
-.hot-card > button {
-  position: absolute;
-  right: 20px;
-  bottom: 18px;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: var(--text-on-accent);
-  background: var(--accent);
-  box-shadow: 0 8px 22px rgba(22, 186, 165, 0.23);
-  cursor: pointer;
   font-size: 10px;
 }
 

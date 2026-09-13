@@ -1,7 +1,7 @@
-<!-- 音乐画像页面：将播放、收藏数据转换为统计卡片和趋势图。 -->
+<!-- 个人画像页面：将历史互动与收藏数据转换为统计卡片和趋势图。 -->
 <template>
   <section class="profile-page">
-    <PageHeader title="我的音乐画像" subtitle="从你的播放和收藏记录里，看看自己真正偏爱的声音">
+    <PageHeader title="个人内容画像" subtitle="从你的历史互动和收藏记录里，了解内容偏好">
       <template #actions>
         <el-button :loading="loading" @click="loadProfile">刷新数据</el-button>
       </template>
@@ -45,7 +45,7 @@
               >{{ genre }}
             </span>
           </div>
-          <div v-else class="panel-empty">播放一些歌曲后，这里会出现你的风格偏好。</div>
+          <div v-else class="panel-empty">产生一些互动后，这里会出现你的内容偏好。</div>
           <div class="feature-list">
             <div v-for="feature in features" :key="feature.label" class="feature-row">
               <div class="feature-label">
@@ -63,12 +63,12 @@
           <div class="panel-heading">
             <div>
               <p class="panel-kicker">LAST 30 DAYS</p>
-              <h3>听歌趋势</h3>
+              <h3>互动趋势</h3>
             </div>
-            <span class="trend-total">{{ profile.total_plays }} 次播放</span>
+            <span class="trend-total">{{ profile.total_plays }} 次互动</span>
           </div>
           <div v-if="profile.play_trend.length" ref="trendChart" class="chart chart-trend"></div>
-          <div v-else class="chart-empty">还没有足够的播放记录生成趋势。</div>
+          <div v-else class="chart-empty">还没有足够的互动记录生成趋势。</div>
         </article>
       </div>
 
@@ -103,7 +103,7 @@
         <div class="panel-heading">
           <div>
             <p class="panel-kicker">RECENTLY PLAYED</p>
-            <h3>最近播放</h3>
+            <h3>最近互动</h3>
           </div>
           <router-link to="/songs" class="text-link">去发现更多 →</router-link>
         </div>
@@ -112,8 +112,6 @@
             v-for="item in profile.recent_plays"
             :key="`${item.song.id}-${item.played_at}`"
             class="recent-item"
-            type="button"
-            @click="play(item.song)"
           >
             <span class="song-cover">{{ item.song.title.slice(0, 1) }}</span>
             <span class="song-info">
@@ -122,10 +120,9 @@
             </span>
             <span class="song-genre">{{ item.song.genre || '未分类' }}</span>
             <time>{{ formatDate(item.played_at) }}</time>
-            <span class="play-mark" aria-hidden="true">▶</span>
           </button>
         </div>
-        <div v-else class="recent-empty">还没有播放记录，去音乐库播放第一首歌吧。</div>
+        <div v-else class="recent-empty">还没有互动记录，先浏览内容数据吧。</div>
       </article>
     </template>
   </section>
@@ -142,13 +139,10 @@ import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
 import { getMusicProfile } from '../api/profile'
 import type { MusicProfileResponse } from '../types/profile'
-import type { SongSummary } from '../types/music'
 import { showError } from '../utils/feedback'
-import { usePlayerStore } from '../stores/player'
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
-const player = usePlayerStore()
 const profile = ref<MusicProfileResponse | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -162,7 +156,7 @@ let resizeObserver: ResizeObserver | null = null
 const stats = computed(() => {
   if (!profile.value) return []
   return [
-    { label: '累计播放', value: profile.value.total_plays, icon: '◉' },
+    { label: '累计互动', value: profile.value.total_plays, icon: '◉' },
     { label: '听过歌曲', value: profile.value.unique_songs, icon: '♫' },
     { label: '收藏歌曲', value: profile.value.favorite_count, icon: '♡' },
   ]
@@ -303,12 +297,6 @@ function disposeCharts(): void {
   resizeObserver = null
   charts.value.forEach((chart) => chart.dispose())
   charts.value = []
-}
-
-// 播放最近记录中的歌曲并设置最近播放队列。
-function play(song: SongSummary): void {
-  player.playSong(song)
-  if (profile.value) player.setQueue(profile.value.recent_plays.map((item) => item.song))
 }
 
 // 将统计值限制在进度条允许的 0~100 区间。

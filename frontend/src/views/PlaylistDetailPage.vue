@@ -1,4 +1,4 @@
-<!-- 歌单详情页：展示歌单信息并复用歌曲列表播放歌曲。 -->
+<!-- 集合详情页：展示集合信息并复用信息列表查看条目。 -->
 <template>
   <section v-if="playlist" class="detail-page">
     <div class="page-header legacy-header">
@@ -14,7 +14,7 @@
       title="歌单里还没有歌曲"
       message="去音乐库添加一些歌曲吧"
     />
-    <SongList v-else :songs="playlist.songs" variant="playlist" @play="play" />
+    <SongList v-else :songs="playlist.songs" variant="playlist" />
   </section>
   <section v-else class="detail-page">
     <div class="state-surface page-surface">
@@ -38,14 +38,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPlaylist } from '../api/playlists'
-import type { PlaylistDetail, SongSummary } from '../types/music'
-import { usePlayerStore } from '../stores/player'
+import type { PlaylistDetail } from '../types/music'
 import { showError } from '../utils/feedback'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 const route = useRoute()
 const router = useRouter()
-const player = usePlayerStore()
 const playlist = ref<PlaylistDetail | null>(null)
 const loading = ref(false)
 // 读取歌单详情；失败时保留页面并显示返回/重试入口。
@@ -59,11 +57,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-}
-// 播放歌单歌曲，并按歌单顺序设置队列。
-function play(s: SongSummary) {
-  player.playSong(s)
-  if (playlist.value) player.setQueue(playlist.value.songs)
 }
 onMounted(load)
 </script>

@@ -9,32 +9,23 @@
       <span v-if="variant === 'catalog'">能量</span>
       <span v-if="variant === 'catalog'">愉悦度</span>
       <span v-if="variant === 'search'">BPM</span>
-      <span></span>
       <span v-if="variant === 'favorites'"></span>
     </div>
     <div
       v-for="(song, index) in songs"
       :key="song.id"
       class="song-row"
-      :class="{ current: player.currentSong?.id === song.id }"
-      role="button"
-      tabindex="0"
-      :aria-label="`播放 ${song.title}，歌手 ${song.artist.name}`"
-      @click="emit('play', song)"
-      @keydown.enter="emit('play', song)"
-      @keydown.space.prevent="emit('play', song)"
+      :aria-label="`查看 ${song.title}，歌手 ${song.artist.name}`"
     >
-      <span class="track-cell">
+      <router-link class="track-cell" :to="`/songs/${song.id}`">
         <span class="cover" aria-hidden="true">
           <span class="track-number">{{ String(index + 1).padStart(2, '0') }}</span>
-          <span class="playing-mark">{{ player.playing ? 'Ⅱ' : '▶' }}</span>
         </span>
         <span class="track-copy">
           <strong>{{ song.title }}</strong>
-          <small v-if="player.currentSong?.id === song.id">正在播放</small>
-          <small v-else>{{ song.language || '音乐曲目' }}</small>
+          <small>{{ song.language || '信息条目' }}</small>
         </span>
-      </span>
+      </router-link>
       <span class="artist">{{ song.artist.name }}</span>
       <span v-if="variant === 'playlist'" class="muted">{{ formatDuration(song.duration) }}</span>
       <span v-else class="muted">{{ song.genre || '-' }}</span>
@@ -47,14 +38,6 @@
       <span v-if="variant === 'catalog'" class="muted numeric">
         {{ song.valence !== null ? `${(song.valence * 100).toFixed(0)}%` : '-' }}
       </span>
-      <button
-        class="play-button"
-        type="button"
-        :aria-label="`播放 ${song.title}`"
-        @click.stop="emit('play', song)"
-      >
-        {{ player.currentSong?.id === song.id && player.playing ? 'Ⅱ' : '▶' }}
-      </button>
       <button
         v-if="variant === 'favorites'"
         class="remove-button"
@@ -69,7 +52,6 @@
 </template>
 
 <script setup lang="ts">
-import { usePlayerStore } from '../stores/player'
 import type { SongSummary } from '../types/music'
 
 type SongListVariant = 'catalog' | 'search' | 'favorites' | 'playlist'
@@ -79,10 +61,8 @@ const { songs, variant = 'catalog' } = defineProps<{
   variant?: SongListVariant
 }>()
 const emit = defineEmits<{
-  play: [song: SongSummary]
   remove: [songId: number]
 }>()
-const player = usePlayerStore()
 
 // 将歌曲时长格式化为列表展示文本。
 function formatDuration(duration: number | null): string {
@@ -116,30 +96,25 @@ function formatDuration(duration: number | null): string {
 .variant-catalog .song-row {
   grid-template-columns:
     minmax(220px, 2fr) minmax(120px, 1.2fr) minmax(90px, 0.8fr)
-    64px 68px 68px 38px;
+    64px 68px 68px;
 }
 
 .variant-search .song-row {
-  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) minmax(90px, 0.8fr) 64px 38px;
+  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) minmax(90px, 0.8fr) 64px;
 }
 
 .variant-favorites .song-row {
-  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) minmax(90px, 0.8fr) 38px 38px;
+  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) minmax(90px, 0.8fr) 38px;
 }
 
 .variant-playlist .song-row {
-  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) 70px 38px;
+  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) 70px;
 }
 
 .song-row:not(.header):hover {
   border-color: var(--border);
   background: linear-gradient(100deg, rgba(110, 231, 210, 0.09), rgba(169, 162, 255, 0.07));
   transform: translateY(-1px);
-}
-
-.song-row.current {
-  border-color: rgba(110, 231, 210, 0.24);
-  background: linear-gradient(100deg, rgba(110, 231, 210, 0.14), rgba(112, 183, 255, 0.08));
 }
 
 .song-row.header {
@@ -156,6 +131,8 @@ function formatDuration(duration: number | null): string {
   min-width: 0;
   align-items: center;
   gap: 12px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .cover {
@@ -171,20 +148,6 @@ function formatDuration(duration: number | null): string {
   background: linear-gradient(145deg, rgba(110, 231, 210, 0.26), rgba(169, 162, 255, 0.26));
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-}
-
-.playing-mark {
-  display: none;
-  color: var(--accent-strong);
-  font-size: 11px;
-}
-
-.current .track-number {
-  display: none;
-}
-
-.current .playing-mark {
-  display: inline;
 }
 
 .track-copy {
@@ -211,11 +174,6 @@ function formatDuration(duration: number | null): string {
   font-size: 10px;
 }
 
-.current .track-copy strong,
-.current .track-copy small {
-  color: var(--accent-strong);
-}
-
 .artist,
 .muted {
   overflow: hidden;
@@ -229,7 +187,6 @@ function formatDuration(duration: number | null): string {
   font-variant-numeric: tabular-nums;
 }
 
-.play-button,
 .remove-button {
   display: grid;
   width: 31px;
@@ -237,19 +194,6 @@ function formatDuration(duration: number | null): string {
   place-items: center;
   border-radius: 50%;
   cursor: pointer;
-}
-
-.play-button {
-  border: 0;
-  color: var(--text-on-accent);
-  background: var(--accent);
-  box-shadow: 0 7px 18px rgba(22, 186, 165, 0.18);
-  font-size: 10px;
-}
-
-.play-button:hover {
-  background: var(--accent-strong);
-  transform: scale(1.06);
 }
 
 .remove-button {
@@ -267,7 +211,7 @@ function formatDuration(duration: number | null): string {
 
 @media (max-width: 860px) {
   .variant-catalog .song-row {
-    grid-template-columns: minmax(190px, 2fr) minmax(110px, 1fr) minmax(80px, 0.8fr) 38px;
+    grid-template-columns: minmax(190px, 2fr) minmax(110px, 1fr) minmax(80px, 0.8fr);
   }
 
   .variant-catalog .song-row > :nth-child(4),
@@ -303,17 +247,17 @@ function formatDuration(duration: number | null): string {
   .variant-catalog .song-row,
   .variant-search .song-row,
   .variant-playlist .song-row {
-    grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .variant-catalog .song-row > :not(.track-cell):not(.play-button),
-  .variant-search .song-row > :not(.track-cell):not(.play-button),
-  .variant-playlist .song-row > :not(.track-cell):not(.play-button) {
+  .variant-catalog .song-row > :not(.track-cell),
+  .variant-search .song-row > :not(.track-cell),
+  .variant-playlist .song-row > :not(.track-cell) {
     display: none;
   }
 
   .variant-favorites .song-row {
-    grid-template-columns: minmax(0, 1fr) 36px 36px;
+    grid-template-columns: minmax(0, 1fr) 36px;
   }
 
   .variant-favorites .artist {

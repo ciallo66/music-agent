@@ -1,17 +1,17 @@
 <!-- 受保护页面的主布局：侧边导航、内容区和全局播放器。 -->
 <template>
-  <div class="app-layout" :class="{ 'has-player': player.currentSong }">
+  <div class="app-layout">
     <aside class="sidebar">
       <router-link class="brand" to="/" aria-label="返回首页">
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>
-          <strong>Music Agent</strong>
-          <small>AI 智能体工具</small>
+          <strong>Agent Workspace</strong>
+          <small>AI 智能体工作区</small>
         </span>
       </router-link>
 
       <nav aria-label="主要导航">
-        <p class="nav-label">发现音乐</p>
+        <p class="nav-label">工作区</p>
         <router-link
           v-for="item in discoveryItems"
           :key="item.to"
@@ -27,7 +27,7 @@
             >🔒</span
           >
         </router-link>
-        <p class="nav-label">我的空间</p>
+        <p class="nav-label">个人空间</p>
         <router-link
           v-for="item in personalItems"
           :key="item.to"
@@ -68,20 +68,26 @@
 
     <main class="main-content">
       <div class="content-frame">
+        <div class="workspace-toolbar">
+          <form class="quick-search" role="search" @submit.prevent="submitSearch">
+            <span aria-hidden="true">⌕</span>
+            <input v-model="quickSearch" type="search" placeholder="搜索内容、来源或标签" />
+            <kbd>Enter</kbd>
+          </form>
+          <span class="toolbar-hint">示例数据 · 可检索、可分析</span>
+        </div>
         <router-view />
         <footer class="site-footer">
-          AI 智能体工具 · 音乐数据仅用于检索、分析与演示 · 不提供音乐下载或交易
+          AI 智能体工作区 · 示例数据仅用于检索、分析与演示 · 不提供内容下载或交易
         </footer>
       </div>
     </main>
-    <GlobalPlayer />
   </div>
 </template>
 
 <script setup lang="ts">
-import GlobalPlayer from '../components/GlobalPlayer.vue'
+import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { usePlayerStore } from '../stores/player'
 import { useRouter } from 'vue-router'
 
 interface NavigationItem {
@@ -93,18 +99,22 @@ interface NavigationItem {
 
 const discoveryItems: NavigationItem[] = [
   { to: '/', label: '首页', icon: '⌂' },
-  { to: '/songs', label: '音乐库', icon: '♫' },
-  { to: '/search', label: '搜索', icon: '⌕' },
+  { to: '/songs', label: '内容数据', icon: '▦' },
   { to: '/agent', label: 'AI 助手', icon: '✦', requiresAuth: true },
 ]
 const personalItems: NavigationItem[] = [
-  { to: '/playlists', label: '我的歌单', icon: '▤', requiresAuth: true },
+  { to: '/playlists', label: '我的空间', icon: '▤', requiresAuth: true },
   { to: '/favorites', label: '收藏', icon: '♡', requiresAuth: true },
-  { to: '/profile', label: '音乐画像', icon: '◫', requiresAuth: true },
+  { to: '/profile', label: '个人分析', icon: '◫', requiresAuth: true },
 ]
 const auth = useAuthStore()
-const player = usePlayerStore()
 const router = useRouter()
+const quickSearch = ref('')
+
+async function submitSearch(): Promise<void> {
+  const query = quickSearch.value.trim()
+  await router.push({ name: 'songs', query: query ? { q: query } : undefined })
+}
 
 // 先撤销本地认证状态，再返回登录页。
 async function logout(): Promise<void> {
@@ -339,6 +349,55 @@ nav a.router-link-exact-active .nav-icon {
   scrollbar-gutter: stable;
 }
 
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px var(--page-gutter) 0;
+}
+
+.quick-search {
+  display: flex;
+  width: min(100%, 430px);
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-muted);
+}
+
+.quick-search:focus-within {
+  border-color: rgba(110, 231, 210, 0.55);
+  box-shadow: 0 0 0 3px rgba(110, 231, 210, 0.08);
+}
+
+.quick-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+
+.quick-search kbd {
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.toolbar-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
 .content-frame {
   width: 100%;
   max-width: var(--content-width);
@@ -352,10 +411,6 @@ nav a.router-link-exact-active .nav-icon {
   font-size: 11px;
   line-height: 1.6;
   text-align: center;
-}
-
-.has-player .main-content {
-  padding-bottom: 82px;
 }
 
 @media (max-width: 800px) {
@@ -415,8 +470,17 @@ nav a.router-link-exact-active .nav-icon {
     height: calc(100vh - 93px);
   }
 
-  .has-player .main-content {
-    padding-bottom: 110px;
+  .workspace-toolbar {
+    display: block;
+    padding-top: 12px;
+  }
+
+  .quick-search {
+    width: 100%;
+  }
+
+  .toolbar-hint {
+    display: none;
   }
 }
 </style>

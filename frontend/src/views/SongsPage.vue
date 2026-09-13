@@ -1,10 +1,10 @@
-<!-- 音乐库页面：分页查询并按关键词、风格筛选歌曲。 -->
+<!-- 内容数据页面：分页查询并按关键词、分类筛选条目。 -->
 <template>
   <section class="songs-page">
     <PageHeader
       eyebrow="LIBRARY"
-      title="音乐库"
-      subtitle="按歌曲、歌手与风格浏览音乐，音频特征让每次发现更有依据"
+      title="内容数据"
+      subtitle="按标题、来源与标签浏览示例内容，结构化特征让每次检索更有依据"
     >
       <template #actions>
         <div class="filters">
@@ -52,7 +52,7 @@
         >
       </StatePanel>
     </div>
-    <SongList v-else :songs="songs" variant="catalog" @play="play" />
+    <SongList v-else :songs="songs" variant="catalog" />
 
     <div v-if="total > pageSize" class="pagination">
       <el-pagination
@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { usePlayerStore } from '../stores/player'
+import { useRoute } from 'vue-router'
 import { listSongs, type SongSummary } from '../api/songs'
 import { showError } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
@@ -88,7 +88,6 @@ const genres = [
   'Folk',
   'Metal',
 ]
-const player = usePlayerStore()
 const songs = ref<SongSummary[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
@@ -97,12 +96,7 @@ const total = ref(0)
 const keyword = ref('')
 const genre = ref('')
 const hasFilters = computed(() => keyword.value.trim().length > 0 || genre.value.length > 0)
-
-// 播放当前页歌曲，并保留列表顺序供上一首/下一首使用。
-function play(song: SongSummary): void {
-  player.playSong(song)
-  player.setQueue(songs.value)
-}
+const route = useRoute()
 
 // 按当前页和筛选条件查询歌曲；请求失败时展示可重试状态。
 async function loadSongs(): Promise<void> {
@@ -140,7 +134,10 @@ async function clearFilters(): Promise<void> {
   await applyFilters()
 }
 
-onMounted(loadSongs)
+onMounted(() => {
+  keyword.value = typeof route.query.q === 'string' ? route.query.q : ''
+  loadSongs()
+})
 </script>
 
 <style scoped>

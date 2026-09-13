@@ -132,7 +132,6 @@ class SongSummary(BaseModel):
     genre: str | None
     language: str | None
     duration: int | None
-    audio_url: str | None
     popularity: int
     bpm: float | None
     music_key: str | None

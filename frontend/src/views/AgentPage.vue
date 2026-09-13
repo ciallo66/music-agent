@@ -4,7 +4,7 @@
     <PageHeader
       eyebrow="AI AGENT WORKSPACE"
       title="AI 智能体"
-      subtitle="调用音乐数据工具，完成检索、分析和可解释的知识问答"
+      subtitle="调用已接入的数据工具，完成检索、分析和可解释的知识问答"
     >
       <template #actions
         ><el-button v-if="messages.length" :disabled="loading" @click="startNewConversation"
@@ -130,9 +130,9 @@ const starterPrompts = [
   },
   {
     icon: '♫',
-    title: '发现新音乐',
-    description: '按我的喜好推荐歌曲',
-    message: '根据我的播放和收藏记录，推荐一些我可能喜欢的歌曲。',
+    title: '发现相关内容',
+    description: '按我的偏好寻找内容',
+    message: '根据我的互动和收藏记录，推荐一些我可能感兴趣的内容。',
   },
   {
     icon: '☾',

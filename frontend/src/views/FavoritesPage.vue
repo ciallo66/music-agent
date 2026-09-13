@@ -1,4 +1,4 @@
-<!-- 收藏页面：加载用户收藏并复用歌曲列表进行播放或取消收藏。 -->
+<!-- 收藏页面：加载用户收藏并复用信息列表进行查看或取消收藏。 -->
 <template>
   <section class="fav-page">
     <PageHeader
@@ -21,19 +21,17 @@
         >
       </StatePanel>
     </div>
-    <SongList v-else :songs="favSongs" variant="favorites" @play="play" @remove="remove" />
+    <SongList v-else :songs="favSongs" variant="favorites" @remove="remove" />
   </section>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { listFavorites, removeFavorite } from '../api/favorites'
-import { getSong, type SongDetail, type SongSummary } from '../api/songs'
-import { usePlayerStore } from '../stores/player'
+import { getSong, type SongDetail } from '../api/songs'
 import { showError, showSuccess } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
-const player = usePlayerStore()
 const favSongs = ref<SongDetail[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
@@ -68,11 +66,6 @@ async function remove(id: number) {
   } catch (error) {
     showError(error, '取消收藏失败')
   }
-}
-// 播放收藏歌曲并使用收藏顺序作为队列。
-function play(s: SongSummary) {
-  player.playSong(s)
-  player.setQueue(favSongs.value)
 }
 onMounted(load)
 </script>

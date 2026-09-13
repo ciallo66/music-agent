@@ -68,11 +68,15 @@ docker compose logs -f backend
 
 ## 更新版本
 
-第一版建议手动更新，确认稳定后再接 GitHub Actions：
+### GitHub Actions + GHCR
+
+仓库中的 GitHub Actions 会在推送 `master` 后构建并推送两个镜像到 GHCR；服务器配置 `BACKEND_IMAGE`、`FRONTEND_IMAGE` 和 `FRONTEND_PORT=8080` 后执行 `docker compose pull` 与 `docker compose up -d`，由现有 Nginx 反向代理到 8080。
+
+服务器使用镜像更新：
 
 ```bash
-git pull --ff-only
-docker compose --env-file .env.production up -d --build
+docker compose --env-file .env.production pull
+docker compose --env-file .env.production up -d
 ```
 
 不要把 `.env.production`、API Key、数据库密码提交到 GitHub。后续 CI/CD 使用 GitHub Secrets 或服务器专用部署密钥。

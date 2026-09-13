@@ -13,6 +13,7 @@ export interface SongSummary {
   genre: string | null
   language: string | null
   duration: number | null
+  /** 后端兼容字段；前端不展示、不调用音频资源。 */
   audio_url: string | null
   popularity: number
   bpm: number | null

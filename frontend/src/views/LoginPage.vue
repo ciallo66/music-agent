@@ -4,18 +4,18 @@
     <section class="brand-panel">
       <div class="brand-lockup">
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span><strong>Music Agent</strong><small>AI 智能体工具</small></span>
+        <span><strong>Agent Workspace</strong><small>AI 智能体工作区</small></span>
       </div>
       <div class="brand-copy">
         <p>AI AGENT WORKSPACE</p>
         <h1>让数据进入对话，<br />让智能体真正工作。</h1>
-        <span>音乐数据只是当前演示载体，智能体负责检索、分析和组织可解释的结果。</span>
+        <span>当前数据仅用于演示，智能体负责检索、分析和组织可解释的结果。</span>
       </div>
       <div class="feature-row">
-        <span><i>✦</i> AI 智能体</span><span><i>♫</i> 数据工具</span
+        <span><i>✦</i> AI 智能体</span><span><i>▦</i> 数据工具</span
         ><span><i>◫</i> 可解释分析</span>
       </div>
-      <div class="decor-record" aria-hidden="true"><span>♫</span></div>
+      <div class="decor-record" aria-hidden="true"><span>✦</span></div>
     </section>
 
     <section class="auth-panel">
@@ -109,13 +109,13 @@ const rules: FormRules = {
 }
 const panelTitle = computed(
   () =>
-    ({ login: '继续探索音乐', register: '创建你的音乐空间', admin: '进入管理控制台' })[mode.value],
+    ({ login: '继续使用智能体', register: '创建你的工作区', admin: '进入管理控制台' })[mode.value],
 )
 const panelDescription = computed(
   () =>
     ({
-      login: '登录后继续你的音乐旅程',
-      register: '注册后即可收藏、建歌单并生成个人画像',
+      login: '登录后继续使用个人工作区',
+      register: '注册后即可保存偏好、整理内容并生成个人分析',
       admin: '仅限拥有管理员权限的账号使用',
     })[mode.value],
 )

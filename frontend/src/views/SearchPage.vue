@@ -1,9 +1,9 @@
-<!-- 搜索页面：提交关键词并展示可直接播放的结果列表。 -->
+<!-- 搜索页面：提交关键词并展示可查看详情的结果列表。 -->
 <template>
   <section class="search-page">
     <PageHeader
       eyebrow="DISCOVER"
-      title="搜索音乐"
+      title="搜索内容"
       subtitle="输入歌曲名、歌手或关键词，快速定位想听的声音"
     />
     <form class="search-panel page-surface" @submit.prevent="doSearch">
@@ -30,7 +30,7 @@
       <div class="guide-copy">
         <p>SEARCH YOUR SOUND</p>
         <h2>从一个关键词开始</h2>
-        <span>可以搜索歌曲名称、歌手名称，结果支持直接播放并加入当前队列。</span>
+        <span>可以搜索标题、来源和标签，结果可进入详情页查看结构化信息。</span>
         <div class="suggestions">
           <button
             v-for="suggestion in suggestions"
@@ -63,7 +63,7 @@
       <div class="result-heading">
         <strong>搜索结果</strong><span>共 {{ results.length }} 首</span>
       </div>
-      <SongList :songs="results" variant="search" @play="play" />
+      <SongList :songs="results" variant="search" />
     </div>
   </section>
 </template>
@@ -71,14 +71,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { listSongs, type SongSummary } from '../api/songs'
-import { usePlayerStore } from '../stores/player'
 import { showError } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 
 const suggestions = ['流行', '摇滚', '爵士', '电子']
-const player = usePlayerStore()
 const keyword = ref('')
 const lastKeyword = ref('')
 const results = ref<SongSummary[]>([])
@@ -118,12 +116,6 @@ function resetSearch(): void {
   loadFailed.value = false
   lastKeyword.value = ''
   results.value = []
-}
-
-// 播放搜索结果并使用当前结果作为队列。
-function play(song: SongSummary): void {
-  player.playSong(song)
-  player.setQueue(results.value)
 }
 </script>
 
