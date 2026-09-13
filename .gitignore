@@ -11,6 +11,9 @@ venv/
 .env.production
 .env.production.local
 
+# GitHub Actions 部署密钥（只保存在本机桌面和 GitHub Secrets）
+github_actions_deploy_ed25519*
+
 # 测试/缓存
 **/.pytest_cache/
 **/.ruff_cache/
