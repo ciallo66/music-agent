@@ -30,7 +30,7 @@ jobs:
   deploy:
     needs: publish
     runs-on: ubuntu-latest
-    environment: production
+    environment: mima
     steps:
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.2
