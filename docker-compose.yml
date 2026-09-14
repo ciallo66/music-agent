@@ -1,6 +1,6 @@
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: ${DB_IMAGE:-docker.cnb.cool/my-repo-26633/music-agent/pgvector:pg16}
     env_file:
       - ${COMPOSE_ENV_FILE:-.env.production}
     volumes:
@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/ciallo66/music-agent-backend:latest}
+    image: ${BACKEND_IMAGE:-docker.cnb.cool/my-repo-26633/music-agent/backend:latest}
     build:
       context: ./backend
     env_file:
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/ciallo66/music-agent-frontend:latest}
+    image: ${FRONTEND_IMAGE:-docker.cnb.cool/my-repo-26633/music-agent/frontend:latest}
     build:
       context: ./frontend
     depends_on:
