@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
   const user = ref<UserProfile | null>(null)
   const initialized = ref(false)
+  let initializationRequest: Promise<void> | null = null
   const isAuthenticated = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
 
@@ -53,15 +54,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 应用启动时尝试恢复会话；失败只代表未登录，不阻断应用启动。
   async function initialize(): Promise<void> {
-    try {
-      await refreshAccessToken()
-      await fetchProfile()
-    } catch {
-      accessToken.value = null
-      user.value = null
-    } finally {
-      initialized.value = true
-    }
+    if (initialized.value) return
+    if (initializationRequest !== null) return initializationRequest
+
+    initializationRequest = (async () => {
+      try {
+        await refreshAccessToken()
+        await fetchProfile()
+      } catch {
+        accessToken.value = null
+        user.value = null
+      } finally {
+        initialized.value = true
+        initializationRequest = null
+      }
+    })()
+
+    return initializationRequest
   }
 
   return {

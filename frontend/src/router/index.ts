@@ -1,6 +1,9 @@
 // 路由表与认证守卫；守卫先等待认证恢复再决定页面访问权限。
 import { createRouter, createWebHistory } from 'vue-router'
+import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
+
+export const isNavigating = ref(false)
 
 const router = createRouter({
   history: createWebHistory(),
@@ -72,10 +75,28 @@ const router = createRouter({
   ],
 })
 
+router.beforeResolve(() => {
+  isNavigating.value = true
+})
+
+router.afterEach(() => {
+  isNavigating.value = false
+})
+
+router.onError(() => {
+  isNavigating.value = false
+})
+
 // 所有受保护路由等待认证恢复，避免未登录页面短暂闪现。
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  if (!auth.initialized) await auth.initialize()
+  if (!auth.initialized) {
+    if (to.meta.requiresAuth === true) {
+      await auth.initialize()
+    } else {
+      void auth.initialize()
+    }
+  }
   if (to.meta.requiresAuth === true && !auth.isAuthenticated) {
     return {
       name: 'access-required',

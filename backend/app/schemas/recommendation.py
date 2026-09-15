@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.catalog import SongSummary
 
@@ -18,3 +20,31 @@ class RecommendationPage(BaseModel):
 
     items: list[RecommendationItem]
     strategy: str
+
+
+class StructuredRecommendationItem(SongSummary):
+    """结构化推荐条目：包含匹配分和推荐理由。"""
+
+    reason: str
+    match_score: Annotated[float, Field(ge=0.0, le=1.0)]
+
+
+class StructuredRecommendationCard(BaseModel):
+    """结构化推荐结果卡片。"""
+
+    title: str
+    items: list[StructuredRecommendationItem]
+    reason: str = ""
+    tags: list[str] = []
+    scenario: str = ""
+    feedback_actions: list[str] = ["like", "dislike", "seen"]
+
+    model_config = ConfigDict(extra="forbid")
+
+
+__all__ = [
+    "RecommendationItem",
+    "RecommendationPage",
+    "StructuredRecommendationItem",
+    "StructuredRecommendationCard",
+]

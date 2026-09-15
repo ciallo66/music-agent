@@ -11,7 +11,7 @@ from app.api.dependencies import get_current_user, get_optional_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.library import SongReference
-from app.schemas.recommendation import RecommendationPage
+from app.schemas.recommendation import RecommendationPage, StructuredRecommendationCard
 from app.services.recommendation_service import RecommendationService, SongNotFoundError
 
 router = APIRouter()
@@ -26,6 +26,17 @@ def list_recommendations(
     """返回当前用户的可解释推荐。"""
     user_id = current_user.id if current_user is not None else None
     return RecommendationService(db).recommend(user_id, limit)
+
+
+@router.get("/recommendations/cards", response_model=list[StructuredRecommendationCard])
+def list_recommendation_cards(
+    current_user: Annotated[User | None, Depends(get_optional_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[StructuredRecommendationCard]:
+    """返回结构化推荐卡片，便于前端卡片式展示。"""
+    user_id = current_user.id if current_user is not None else None
+    return RecommendationService(db).recommend_cards(user_id, limit)
 
 
 @router.post("/plays", status_code=status.HTTP_204_NO_CONTENT)

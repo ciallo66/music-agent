@@ -8,6 +8,7 @@ from app.models.import_job import ImportJob, ImportJobStatus
 from app.models.music_knowledge import MusicKnowledge
 from app.models.play_record import PlayRecord
 from app.models.playlist import Playlist
+from app.models.recommendation_feedback import RecommendationFeedback
 from app.models.refresh_session import RefreshSession
 from app.models.song import Song
 from app.models.tag import Tag
@@ -24,6 +25,7 @@ __all__ = [
     "PlayRecord",
     "Playlist",
     "PlaylistSong",
+    "RecommendationFeedback",
     "RefreshSession",
     "Song",
     "SongTag",

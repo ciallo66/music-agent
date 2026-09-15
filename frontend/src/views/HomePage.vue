@@ -56,10 +56,28 @@
         <p>{{ auth.user ? 'MADE FOR YOU' : 'POPULAR NOW' }}</p>
         <h2>{{ auth.user ? '为你推荐' : '热门推荐' }}</h2>
       </div>
-      <router-link to="/profile">查看个人分析 →</router-link>
+      <div v-if="auth.user" class="feedback-summary" v-loading="!feedbackStore.loaded">
+        <span v-if="feedbackStore.stats"
+          >反馈：{{ feedbackStore.stats.liked_count }} 👍 ·
+          {{ feedbackStore.stats.disliked_count }} 👎 · 共{{ feedbackStore.stats.total }}条</span
+        >
+        <span v-else>登录后反馈将影响推荐</span>
+      </div>
     </div>
+
     <div v-if="loading" class="recommendation-state page-surface">
       <StatePanel type="loading" title="正在生成推荐" message="结合你的偏好寻找合适的音乐" />
+    </div>
+    <div v-else-if="cards.length" class="recommendations">
+      <RecommendationCard
+        v-for="card in cards"
+        :key="card.title + card.items.length"
+        :card="card"
+        :actions="feedbackStore.actions"
+        @refresh="loadRecommendations"
+        @feedback="handleFeedbackPayload"
+        @openAgent="onOpenAgent"
+      />
     </div>
     <div v-else-if="hotSongs.length" class="hot-grid">
       <router-link
@@ -80,6 +98,17 @@
             {{ song.genre || '未知风格'
             }}<template v-if="song.bpm"> · {{ Math.round(song.bpm) }} BPM</template>
           </p>
+        </div>
+        <div v-if="auth.user" class="hot-feedback">
+          <button
+            v-for="action in feedbackStore.actions.slice(0, 3)"
+            :key="action.action"
+            class="hot-feedback-btn"
+            :title="action.label"
+            @click.prevent.stop="handleFeedback(song.id, action.action)"
+          >
+            {{ action.label }}
+          </button>
         </div>
       </router-link>
     </div>
@@ -106,10 +135,12 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { listRecommendations } from '../api/recommendations'
+import { listRecommendationCards, listRecommendations } from '../api/recommendations'
+import RecommendationCard from '../components/RecommendationCard.vue'
 import StatePanel from '../components/StatePanel.vue'
-import type { RecommendationItem } from '../types/music'
+import type { RecommendationItem, StructuredRecommendationCard } from '../types/music'
 import { useAuthStore } from '../stores/auth'
+import { useFeedbackStore } from '../stores/feedback'
 
 const quickActions = [
   {
@@ -138,26 +169,49 @@ const quickActions = [
   { to: '/search', label: '搜索', description: '快速定位歌曲与歌手', icon: '⌕', tone: 'blue' },
 ]
 const auth = useAuthStore()
+const feedbackStore = useFeedbackStore()
 const hotSongs = ref<RecommendationItem[]>([])
+const cards = ref<StructuredRecommendationCard[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
 
-// 拉取推荐；失败时转为空状态，避免首页被异常打断。
 async function loadRecommendations(): Promise<void> {
   loading.value = true
   loadFailed.value = false
   try {
-    const { data } = await listRecommendations()
-    hotSongs.value = data.items
+    if (auth.user) {
+      const { data } = await listRecommendationCards()
+      cards.value = data
+    } else {
+      const { data } = await listRecommendations()
+      hotSongs.value = data.items
+    }
   } catch {
     hotSongs.value = []
+    cards.value = []
     loadFailed.value = true
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadRecommendations)
+function onOpenAgent(payload: { type: string; query: string }) {
+  window.open(`/agent?topic=${encodeURIComponent(payload.query)}`, '_blank')
+}
+
+// 反馈提交后对“不喜欢”的歌曲立刻从推荐中移除，形成反馈闭环；其余动作只记录统计。
+async function handleFeedback(songId: number, action: string): Promise<void> {
+  await feedbackStore.submitFeedback(songId, action)
+  if (action === 'dislike') await loadRecommendations()
+}
+
+async function handleFeedbackPayload(payload: { songId: number; action: string }): Promise<void> {
+  if (payload.action === 'dislike') await loadRecommendations()
+}
+
+onMounted(async () => {
+  await Promise.all([feedbackStore.loadActions(), feedbackStore.loadStats(), loadRecommendations()])
+})
 </script>
 
 <style scoped>
@@ -516,6 +570,34 @@ onMounted(loadRecommendations)
 
 .recommendation-state {
   min-height: 245px;
+}
+
+.feedback-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hot-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 10px 10px 10px;
+}
+
+.hot-feedback-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.hot-feedback-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--accent-soft);
 }
 
 @media (max-width: 1120px) {

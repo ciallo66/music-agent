@@ -16,6 +16,7 @@
           v-for="item in discoveryItems"
           :key="item.to"
           :to="item.to"
+          :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
         >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
@@ -32,6 +33,7 @@
           v-for="item in personalItems"
           :key="item.to"
           :to="item.to"
+          :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
         >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
@@ -88,7 +90,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { isNavigating } from '../router'
 
 interface NavigationItem {
   to: string
@@ -109,6 +112,7 @@ const personalItems: NavigationItem[] = [
 ]
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const quickSearch = ref('')
 
 async function submitSearch(): Promise<void> {
@@ -249,6 +253,15 @@ nav a {
 nav a:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.045);
+}
+
+nav a:active {
+  transform: scale(0.98);
+}
+
+nav a.nav-link-loading {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 nav a.router-link-exact-active {

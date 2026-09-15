@@ -14,6 +14,7 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.models.play_record import PlayRecord
     from app.models.playlist import Playlist
+    from app.models.recommendation_feedback import RecommendationFeedback
     from app.models.refresh_session import RefreshSession
 
 
@@ -54,3 +55,6 @@ class User(Base):
     playlists: Mapped[list[Playlist]] = relationship(back_populates="user")
     play_records: Mapped[list[PlayRecord]] = relationship(back_populates="user")
     refresh_sessions: Mapped[list[RefreshSession]] = relationship(back_populates="user")
+    recommendation_feedback: Mapped[list[RecommendationFeedback]] = relationship(
+        back_populates="user"
+    )

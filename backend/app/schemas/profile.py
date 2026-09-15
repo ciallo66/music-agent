@@ -39,6 +39,28 @@ class RecentPlayItem(BaseModel):
     song: SongSummary
 
 
+class PreferenceChangeItem(BaseModel):
+    """偏好变化项。"""
+
+    direction: str
+    detail: str
+
+
+class ActiveHourItem(BaseModel):
+    """活跃小时统计。"""
+
+    hour: int
+    label: str
+    weight: float
+
+
+class InterestDistributionItem(BaseModel):
+    """兴趣主题分布。"""
+
+    label: str
+    weight: float
+
+
 class MusicProfileResponse(BaseModel):
     """当前用户的音乐画像和听歌统计。"""
 
@@ -51,3 +73,8 @@ class MusicProfileResponse(BaseModel):
     top_artists: list[MusicDistributionItem]
     play_trend: list[PlayTrendItem]
     recent_plays: list[RecentPlayItem]
+    preference_change: list[PreferenceChangeItem] | None = None
+    active_hours: list[ActiveHourItem] | None = None
+    favorite_trend: list[PlayTrendItem] | None = None
+    agent_interpretation: str | None = None
+    interest_distribution: list[InterestDistributionItem] | None = None

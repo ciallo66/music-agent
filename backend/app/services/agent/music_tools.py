@@ -79,7 +79,10 @@ class MusicAgentTools:
         registry.register(
             AgentTool(
                 "analyze_song",
-                "分析歌曲的 BPM、Key、Energy、Valence、Danceability 等音乐特征。",
+                (
+                    "分析歌曲的 AcousticBrainz 音频特征，包括节奏、调性、频谱、"
+                    "情绪/流派标签以及各项置信度；仅在缺失字段影响当前问题时说明。"
+                ),
                 SongIdInput.model_json_schema(),
                 self.analyze_song,
             )
@@ -220,6 +223,17 @@ class MusicAgentTools:
     def _song_text(song: Song) -> str:
         """将歌曲元数据组合为 Embedding 输入文本。"""
         artist_name = song.artist.name if song.artist is not None else ""
+        acousticbrainz_fields = [
+            f"voice:{song.voice_instrumental}" if song.voice_instrumental else "",
+            f"voice_probability:{song.voice_probability}"
+            if song.voice_probability is not None
+            else "",
+            f"rhythm:{song.rhythm_features}" if song.rhythm_features else "",
+            f"tonal:{song.tonal_features}" if song.tonal_features else "",
+            f"spectral:{song.spectral_features}" if song.spectral_features else "",
+            f"mood:{song.mood_labels}" if song.mood_labels else "",
+            f"genre_labels:{song.genre_labels}" if song.genre_labels else "",
+        ]
         fields = [
             song.title,
             artist_name,
@@ -230,6 +244,7 @@ class MusicAgentTools:
             f"energy:{song.energy}" if song.energy is not None else "",
             f"valence:{song.valence}" if song.valence is not None else "",
             f"danceability:{song.danceability}" if song.danceability is not None else "",
+            *acousticbrainz_fields,
         ]
         return " | ".join(field for field in fields if field)
 

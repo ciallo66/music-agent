@@ -23,6 +23,22 @@ export interface RecentPlayItem {
   song: SongSummary
 }
 
+export interface PreferenceChangeItem {
+  direction: string
+  detail: string
+}
+
+export interface ActiveHourItem {
+  hour: number
+  label: string
+  weight: number
+}
+
+export interface InterestDistributionItem {
+  label: string
+  weight: number
+}
+
 export interface MusicProfileResponse {
   total_plays: number
   unique_songs: number
@@ -33,4 +49,9 @@ export interface MusicProfileResponse {
   top_artists: MusicDistributionItem[]
   play_trend: PlayTrendItem[]
   recent_plays: RecentPlayItem[]
+  preference_change?: PreferenceChangeItem[]
+  active_hours?: ActiveHourItem[]
+  favorite_trend?: PlayTrendItem[]
+  agent_interpretation?: string
+  interest_distribution?: InterestDistributionItem[]
 }

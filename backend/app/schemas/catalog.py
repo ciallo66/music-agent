@@ -74,6 +74,15 @@ class SongCreate(BaseModel):
     loudness: float | None = None
     instruments: Annotated[str, Field(max_length=255)] | None = None
     song_structure: str | None = None
+    voice_instrumental: Annotated[str, Field(max_length=32)] | None = None
+    voice_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    rhythm_features: dict | None = None
+    tonal_features: dict | None = None
+    spectral_features: dict | None = None
+    mood_labels: dict | None = None
+    genre_labels: dict | None = None
+    analysis_metadata: dict | None = None
+    feature_completeness: Annotated[float, Field(ge=0, le=1)] | None = None
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -98,6 +107,15 @@ class SongUpdate(BaseModel):
     loudness: float | None = None
     instruments: Annotated[str, Field(max_length=255)] | None = None
     song_structure: str | None = None
+    voice_instrumental: Annotated[str, Field(max_length=32)] | None = None
+    voice_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    rhythm_features: dict | None = None
+    tonal_features: dict | None = None
+    spectral_features: dict | None = None
+    mood_labels: dict | None = None
+    genre_labels: dict | None = None
+    analysis_metadata: dict | None = None
+    feature_completeness: Annotated[float, Field(ge=0, le=1)] | None = None
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -149,6 +167,15 @@ class SongDetail(SongSummary):
     loudness: float | None
     instruments: str | None
     song_structure: str | None
+    voice_instrumental: str | None
+    voice_probability: float | None
+    rhythm_features: dict | None
+    tonal_features: dict | None
+    spectral_features: dict | None
+    mood_labels: dict | None
+    genre_labels: dict | None
+    analysis_metadata: dict | None
+    feature_completeness: float | None
 
 
 class SongPage(BaseModel):

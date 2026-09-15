@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.artist import Artist
     from app.models.associations import PlaylistSong, SongTag
     from app.models.play_record import PlayRecord
+    from app.models.recommendation_feedback import RecommendationFeedback
 
 
 class Song(Base):
@@ -57,7 +59,7 @@ class Song(Base):
     lyrics: Mapped[str | None] = mapped_column(Text)
     popularity: Mapped[int] = mapped_column(default=0, server_default="0")
 
-    # 音乐特征字段（Jamendo API / Embeat 数据集来源）
+    # 兼容旧数据的基础特征字段；新导入使用下方 AcousticBrainz 字段。
     bpm: Mapped[float | None]
     music_key: Mapped[str | None] = mapped_column(String(20))
     energy: Mapped[float | None]
@@ -68,7 +70,21 @@ class Song(Base):
     song_structure: Mapped[str | None] = mapped_column(Text)
     embedding: Mapped[list[float] | None] = mapped_column(Vector())
 
+    # AcousticBrainz 已分析特征。
+    voice_instrumental: Mapped[str | None] = mapped_column(String(32))
+    voice_probability: Mapped[float | None]
+    rhythm_features: Mapped[dict | None] = mapped_column(JSONB)
+    tonal_features: Mapped[dict | None] = mapped_column(JSONB)
+    spectral_features: Mapped[dict | None] = mapped_column(JSONB)
+    mood_labels: Mapped[dict | None] = mapped_column(JSONB)
+    genre_labels: Mapped[dict | None] = mapped_column(JSONB)
+    analysis_metadata: Mapped[dict | None] = mapped_column(JSONB)
+    feature_completeness: Mapped[float | None]
+
     artist: Mapped[Artist] = relationship(back_populates="songs")
     playlist_links: Mapped[list[PlaylistSong]] = relationship(back_populates="song")
     tag_links: Mapped[list[SongTag]] = relationship(back_populates="song")
     play_records: Mapped[list[PlayRecord]] = relationship(back_populates="song")
+    recommendation_feedback: Mapped[list[RecommendationFeedback]] = relationship(
+        back_populates="song"
+    )

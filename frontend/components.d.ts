@@ -26,9 +26,13 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     GlobalPlayer: typeof import('./src/components/GlobalPlayer.vue')['default']
     PageHeader: typeof import('./src/components/PageHeader.vue')['default']
+    RecommendationCard: typeof import('./src/components/RecommendationCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SongList: typeof import('./src/components/SongList.vue')['default']
     StatePanel: typeof import('./src/components/StatePanel.vue')['default']
+  }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

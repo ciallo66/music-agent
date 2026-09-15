@@ -99,6 +99,68 @@
         </article>
       </div>
 
+      <article v-if="profile.agent_interpretation" class="panel interpretation-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">AI INSIGHT</p>
+            <h3>智能体解读</h3>
+          </div>
+          <span class="panel-icon">✦</span>
+        </div>
+        <p class="interpretation-text">{{ profile.agent_interpretation }}</p>
+      </article>
+
+      <div class="insight-grid">
+        <article class="panel insight-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">ACTIVE HOURS</p>
+              <h3>活跃时段</h3>
+            </div>
+          </div>
+          <div
+            v-if="profile.active_hours?.length"
+            ref="activeHoursChart"
+            class="chart chart-active"
+          ></div>
+          <div v-else class="chart-empty">暂无互动时间数据</div>
+        </article>
+
+        <article class="panel insight-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">INTERESTS</p>
+              <h3>兴趣分布</h3>
+            </div>
+          </div>
+          <div
+            v-if="profile.interest_distribution?.length"
+            ref="interestChart"
+            class="chart chart-bar"
+          ></div>
+          <div v-else class="chart-empty">暂无兴趣分布数据</div>
+        </article>
+      </div>
+
+      <article v-if="profile.preference_change?.length" class="panel preference-change-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">PREFERENCE SHIFT</p>
+            <h3>偏好变化</h3>
+          </div>
+        </div>
+        <div class="preference-change-list">
+          <div
+            v-for="item in profile.preference_change"
+            :key="item.detail"
+            class="preference-change-row"
+          >
+            <span class="change-period">{{ item.direction }}</span>
+            <span class="change-genre">{{ item.detail }}</span>
+          </div>
+        </div>
+      </article>
+
       <article class="panel recent-panel">
         <div class="panel-heading">
           <div>
@@ -149,6 +211,8 @@ const errorMessage = ref('')
 const trendChart = ref<HTMLDivElement | null>(null)
 const genreChart = ref<HTMLDivElement | null>(null)
 const artistChart = ref<HTMLDivElement | null>(null)
+const activeHoursChart = ref<HTMLDivElement | null>(null)
+const interestChart = ref<HTMLDivElement | null>(null)
 const charts = shallowRef<ECharts[]>([])
 let resizeObserver: ResizeObserver | null = null
 
@@ -249,10 +313,58 @@ function renderCharts(): void {
 
   createBarChart(genreChart.value, data.genre_distribution)
   createBarChart(artistChart.value, data.top_artists)
+  if (data.interest_distribution?.length) {
+    createBarChart(
+      interestChart.value,
+      data.interest_distribution.map((item) => ({
+        name: item.label,
+        count: Math.round(item.weight * 100),
+      })),
+    )
+  }
+  createActiveHoursChart()
   resizeObserver = new ResizeObserver(() => charts.value.forEach((chart) => chart.resize()))
-  ;[trendChart.value, genreChart.value, artistChart.value].forEach(
-    (element) => element && resizeObserver?.observe(element),
-  )
+  ;[
+    trendChart.value,
+    genreChart.value,
+    artistChart.value,
+    activeHoursChart.value,
+    interestChart.value,
+  ].forEach((element) => element && resizeObserver?.observe(element))
+}
+
+// 创建活跃时段的条形图。
+function createActiveHoursChart(): void {
+  const element = activeHoursChart.value
+  const data = profile.value
+  if (!element || !data?.active_hours?.length) return
+  const chart = init(element)
+  const hours = data.active_hours
+  chart.setOption({
+    grid: { left: 8, right: 18, top: 16, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: hours.map((item) => `${item.hour}:00`),
+      axisLabel: { color: '#8f98b0' },
+      axisLine: { lineStyle: { color: 'rgba(202,210,255,.14)' } },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      splitLine: { lineStyle: { color: 'rgba(202,210,255,.08)' } },
+      axisLabel: { color: '#8f98b0' },
+    },
+    series: [
+      {
+        type: 'bar',
+        barMaxWidth: 24,
+        data: hours.map((item) => item.weight),
+        itemStyle: { color: '#59e2a4', borderRadius: [8, 8, 0, 0] },
+      },
+    ],
+    tooltip: { trigger: 'axis' },
+  })
+  charts.value.push(chart)
 }
 
 // 创建横向柱状图，统一处理颜色、排序和空数据。
@@ -545,12 +657,90 @@ onBeforeUnmount(disposeCharts)
   background: transparent;
   cursor: pointer;
 }
+
+/* 智能体解读面板 */
+.interpretation-panel {
+  margin-bottom: 18px;
+}
+.interpretation-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(110, 231, 210, 0.06), rgba(169, 162, 255, 0.06));
+}
+
+/* 洞察面板布局 */
+.insight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.chart-active {
+  height: 200px;
+}
+
+/* 偏好变化列表 */
+.preference-change-panel {
+  margin-bottom: 18px;
+}
+.preference-change-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.preference-change-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 100px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.change-period {
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.change-genre {
+  color: var(--text);
+  font-weight: 600;
+}
+.change-score {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.change-count {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+@keyframes chartActive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 900px) {
   .profile-page {
     padding: 28px 22px;
   }
   .profile-grid,
-  .chart-grid {
+  .chart-grid,
+  .insight-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -563,6 +753,13 @@ onBeforeUnmount(disposeCharts)
   }
   .song-genre,
   .recent-item time {
+    display: none;
+  }
+  .preference-change-row {
+    grid-template-columns: 100px 1fr;
+  }
+  .change-score,
+  .change-count {
     display: none;
   }
 }

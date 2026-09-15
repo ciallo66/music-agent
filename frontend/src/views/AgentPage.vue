@@ -109,7 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
 import { parseToolConfirmation, streamAgentChat, streamToolConfirmations } from '../api/agent'
 import type { AgentEvent, PendingToolConfirmation } from '../types/agent'
@@ -148,6 +149,7 @@ const starterPrompts = [
   },
 ]
 const auth = useAuthStore()
+const route = useRoute()
 const draft = ref('')
 const loading = ref(false)
 const messages = ref<Message[]>([])
@@ -290,6 +292,15 @@ function handleComposerKeydown(event: KeyboardEvent): void {
   event.preventDefault()
   void sendMessage()
 }
+
+// 页面创建后提交从其它页面带入的话题（如推荐卡片的“在智能体中继续”）。
+onMounted(async () => {
+  const topic = typeof route.query.topic === 'string' ? route.query.topic : ''
+  if (!topic.trim()) return
+  await nextTick()
+  draft.value = topic
+  await sendMessage()
+})
 </script>
 
 <style scoped>
