@@ -26,7 +26,7 @@ class StructuredRecommendationItem(SongSummary):
     """结构化推荐条目：包含匹配分和推荐理由。"""
 
     reason: str
-    match_score: Annotated[float, Field(ge=0.0, le=1.0)]
+    match_score: Annotated[float, Field(ge=0.0, le=1.0)] | None
 
 
 class StructuredRecommendationCard(BaseModel):

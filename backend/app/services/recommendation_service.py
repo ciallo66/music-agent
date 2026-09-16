@@ -160,10 +160,10 @@ class RecommendationService:
         )
 
     @staticmethod
-    def _match_score(song: object, profile: dict[str, float] | None) -> float:
+    def _match_score(song: object, profile: dict[str, float] | None) -> float | None:
         """根据音乐特征与用户偏好的距离计算匹配分。"""
         if not profile:
-            return 0.7
+            return None
         score = 0.0
         total = 0.0
         for field in ("energy", "valence", "danceability", "bpm"):
@@ -171,10 +171,11 @@ class RecommendationService:
             target = profile.get(field)
             if value is None or target is None:
                 continue
-            score += 1 - abs(value - target)
+            difference = abs(value - target) / 180 if field == "bpm" else abs(value - target)
+            score += max(0.0, 1 - difference)
             total += 1
         if total == 0:
-            return 0.7
+            return None
         return max(0.0, min(1.0, score / total))
 
     @staticmethod

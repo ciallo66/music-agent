@@ -60,7 +60,7 @@
         :page-size="pageSize"
         :total="total"
         layout="prev, pager, next"
-        @current-change="loadSongs"
+        @current-change="changePage"
       />
     </div>
   </section>
@@ -127,6 +127,12 @@ async function applyFilters(): Promise<void> {
   await loadSongs()
 }
 
+// 翻页完成后回到内容顶部，避免用户停留在空白页脚区域。
+async function changePage(): Promise<void> {
+  await loadSongs()
+  document.querySelector<HTMLElement>('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // 清空筛选并重新加载完整目录。
 async function clearFilters(): Promise<void> {
   keyword.value = ''
@@ -177,7 +183,37 @@ onMounted(() => {
 .pagination {
   display: flex;
   justify-content: center;
-  margin-top: 24px;
+  margin: 14px 0 4px;
+  padding: 10px;
+}
+.pagination :deep(.el-pagination) {
+  gap: 5px;
+  padding: 0;
+  --el-pagination-bg-color: transparent;
+  --el-pagination-button-bg-color: rgba(255, 255, 255, 0.045);
+  --el-pagination-button-color: var(--text-secondary);
+  --el-pagination-hover-color: var(--accent);
+}
+.pagination :deep(.btn-prev),
+.pagination :deep(.btn-next),
+.pagination :deep(.el-pager li) {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.045) !important;
+}
+.pagination :deep(.el-pager li:hover),
+.pagination :deep(.btn-prev:hover),
+.pagination :deep(.btn-next:hover) {
+  border-color: rgba(110, 231, 210, 0.42);
+  color: var(--accent);
+}
+.pagination :deep(.el-pager li.is-active) {
+  border-color: var(--accent);
+  color: var(--text-on-accent) !important;
+  background: var(--accent) !important;
 }
 @media (max-width: 680px) {
   .filters {

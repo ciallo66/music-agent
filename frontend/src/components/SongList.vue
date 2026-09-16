@@ -23,7 +23,7 @@
         </span>
         <span class="track-copy">
           <strong>{{ song.title }}</strong>
-          <small>{{ song.language || '信息条目' }}</small>
+          <small>{{ song.album || (song.music_key ? `${song.music_key} 调` : '特征数据') }}</small>
         </span>
       </router-link>
       <span class="artist">{{ song.artist.name }}</span>

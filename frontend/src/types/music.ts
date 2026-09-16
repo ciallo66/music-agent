@@ -80,7 +80,7 @@ export interface StructuredRecommendationCard {
 
 export interface StructuredRecommendationItem extends SongSummary {
   reason: string
-  match_score: number
+  match_score: number | null
 }
 
 export interface FeedbackStats {

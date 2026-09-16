@@ -223,9 +223,8 @@ a:focus-visible,
 .page-surface {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgba(37, 53, 81, 0.74), rgba(24, 35, 56, 0.62));
+  background: linear-gradient(145deg, rgba(37, 53, 81, 0.96), rgba(24, 35, 56, 0.94));
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(16px);
 }
 
 @media (prefers-reduced-motion: no-preference) {

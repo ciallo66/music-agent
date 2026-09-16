@@ -146,7 +146,6 @@ async function logout(): Promise<void> {
   background:
     linear-gradient(180deg, rgba(34, 50, 76, 0.94), rgba(20, 31, 51, 0.95)), var(--bg-elevated);
   box-shadow: 10px 0 40px rgba(4, 10, 24, 0.12);
-  backdrop-filter: blur(24px);
 }
 
 .brand {
