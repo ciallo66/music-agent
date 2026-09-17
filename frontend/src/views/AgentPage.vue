@@ -19,25 +19,50 @@
       class="conversation page-surface"
       aria-live="polite"
     >
-      <div v-for="(item, index) in messages" :key="index" class="message-row" :class="item.role">
-        <span class="message-avatar" aria-hidden="true">{{
-          item.role === 'user' ? userInitial : '✦'
-        }}</span>
-        <div class="message">
-          <span class="role-label">{{ item.role === 'user' ? '你' : '智能体' }}</span>
-          <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
-          <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
-          <p v-else class="user-text">{{ item.content }}</p>
+      <div class="conversation-inner">
+        <div v-for="(item, index) in messages" :key="index" class="message-row" :class="item.role">
+          <span class="message-avatar" aria-hidden="true">{{
+            item.role === 'user' ? userInitial : '✦'
+          }}</span>
+          <div class="message">
+            <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
+            <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
+            <p v-else class="user-text">{{ item.content }}</p>
+            <!-- 正在流式输出时，在最后一条回复末尾显示光标。 -->
+            <span
+              v-if="item.role === 'assistant' && loading && index === messages.length - 1"
+              class="stream-cursor"
+              aria-hidden="true"
+            />
+          </div>
         </div>
-      </div>
-      <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
-        <span class="message-avatar" aria-hidden="true">✦</span>
-        <div class="message">
-          <span class="role-label">智能体</span>
-          <p class="typing"><i></i><i></i><i></i></p>
+        <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
+          <span class="message-avatar" aria-hidden="true">✦</span>
+          <div class="message">
+            <p class="typing"><i></i><i></i><i></i></p>
+          </div>
         </div>
+        <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
       </div>
-      <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
+    </div>
+
+    <div v-else class="agent-empty page-surface">
+      <div class="empty-copy">
+        <span class="empty-mark" aria-hidden="true">✦</span>
+        <h2>今天想分析点什么？</h2>
+        <p>我可以调用已接入的数据工具，完成检索、特征分析与知识问答。</p>
+      </div>
+      <div class="suggestion-grid">
+        <button
+          v-for="item in suggestions"
+          :key="item"
+          type="button"
+          class="suggestion-card"
+          @click="sendSuggestion(item)"
+        >
+          {{ item }}
+        </button>
+      </div>
     </div>
 
     <div v-if="awaitingConfirmation" class="confirmation-panel page-surface">
@@ -137,11 +162,24 @@ const hasPendingAssistant = computed(
 // 有未确认的高风险操作时，先让用户处理完再继续对话。
 const awaitingConfirmation = computed(() => pendingConfirmations.value.length > 0)
 
-// 流式回复期间滚动到底部，保证用户始终看到最新内容。
+// 空状态下的示例问题，点击即发送，降低首次使用门槛。
+const suggestions = [
+  '帮我找几首适合深夜听的歌',
+  '分析这首歌为什么听起来比较忧郁',
+  'City Pop 是什么风格？',
+  '我最近听的歌有什么共同特点？',
+]
+
+// 流式回复期间跟随到底部。
+// 用瞬时滚动而非平滑滚动：流式增量每秒会触发多次，平滑动画互相打断会让滚动滞后。
+// 用户主动上滚翻历史时不再自动跟随，避免把视角强行拉回底部。
 async function scrollToLatest(): Promise<void> {
   await nextTick()
   const element = conversationElement.value
-  if (element !== null) element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
+  if (element === null) return
+  const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+  if (distanceToBottom > 120) return
+  element.scrollTo({ top: element.scrollHeight })
 }
 
 // 创建一次流式消费的事件处理器，内部维护当前助手消息的位置。
@@ -232,6 +270,13 @@ async function sendMessage(): Promise<void> {
   )
 }
 
+// 点击示例问题时填入输入框并直接发送。
+async function sendSuggestion(text: string): Promise<void> {
+  if (loading.value) return
+  draft.value = text
+  await sendMessage()
+}
+
 // 提交用户对高风险操作的决定，并继续消费同一条 Agent 流。
 async function respondToConfirmations(approved: boolean): Promise<void> {
   const currentSessionId = sessionId.value
@@ -308,56 +353,151 @@ onBeforeUnmount(() => activeRequest.value?.abort())
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* 内容限宽居中：宽屏上长文本一行不会过长，阅读更轻松 */
+.conversation-inner {
+  display: flex;
+  max-width: 780px;
+  flex-direction: column;
+  margin: 0 auto;
+}
 .message-row {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.message-row:last-child {
+  margin-bottom: 2px;
 }
 .message-row.user {
   flex-direction: row-reverse;
 }
 .message-avatar {
   display: grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  margin-top: 2px;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 9px;
   color: var(--accent);
   background: var(--accent-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 .user .message-avatar {
   color: var(--accent-purple);
-  background: rgba(169, 162, 255, 0.13);
+  background: rgba(169, 162, 255, 0.15);
 }
+/* 助手消息不再套气泡：直接排在背景上，读起来是对话而不是卡片列表 */
 .message {
-  max-width: min(78%, 700px);
-  padding: 12px 15px;
-  border: 1px solid var(--border);
-  border-radius: 4px 15px 15px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
   color: var(--text);
-  background: rgba(45, 61, 91, 0.65);
+  background: none;
 }
+/* 只给用户消息保留气泡，突出「我说的话」 */
 .user .message {
-  border-radius: 15px 4px 15px 15px;
-  border-color: rgba(169, 162, 255, 0.22);
+  max-width: min(78%, 620px);
+  padding: 10px 14px;
+  border: 1px solid rgba(169, 162, 255, 0.22);
+  border-radius: 14px 4px 14px 14px;
   background: linear-gradient(135deg, rgba(169, 162, 255, 0.16), rgba(112, 183, 255, 0.1));
 }
-.role-label {
-  color: var(--accent-strong);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+/* 流式输出光标：让用户看出「正在生成」 */
+.stream-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: text-bottom;
 }
-.user .role-label {
-  color: var(--accent-purple);
+@media (prefers-reduced-motion: no-preference) {
+  .stream-cursor {
+    animation: cursor-blink 1s ease-in-out infinite;
+  }
+}
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.15;
+  }
+}
+/* 空状态：居中引导 + 示例问题，降低首次使用门槛 */
+.agent-empty {
+  display: flex;
+  min-height: 340px;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: clamp(28px, 5vw, 56px);
+}
+.empty-copy {
+  max-width: 460px;
+  text-align: center;
+}
+.empty-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  margin: 0 auto 16px;
+  border-radius: 14px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 20px;
+}
+.empty-copy h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(20px, 3vw, 26px);
+  letter-spacing: -0.02em;
+}
+.empty-copy p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.suggestion-grid {
+  display: grid;
+  width: 100%;
+  max-width: 620px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.suggestion-card {
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.suggestion-card:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface-hover);
+}
+@media (max-width: 640px) {
+  .suggestion-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .message p {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 13px;
   line-height: 1.75;
   white-space: pre-wrap;
