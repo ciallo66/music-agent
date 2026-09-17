@@ -34,6 +34,9 @@ from app.services.embedding_provider import (  # 生成"向量"的服务（相�
 )
 from app.services.library_service import LibraryService  # 歌单与收藏业务（写操作复用）
 from app.services.rag_service import MusicKnowledgeService  # RAG 音乐知识库服务
+from app.services.song_embedding_text import (  # 歌曲向量化文本（与批量向量化共用）
+    build_song_text,
+)
 from app.services.web_search_service import (  # 联网搜索服务（查站外资料用）
     DuckDuckGoWebSearchService,  # 搜索服务实现（真干活那个）
     WebSearchProvider,  # 搜索服务接口
@@ -199,7 +202,7 @@ class MusicAgentTools:
         embedding = song.embedding
         if embedding is None and self.embedding_provider.is_configured:
             try:
-                vectors = self.embedding_provider.embed([self._song_text(song)])
+                vectors = self.embedding_provider.embed([build_song_text(song)])
                 embedding = vectors[0]
             except (EmbeddingProviderError, IndexError) as error:
                 logger.warning("歌曲向量生成失败，回退结构化检索：%s", error)
@@ -218,35 +221,6 @@ class MusicAgentTools:
             logger.exception("歌曲向量查询失败，回退结构化检索")
             return []
         return [item for item, _distance in matches]
-
-    @staticmethod
-    def _song_text(song: Song) -> str:
-        """将歌曲元数据组合为 Embedding 输入文本。"""
-        artist_name = song.artist.name if song.artist is not None else ""
-        acousticbrainz_fields = [
-            f"voice:{song.voice_instrumental}" if song.voice_instrumental else "",
-            f"voice_probability:{song.voice_probability}"
-            if song.voice_probability is not None
-            else "",
-            f"rhythm:{song.rhythm_features}" if song.rhythm_features else "",
-            f"tonal:{song.tonal_features}" if song.tonal_features else "",
-            f"spectral:{song.spectral_features}" if song.spectral_features else "",
-            f"mood:{song.mood_labels}" if song.mood_labels else "",
-            f"genre_labels:{song.genre_labels}" if song.genre_labels else "",
-        ]
-        fields = [
-            song.title,
-            artist_name,
-            song.genre or "",
-            song.music_key or "",
-            song.instruments or "",
-            f"bpm:{song.bpm}" if song.bpm is not None else "",
-            f"energy:{song.energy}" if song.energy is not None else "",
-            f"valence:{song.valence}" if song.valence is not None else "",
-            f"danceability:{song.danceability}" if song.danceability is not None else "",
-            *acousticbrainz_fields,
-        ]
-        return " | ".join(field for field in fields if field)
 
     @staticmethod
     def _summary(song: object) -> dict[str, Any]:

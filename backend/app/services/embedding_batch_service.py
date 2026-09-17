@@ -15,6 +15,7 @@ from app.services.embedding_provider import (
     EmbeddingProvider,
     EmbeddingProviderNotConfiguredError,
 )
+from app.services.song_embedding_text import build_song_text
 
 EmbeddingTarget = Literal["songs", "knowledge"]
 
@@ -85,15 +86,5 @@ class EmbeddingBatchService:
         if target == "knowledge":
             knowledge = cast(MusicKnowledge, item)
             return "\n".join(part for part in (knowledge.source, knowledge.content) if part)
-
-        song = cast(Song, item)
-        fields = (
-            song.title,
-            song.artist.name,
-            song.album,
-            song.genre,
-            song.language,
-            song.instruments,
-            song.song_structure,
-        )
-        return " | ".join(part for part in fields if part)
+        # 与 Agent 相似歌曲检索共用同一套文本规则，保证向量语义空间一致。
+        return build_song_text(cast(Song, item))
