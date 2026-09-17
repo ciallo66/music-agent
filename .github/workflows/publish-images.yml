@@ -7,7 +7,78 @@ permissions:
   contents: read
   packages: write
 jobs:
+  # 质量门禁：测试不通过就不构建镜像、不部署，避免问题代码进生产。
+  backend:
+    name: 后端检查与测试
+    runs-on: ubuntu-latest
+    services:
+      # 迁移里会执行 CREATE EXTENSION vector，因此必须用带 pgvector 的镜像。
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: music_agent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # 仅用于让配置校验通过，不是真实密钥，切勿用于部署。
+      SECRET_KEY: ci-only-secret-key-for-tests
+      # conftest 强制要求独立测试库，禁止连接开发库。
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/music_agent_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: 安装依赖
+        working-directory: backend
+        run: pip install -e ".[dev]"
+      - name: Ruff 格式检查
+        working-directory: backend
+        run: ruff format --check .
+      - name: Ruff 静态检查
+        working-directory: backend
+        run: ruff check .
+      - name: mypy 类型检查
+        working-directory: backend
+        run: mypy .
+      - name: pytest 单元测试
+        working-directory: backend
+        run: pytest
+
+  frontend:
+    name: 前端检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm ci
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint:check
+      - name: Prettier 格式检查
+        working-directory: frontend
+        run: npm run format:check
+      - name: vue-tsc 类型检查
+        working-directory: frontend
+        run: npm run typecheck
+
   publish:
+    needs: [backend, frontend]
     environment: mima
     runs-on: ubuntu-latest
     steps:
@@ -27,7 +98,7 @@ jobs:
           context: ./frontend
           push: true
           tags: docker.cnb.cool/my-repo-26633/music-agent/frontend:latest
-      - name: Mirror pgvector image to GHCR
+      - name: 镜像 pgvector 基础镜像到 CNB 仓库
         run: |
           docker pull pgvector/pgvector:pg16
           docker tag pgvector/pgvector:pg16 docker.cnb.cool/my-repo-26633/music-agent/pgvector:pg16
