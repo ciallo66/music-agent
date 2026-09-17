@@ -25,6 +25,7 @@ declare module 'vue' {
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
     GlobalPlayer: typeof import('./src/components/GlobalPlayer.vue')['default']
+    MarkdownContent: typeof import('./src/components/MarkdownContent.vue')['default']
     PageHeader: typeof import('./src/components/PageHeader.vue')['default']
     RecommendationCard: typeof import('./src/components/RecommendationCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

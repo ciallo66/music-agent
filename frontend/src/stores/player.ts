@@ -9,42 +9,44 @@ export const usePlayerStore = defineStore('player', () => {
   const currentSong = ref<SongBrief | null>(null)
   const queue = ref<SongBrief[]>([])
   const playing = ref(false)
-  const audio = ref(new Audio())
+  // 原生 Audio 无需响应式包装：深度代理 DOM 对象会带来额外开销，
+  // 页面只消费下面这些 ref 暴露的状态。
+  const audio = new Audio()
   const currentTime = ref(0)
   const duration = ref(0)
   const volume = ref(1)
 
   // 事件监听集中在 store 内，页面只消费响应式状态，不直接操作 Audio。
-  audio.value.addEventListener('timeupdate', () => {
-    currentTime.value = audio.value.currentTime
+  audio.addEventListener('timeupdate', () => {
+    currentTime.value = audio.currentTime
   })
-  audio.value.addEventListener('loadedmetadata', () => {
-    duration.value = audio.value.duration
+  audio.addEventListener('loadedmetadata', () => {
+    duration.value = audio.duration
   })
-  audio.value.addEventListener('ended', () => {
+  audio.addEventListener('ended', () => {
     playing.value = false
     playNext()
   })
-  audio.value.addEventListener('play', () => {
+  audio.addEventListener('play', () => {
     playing.value = true
   })
-  audio.value.addEventListener('pause', () => {
+  audio.addEventListener('pause', () => {
     playing.value = false
   })
 
   // 切换歌曲、重置进度并尝试播放；浏览器拒绝自动播放时保持暂停。
   async function playSong(song: SongBrief): Promise<void> {
     currentSong.value = song
-    audio.value.pause()
-    audio.value.currentTime = 0
+    audio.pause()
+    audio.currentTime = 0
     currentTime.value = 0
     duration.value = song.duration ?? 0
     // 目录歌曲可能只有元数据；保留当前歌曲但不尝试播放空地址。
     if (!song.audio_url) return
-    audio.value.src = song.audio_url
+    audio.src = song.audio_url
     void recordPlay(song.id).catch(() => undefined)
     try {
-      await audio.value.play()
+      await audio.play()
     } catch {
       // 浏览器自动播放策略或资源不可用时保持暂停状态，由用户再次点击播放。
       playing.value = false
@@ -55,9 +57,9 @@ export const usePlayerStore = defineStore('player', () => {
   function togglePlay() {
     if (!currentSong.value?.audio_url) return
     if (playing.value) {
-      audio.value.pause()
+      audio.pause()
     } else {
-      void audio.value.play().catch(() => {
+      void audio.play().catch(() => {
         playing.value = false
       })
     }
@@ -85,12 +87,12 @@ export const usePlayerStore = defineStore('player', () => {
   // 同步响应式音量和原生 Audio 音量。
   function setVolume(v: number) {
     volume.value = v
-    audio.value.volume = v
+    audio.volume = v
   }
 
   // 将播放器定位到指定秒数。
   function seek(time: number) {
-    audio.value.currentTime = time
+    audio.currentTime = time
   }
 
   // 设置当前页面提供的播放队列。

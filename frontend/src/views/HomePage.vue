@@ -133,6 +133,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { listRecommendationCards, listRecommendations } from '../api/recommendations'
 import RecommendationCard from '../components/RecommendationCard.vue'
 import StatePanel from '../components/StatePanel.vue'
@@ -166,6 +167,7 @@ const quickActions = [
   },
   { to: '/search', label: '搜索', description: '快速定位歌曲与歌手', icon: '⌕', tone: 'blue' },
 ]
+const router = useRouter()
 const auth = useAuthStore()
 const feedbackStore = useFeedbackStore()
 const hotSongs = ref<RecommendationItem[]>([])
@@ -193,8 +195,9 @@ async function loadRecommendations(): Promise<void> {
   }
 }
 
+// 在应用内切换到智能体页并带入话题，避免反复打开新标签页。
 function onOpenAgent(payload: { type: string; query: string }) {
-  window.open(`/agent?topic=${encodeURIComponent(payload.query)}`, '_blank')
+  void router.push({ name: 'agent', query: { topic: payload.query } })
 }
 
 // 反馈提交后对“不喜欢”的歌曲立刻从推荐中移除，形成反馈闭环；其余动作只记录统计。

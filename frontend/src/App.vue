@@ -31,13 +31,17 @@ import { isNavigating } from './router'
   opacity: 1;
 }
 
+/* 动画只在进度条可见时运行，避免空闲状态下持续占用合成线程。 */
+.route-progress-visible span {
+  animation: route-progress 900ms ease-in-out infinite;
+}
+
 .route-progress span {
   display: block;
   width: 42%;
   height: 100%;
   background: var(--accent);
   box-shadow: 0 0 14px rgba(110, 231, 210, 0.85);
-  animation: route-progress 900ms ease-in-out infinite;
 }
 
 @keyframes route-progress {
