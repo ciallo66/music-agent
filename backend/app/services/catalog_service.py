@@ -85,6 +85,10 @@ class CatalogService:
         items = [SongSummary.model_validate(song) for song in songs]
         return SongPage(items=items, total=total, page=page, page_size=page_size)
 
+    def list_genres(self) -> list[str]:
+        """返回目录中实际存在的风格列表，供前端筛选选项使用。"""
+        return self.songs.list_genres()
+
     def get_song(self, song_id: int) -> SongDetail:
         """返回歌曲详情，不存在时抛出业务异常。"""
         return SongDetail.model_validate(self._require_song(song_id))

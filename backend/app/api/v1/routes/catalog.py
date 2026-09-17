@@ -28,6 +28,15 @@ def list_songs(
     return CatalogService(db).list_songs(page, page_size, q, genre, language, artist_id)
 
 
+@router.get("/songs/genres", response_model=list[str])
+def list_song_genres(db: Annotated[Session, Depends(get_db)]) -> list[str]:
+    """返回目录中实际存在的风格列表。
+
+    放在 /songs/{song_id} 之前注册，避免 "genres" 被当作歌曲 ID 匹配。
+    """
+    return CatalogService(db).list_genres()
+
+
 @router.get("/songs/{song_id}", response_model=SongDetail)
 def read_song(song_id: int, db: Annotated[Session, Depends(get_db)]) -> SongDetail:
     """读取公开歌曲详情。"""

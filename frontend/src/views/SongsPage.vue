@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { listSongs, type SongSummary } from '../api/songs'
+import { listSongGenres, listSongs, type SongSummary } from '../api/songs'
 import { showError } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
 import SkeletonList from '../components/SkeletonList.vue'
@@ -75,18 +75,8 @@ import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 
 const pageSize = 20
-const genres = [
-  'Pop',
-  'Rock',
-  'Electronic',
-  'Jazz',
-  'Classical',
-  'Hip-Hop',
-  'R&B',
-  'Country',
-  'Folk',
-  'Metal',
-]
+// 风格选项由后端按目录实际取值聚合返回，避免前后端硬编码不一致。
+const genres = ref<string[]>([])
 const songs = ref<SongSummary[]>([])
 const loading = ref(false)
 const loadFailed = ref(false)
@@ -139,9 +129,20 @@ async function clearFilters(): Promise<void> {
   await applyFilters()
 }
 
+// 拉取风格选项；失败时不阻塞主流程，仅少一个筛选项。
+async function loadGenres(): Promise<void> {
+  try {
+    const { data } = await listSongGenres()
+    genres.value = data
+  } catch {
+    genres.value = []
+  }
+}
+
 onMounted(() => {
   keyword.value = typeof route.query.q === 'string' ? route.query.q : ''
-  loadSongs()
+  void loadGenres()
+  void loadSongs()
 })
 </script>
 

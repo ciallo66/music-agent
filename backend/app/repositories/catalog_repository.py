@@ -109,6 +109,16 @@ class SongRepository:
         )
         return list(self.db.scalars(statement)), total
 
+    def list_genres(self) -> list[str]:
+        """返回目录中实际存在的风格取值，按歌曲数量降序，供筛选下拉使用。"""
+        statement = (
+            select(Song.genre)
+            .where(Song.genre.is_not(None))
+            .group_by(Song.genre)
+            .order_by(func.count().desc(), Song.genre)
+        )
+        return [genre for genre in self.db.scalars(statement) if genre]
+
     def get_by_id(self, song_id: int) -> Song | None:
         """按主键查询歌曲并加载歌手。"""
         statement = select(Song).options(joinedload(Song.artist)).where(Song.id == song_id)

@@ -82,6 +82,24 @@ def test_public_catalog_supports_search_filter_sort_and_pagination(
     assert filtered.json()["items"][0]["title"] == "Silent Rain"
 
 
+def test_song_genres_endpoint_returns_distinct_values(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    """风格列表接口应返回去重取值并按歌曲数量降序，且不会被当成歌曲 ID。"""
+    headers = _admin_headers(client, db_session, "GenreList")
+    artist_id = _create_artist(client, headers, "Genre Artist")
+    _create_song(client, headers, artist_id, "Track A", 50, "摇滚")
+    _create_song(client, headers, artist_id, "Track B", 30, "摇滚")
+    _create_song(client, headers, artist_id, "Track C", 40, "爵士")
+
+    response = client.get("/api/v1/songs/genres")
+
+    assert response.status_code == 200
+    # 摇滚出现 2 次，应排在爵士之前
+    assert response.json() == ["摇滚", "爵士"]
+
+
 def test_public_song_and_artist_details_return_not_found(client: TestClient) -> None:
     """不存在的公开资源应返回404。"""
     assert client.get("/api/v1/songs/999999").status_code == 404

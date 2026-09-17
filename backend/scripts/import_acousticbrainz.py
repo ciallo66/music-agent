@@ -13,6 +13,29 @@ from sqlalchemy import select
 SOURCE = "acousticbrainz"
 USER_AGENT = "music-agent-acousticbrainz-import/1.0"
 
+# 对外展示用的主分类取自 rosamerica 体系：它的八分类分布均衡，
+# 而 dortmund 体系面向电子音乐细分，在本数据集上 83% 会落进 electronic，
+# 用作展示几乎没有区分度。完整的多体系标注仍保存在 genre_labels 中。
+GENRE_DISPLAY_BY_ROSAMERICA = {
+    "cla": "古典",
+    "roc": "摇滚",
+    "rhy": "节奏布鲁斯",
+    "pop": "流行",
+    "dan": "舞曲",
+    "jaz": "爵士",
+    "hip": "嘻哈",
+    "spe": "语音",
+}
+
+
+def display_genre(rosamerica: object, fallback: object) -> str | None:
+    """把 rosamerica 分类码转成中文展示名；缺失时回退到 dortmund 原值。"""
+    if isinstance(rosamerica, str):
+        mapped = GENRE_DISPLAY_BY_ROSAMERICA.get(rosamerica)
+        if mapped:
+            return mapped
+    return fallback if isinstance(fallback, str) and fallback else None
+
 
 def fetch_json(url: str) -> dict:
     """请求并校验一个 JSON 接口。"""
@@ -60,7 +83,7 @@ def import_recording(mbid: str) -> dict[str, object]:
     values = {
         "title": title,
         "album": release.get("title"),
-        "genre": value("genre_dortmund"),
+        "genre": display_genre(value("genre_rosamerica"), value("genre_dortmund")),
         "source": SOURCE,
         "source_id": mbid,
         "popularity": 0,

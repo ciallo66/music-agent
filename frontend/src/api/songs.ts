@@ -21,3 +21,8 @@ export function listSongs(params: {
 export function getSong(id: number) {
   return http.get<SongDetail>(`/songs/${id}`)
 }
+
+// 获取目录中实际存在的风格列表，供筛选下拉使用（避免前后端硬编码不一致）。
+export function listSongGenres() {
+  return http.get<string[]>('/songs/genres')
+}
