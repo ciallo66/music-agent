@@ -70,7 +70,17 @@ class MusicAgentTools:
         self.user_id = user_id
 
     def register_all(self, registry: ToolRegistry) -> None:
-        """注册文档规定的核心工具（全部为只读）。"""
+        """注册文档规定的核心工具。
+
+        分组注册，注册顺序与原先保持一致；除 create_playlist 外均为只读工具。
+        """
+        self._register_lookup_tools(registry)
+        self._register_recommendation_tools(registry)
+        self._register_knowledge_tools(registry)
+        self._register_write_tools(registry)
+
+    def _register_lookup_tools(self, registry: ToolRegistry) -> None:
+        """注册歌曲检索与特征分析工具。"""
         registry.register(
             AgentTool(
                 "search_songs",
@@ -90,6 +100,9 @@ class MusicAgentTools:
                 self.analyze_song,
             )
         )
+
+    def _register_recommendation_tools(self, registry: ToolRegistry) -> None:
+        """注册相似歌曲与用户偏好分析工具。"""
         registry.register(
             AgentTool(
                 "find_similar_songs",
@@ -106,6 +119,9 @@ class MusicAgentTools:
                 self.analyze_user_taste,
             )
         )
+
+    def _register_knowledge_tools(self, registry: ToolRegistry) -> None:
+        """注册知识库检索与联网搜索工具。"""
         registry.register(
             AgentTool(
                 "search_music_knowledge",
@@ -122,6 +138,9 @@ class MusicAgentTools:
                 self.search_web,
             )
         )
+
+    def _register_write_tools(self, registry: ToolRegistry) -> None:
+        """注册需要用户确认的写操作工具。"""
         registry.register(
             AgentTool(
                 "create_playlist",
