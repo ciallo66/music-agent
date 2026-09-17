@@ -11,9 +11,7 @@
       >
     </PageHeader>
 
-    <div v-if="loading" class="state-surface page-surface">
-      <StatePanel type="loading" title="正在加载歌单" />
-    </div>
+    <SkeletonList v-if="loading" :rows="6" variant="card" status="正在加载内容集合" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="歌单加载失败" message="服务暂时不可用，请稍后重试">
         <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
@@ -95,6 +93,7 @@ import { useRouter } from 'vue-router'
 import { createPlaylist, listPlaylists, type PlaylistItem } from '../api/playlists'
 import { showError, showSuccess } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
+import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
 
 const router = useRouter()

@@ -18,6 +18,8 @@
           :to="item.to"
           :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+          @mouseenter="prefetchRoute(item.to)"
+          @focus="prefetchRoute(item.to)"
         >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
@@ -35,6 +37,8 @@
           :to="item.to"
           :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+          @mouseenter="prefetchRoute(item.to)"
+          @focus="prefetchRoute(item.to)"
         >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
@@ -114,6 +118,15 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const quickSearch = ref('')
+
+// 悬停或聚焦导航时预取目标页面的懒加载 chunk，减少点击后的等待感。
+function prefetchRoute(path: string): void {
+  const matched = router.resolve(path).matched
+  const loader = matched[matched.length - 1]?.components?.default
+  if (typeof loader === 'function') {
+    void (loader as () => Promise<unknown>)()
+  }
+}
 
 async function submitSearch(): Promise<void> {
   const query = quickSearch.value.trim()
@@ -423,6 +436,22 @@ nav a.router-link-exact-active .nav-icon {
   font-size: 11px;
   line-height: 1.6;
   text-align: center;
+}
+
+/* 平板横屏：收窄侧栏，把宽度让给内容区（与下方 800px 断点不重叠） */
+@media (min-width: 801px) and (max-width: 1024px) {
+  .sidebar {
+    width: 200px;
+    padding: 18px 10px 14px;
+  }
+
+  .brand {
+    margin: 0 4px 22px;
+  }
+
+  nav a {
+    padding: 9px 10px;
+  }
 }
 
 @media (max-width: 800px) {

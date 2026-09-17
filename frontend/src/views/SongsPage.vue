@@ -32,9 +32,7 @@
       <button v-if="hasFilters" type="button" @click="clearFilters">清除筛选 ×</button>
     </div>
 
-    <div v-if="loading" class="state-surface page-surface">
-      <StatePanel type="loading" title="正在加载音乐库" />
-    </div>
+    <SkeletonList v-if="loading" :rows="8" status="正在加载内容库" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="音乐库加载失败" message="服务暂时不可用，请稍后重新加载">
         <template #action
@@ -72,6 +70,7 @@ import { useRoute } from 'vue-router'
 import { listSongs, type SongSummary } from '../api/songs'
 import { showError } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
+import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 

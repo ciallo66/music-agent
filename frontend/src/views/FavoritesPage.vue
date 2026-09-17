@@ -6,9 +6,7 @@
       title="我的收藏"
       subtitle="把打动你的声音留在这里，随时回来重温"
     />
-    <div v-if="loading" class="state-surface page-surface">
-      <StatePanel type="loading" title="正在加载收藏" />
-    </div>
+    <SkeletonList v-if="loading" :rows="6" status="正在加载收藏" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="收藏加载失败" message="服务暂时不可用，请稍后重新加载">
         <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
@@ -30,6 +28,7 @@ import { listFavorites, removeFavorite } from '../api/favorites'
 import { getSong, type SongDetail } from '../api/songs'
 import { showError, showSuccess } from '../utils/feedback'
 import PageHeader from '../components/PageHeader.vue'
+import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 const favSongs = ref<SongDetail[]>([])

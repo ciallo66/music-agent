@@ -89,7 +89,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import * as echarts from 'echarts/core'
+import { use, init } from 'echarts/core'
+import type { ECharts } from 'echarts/core'
 import { RadarChart } from 'echarts/charts'
 import { LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -98,14 +99,14 @@ import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { showError, showSuccess } from '../utils/feedback'
 import StatePanel from '../components/StatePanel.vue'
 
-echarts.use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
+use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const route = useRoute()
 const song = ref<SongDetail | null>(null)
 const loading = ref(false)
 const isFav = ref(false)
 const chartEl = ref<HTMLDivElement | null>(null)
-let chart: echarts.ECharts | null = null
+let chart: ECharts | null = null
 
 const instruments = computed(() =>
   (song.value?.instruments ?? '')
@@ -157,7 +158,7 @@ function cssVariable(name: string): string {
 // 将歌曲特征转换为雷达图配置；缺失值按 0 展示而不伪造数据。
 function renderRadar() {
   if (!song.value || !chartEl.value) return
-  if (!chart) chart = echarts.init(chartEl.value)
+  if (!chart) chart = init(chartEl.value)
   const current = song.value
   const values = [
     current.energy !== null ? Math.round(current.energy * 100) : 0,

@@ -30,6 +30,7 @@ declare module 'vue' {
     RecommendationCard: typeof import('./src/components/RecommendationCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SkeletonList: typeof import('./src/components/SkeletonList.vue')['default']
     SongList: typeof import('./src/components/SongList.vue')['default']
     StatePanel: typeof import('./src/components/StatePanel.vue')['default']
   }
