@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from sqlalchemy.orm import Session
 
+from app.repositories.catalog_repository import SongRepository
 from app.repositories.feedback_repository import FeedbackRepository
 from app.schemas.feedback import (
     FeedbackActionItem,
@@ -13,6 +14,7 @@ from app.schemas.feedback import (
     RecommendationFeedbackCreate,
     RecommendationFeedbackResponse,
 )
+from app.services.recommendation_service import SongNotFoundError
 
 
 class FeedbackNotFoundError(Exception):
@@ -35,8 +37,9 @@ class FeedbackService:
     ]
 
     def __init__(self, db: Session) -> None:
-        """绑定反馈仓储，负责校验和业务编排。"""
+        """绑定反馈仓储与歌曲仓储，负责校验和业务编排。"""
         self.repository = FeedbackRepository(db)
+        self.songs = SongRepository(db)
 
     def list_actions(self) -> list[FeedbackActionItem]:
         """返回所有可用反馈类型。"""
@@ -48,10 +51,15 @@ class FeedbackService:
     def record_feedback(
         self, user_id: int, payload: RecommendationFeedbackCreate
     ) -> RecommendationFeedbackResponse:
-        """记录或更新用户反馈。"""
+        """记录或更新用户反馈。
+
+        先确认歌曲存在：否则会直接撞上外键约束，接口返回 500 而不是 404。
+        """
         valid_actions = {action for action, _, _ in self.ACTIONS}
         if payload.action not in valid_actions:
             raise InvalidFeedbackActionError(f"不支持的反馈类型：{payload.action}")
+        if self.songs.get_by_id(payload.song_id) is None:
+            raise SongNotFoundError
         feedback = self.repository.record(user_id, payload.song_id, payload.action)
         return RecommendationFeedbackResponse.model_validate(feedback, from_attributes=True)
 
