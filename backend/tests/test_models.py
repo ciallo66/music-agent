@@ -15,6 +15,7 @@ EXPECTED_TABLES = {
     "play_records",
     "playlist_songs",
     "playlists",
+    "recommendation_feedback",
     "refresh_sessions",
     "song_tags",
     "songs",

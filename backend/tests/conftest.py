@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import os
+
+# 测试环境必须与部署环境隔离：CORS 允许来源在应用创建时固化，
+# 因此要在导入 app 之前覆盖，否则会读到部署用的 .env 取值，
+# 使「前端来源是否放行」的断言随部署环境变化而失败。
+os.environ["CORS_ORIGINS"] = '["http://localhost:5173","http://127.0.0.1:5173"]'
+
 from collections.abc import Generator
 from pathlib import Path
 

@@ -14,7 +14,9 @@ def test_env_file_is_bound_to_backend_directory() -> None:
 
     assert isinstance(env_file, Path)
     assert env_file == BACKEND_ROOT / ".env"
-    assert env_file.parent.name == "backend"
+    # 只断言与工作目录无关这一实质，不绑定具体目录名（容器内为 /app）。
+    assert env_file.is_absolute()
+    assert env_file.name == ".env"
 
 
 def test_default_secret_key_is_rejected() -> None:
