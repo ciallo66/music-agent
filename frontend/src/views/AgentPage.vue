@@ -3,7 +3,7 @@
   <section class="agent-page">
     <PageHeader
       eyebrow="智能协作"
-      title="AI 智能体"
+      title="智能体"
       subtitle="调用已接入的数据工具，完成检索、分析和可解释的知识问答"
     >
       <template #actions
@@ -24,14 +24,16 @@
           item.role === 'user' ? userInitial : '✦'
         }}</span>
         <div class="message">
-          <span class="role-label">{{ item.role === 'user' ? '你' : 'AI 智能体' }}</span>
-          <p>{{ item.content }}</p>
+          <span class="role-label">{{ item.role === 'user' ? '你' : '智能体' }}</span>
+          <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
+          <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
+          <p v-else class="user-text">{{ item.content }}</p>
         </div>
       </div>
       <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
         <span class="message-avatar" aria-hidden="true">✦</span>
         <div class="message">
-          <span class="role-label">AI 智能体</span>
+          <span class="role-label">智能体</span>
           <p class="typing"><i></i><i></i><i></i></p>
         </div>
       </div>
@@ -96,7 +98,7 @@
         发送
       </el-button>
     </form>
-    <p class="assistant-notice">AI 回答可能存在偏差，重要信息请结合歌曲详情与实际数据判断。</p>
+    <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合歌曲详情与实际数据判断。</p>
   </section>
 </template>
 
@@ -104,6 +106,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ElInput } from 'element-plus'
 import { useRoute } from 'vue-router'
+import MarkdownContent from '../components/MarkdownContent.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { parseToolConfirmation, streamAgentChat, streamToolConfirmations } from '../api/agent'
 import type { AgentEvent, PendingToolConfirmation } from '../types/agent'

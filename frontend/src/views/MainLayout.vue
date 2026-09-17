@@ -103,7 +103,7 @@ interface NavigationItem {
 const discoveryItems: NavigationItem[] = [
   { to: '/', label: '首页', icon: '⌂' },
   { to: '/songs', label: '内容数据', icon: '▦' },
-  { to: '/agent', label: 'AI 助手', icon: '✦', requiresAuth: true },
+  { to: '/agent', label: '智能助手', icon: '✦', requiresAuth: true },
 ]
 const personalItems: NavigationItem[] = [
   { to: '/playlists', label: '我的空间', icon: '▤', requiresAuth: true },

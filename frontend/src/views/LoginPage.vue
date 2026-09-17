@@ -12,8 +12,7 @@
         <span>当前数据仅用于演示，智能体负责检索、分析和组织可解释的结果。</span>
       </div>
       <div class="feature-row">
-        <span><i>✦</i> AI 智能体</span><span><i>▦</i> 数据工具</span
-        ><span><i>◫</i> 可解释分析</span>
+        <span><i>✦</i> 智能体</span><span><i>▦</i> 数据工具</span><span><i>◫</i> 可解释分析</span>
       </div>
       <div class="decor-record" aria-hidden="true"><span>✦</span></div>
     </section>

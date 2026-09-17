@@ -7,7 +7,7 @@
         <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '让智能体帮你理解数据' }}</h1>
         <p>这是一个可调用数据工具的智能工作区，帮助你检索、分析并获得可解释的建议。</p>
         <div class="hero-actions">
-          <router-link class="primary-link" to="/agent">使用 AI 智能体 <span>→</span></router-link>
+          <router-link class="primary-link" to="/agent">使用智能体 <span>→</span></router-link>
           <router-link class="secondary-link" to="/agent">
             {{ auth.user ? '继续对话' : '登录后使用' }}
           </router-link>
