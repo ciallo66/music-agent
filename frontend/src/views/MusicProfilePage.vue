@@ -34,7 +34,7 @@
         <article class="panel preference-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">YOUR SOUND</p>
+              <p class="panel-kicker">你的偏好</p>
               <h3>常听风格</h3>
             </div>
             <span class="panel-icon">♫</span>
@@ -62,7 +62,7 @@
         <article class="panel trend-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">LAST 30 DAYS</p>
+              <p class="panel-kicker">近 30 天</p>
               <h3>互动趋势</h3>
             </div>
             <span class="trend-total">{{ profile.total_plays }} 次互动</span>
@@ -76,7 +76,7 @@
         <article class="panel chart-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">GENRES</p>
+              <p class="panel-kicker">风格分布</p>
               <h3>风格分布</h3>
             </div>
           </div>
@@ -90,7 +90,7 @@
         <article class="panel chart-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">ARTISTS</p>
+              <p class="panel-kicker">常听歌手</p>
               <h3>常听歌手</h3>
             </div>
           </div>
@@ -102,7 +102,7 @@
       <article v-if="profile.agent_interpretation" class="panel interpretation-panel">
         <div class="panel-heading">
           <div>
-            <p class="panel-kicker">AI INSIGHT</p>
+            <p class="panel-kicker">智能解读</p>
             <h3>智能体解读</h3>
           </div>
           <span class="panel-icon">✦</span>
@@ -114,7 +114,7 @@
         <article class="panel insight-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">ACTIVE HOURS</p>
+              <p class="panel-kicker">活跃时段</p>
               <h3>活跃时段</h3>
             </div>
           </div>
@@ -129,7 +129,7 @@
         <article class="panel insight-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">INTERESTS</p>
+              <p class="panel-kicker">兴趣分布</p>
               <h3>兴趣分布</h3>
             </div>
           </div>
@@ -145,7 +145,7 @@
       <article v-if="profile.preference_change?.length" class="panel preference-change-panel">
         <div class="panel-heading">
           <div>
-            <p class="panel-kicker">PREFERENCE SHIFT</p>
+            <p class="panel-kicker">偏好变化</p>
             <h3>偏好变化</h3>
           </div>
         </div>
@@ -164,7 +164,7 @@
       <article class="panel recent-panel">
         <div class="panel-heading">
           <div>
-            <p class="panel-kicker">RECENTLY PLAYED</p>
+            <p class="panel-kicker">最近播放</p>
             <h3>最近互动</h3>
           </div>
           <router-link to="/songs" class="text-link">去发现更多 →</router-link>

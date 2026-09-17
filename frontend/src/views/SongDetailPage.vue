@@ -19,33 +19,33 @@
       <h3>音乐特征</h3>
       <div class="feature-grid">
         <div class="feat-item">
-          <span class="feat-label">BPM</span
+          <span class="feat-label">节拍</span
           ><span class="feat-val">{{ song.bpm ? Math.round(song.bpm) : '-' }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">Key</span
+          <span class="feat-label">调性</span
           ><span class="feat-val">{{ song.music_key || '-' }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">Energy</span
+          <span class="feat-label">能量</span
           ><span class="feat-val">{{
             song.energy !== null ? (song.energy * 100).toFixed(0) + '%' : '-'
           }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">Valence</span
+          <span class="feat-label">情绪</span
           ><span class="feat-val">{{
             song.valence !== null ? (song.valence * 100).toFixed(0) + '%' : '-'
           }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">Dance</span
+          <span class="feat-label">律动</span
           ><span class="feat-val">{{
             song.danceability !== null ? (song.danceability * 100).toFixed(0) + '%' : '-'
           }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">Loudness</span
+          <span class="feat-label">响度</span
           ><span class="feat-val">{{
             song.loudness !== null ? song.loudness.toFixed(1) + ' dB' : '-'
           }}</span>

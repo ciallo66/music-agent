@@ -2,7 +2,7 @@
 <template>
   <section class="fav-page">
     <PageHeader
-      eyebrow="FAVORITES"
+      eyebrow="我的收藏"
       title="我的收藏"
       subtitle="把打动你的声音留在这里，随时回来重温"
     />

@@ -5,8 +5,8 @@
       <router-link class="brand" to="/" aria-label="返回首页">
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>
-          <strong>Agent Workspace</strong>
-          <small>AI 智能体工作区</small>
+          <strong>智能数据平台</strong>
+          <small>数据检索与智能分析</small>
         </span>
       </router-link>
 
@@ -74,13 +74,13 @@
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
             <span aria-hidden="true">⌕</span>
             <input v-model="quickSearch" type="search" placeholder="搜索内容、来源或标签" />
-            <kbd>Enter</kbd>
+            <kbd>回车</kbd>
           </form>
           <span class="toolbar-hint">示例数据 · 可检索、可分析</span>
         </div>
         <router-view />
         <footer class="site-footer">
-          AI 智能体工作区 · 示例数据仅用于检索、分析与演示 · 不提供内容下载或交易
+          智能数据平台 · 示例数据仅用于检索、分析与演示 · 不提供内容下载或交易
         </footer>
       </div>
     </main>

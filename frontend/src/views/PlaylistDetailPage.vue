@@ -6,7 +6,7 @@
       <div class="pl-info">
         <h2>{{ playlist.name }}</h2>
         <p class="desc">{{ playlist.description || '还没有添加描述' }}</p>
-        <p class="meta"><span>PLAYLIST</span>{{ playlist.song_count }} 首歌曲</p>
+        <p class="meta"><span>歌单</span>{{ playlist.song_count }} 首歌曲</p>
       </div>
     </div>
     <StatePanel

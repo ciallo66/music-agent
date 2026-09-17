@@ -2,7 +2,7 @@
 <template>
   <section class="songs-page">
     <PageHeader
-      eyebrow="LIBRARY"
+      eyebrow="内容库"
       title="内容数据"
       subtitle="按标题、来源与标签浏览示例内容，结构化特征让每次检索更有依据"
     >

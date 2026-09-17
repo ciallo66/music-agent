@@ -4,10 +4,10 @@
     <section class="brand-panel">
       <div class="brand-lockup">
         <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span><strong>Agent Workspace</strong><small>AI 智能体工作区</small></span>
+        <span><strong>智能数据平台</strong><small>数据检索与智能分析</small></span>
       </div>
       <div class="brand-copy">
-        <p>AI AGENT WORKSPACE</p>
+        <p>智能协作平台</p>
         <h1>让数据进入对话，<br />让智能体真正工作。</h1>
         <span>当前数据仅用于演示，智能体负责检索、分析和组织可解释的结果。</span>
       </div>
@@ -20,7 +20,7 @@
 
     <section class="auth-panel">
       <div class="auth-copy">
-        <p>WELCOME</p>
+        <p>欢迎使用</p>
         <h2>{{ panelTitle }}</h2>
         <span>{{ panelDescription }}</span>
       </div>

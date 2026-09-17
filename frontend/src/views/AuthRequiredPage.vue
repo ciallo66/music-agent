@@ -3,7 +3,7 @@
   <section class="auth-required-page">
     <div class="auth-required-card page-surface">
       <span class="auth-required-icon" aria-hidden="true">◈</span>
-      <p class="eyebrow">ACCOUNT REQUIRED</p>
+      <p class="eyebrow">需要登录</p>
       <h1>{{ pageTitle }}</h1>
       <p class="description">
         这个功能需要登录后才能使用。你可以先浏览公开内容，登录后即可继续当前操作。

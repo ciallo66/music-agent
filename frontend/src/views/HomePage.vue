@@ -3,11 +3,9 @@
   <section class="home-page">
     <div class="hero page-surface">
       <div class="hero-copy">
-        <p class="eyebrow">GOOD TO SEE YOU</p>
+        <p class="eyebrow">欢迎回来</p>
         <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '让智能体帮你理解数据' }}</h1>
-        <p>
-          Agent Workspace 是一个可调用数据工具的 AI 工作区，帮助你检索、分析并获得可解释的建议。
-        </p>
+        <p>这是一个可调用数据工具的智能工作区，帮助你检索、分析并获得可解释的建议。</p>
         <div class="hero-actions">
           <router-link class="primary-link" to="/agent">使用 AI 智能体 <span>→</span></router-link>
           <router-link class="secondary-link" to="/agent">
@@ -23,7 +21,7 @@
 
     <div class="section-heading">
       <div>
-        <p>QUICK ACCESS</p>
+        <p>快捷入口</p>
         <h2>快速开始</h2>
       </div>
       <span>{{

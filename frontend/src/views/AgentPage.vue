@@ -2,7 +2,7 @@
 <template>
   <section class="agent-page">
     <PageHeader
-      eyebrow="AI AGENT WORKSPACE"
+      eyebrow="智能协作"
       title="AI 智能体"
       subtitle="调用已接入的数据工具，完成检索、分析和可解释的知识问答"
     >

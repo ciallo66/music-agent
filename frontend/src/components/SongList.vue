@@ -5,10 +5,10 @@
       <span>歌曲</span>
       <span>歌手</span>
       <span>{{ variant === 'playlist' ? '时长' : '风格' }}</span>
-      <span v-if="variant === 'catalog'">BPM</span>
+      <span v-if="variant === 'catalog'">节拍</span>
       <span v-if="variant === 'catalog'">能量</span>
       <span v-if="variant === 'catalog'">愉悦度</span>
-      <span v-if="variant === 'search'">BPM</span>
+      <span v-if="variant === 'search'">节拍</span>
       <span v-if="variant === 'favorites'"></span>
     </div>
     <div

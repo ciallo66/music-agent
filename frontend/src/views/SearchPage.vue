@@ -2,7 +2,7 @@
 <template>
   <section class="search-page">
     <PageHeader
-      eyebrow="DISCOVER"
+      eyebrow="探索发现"
       title="搜索内容"
       subtitle="输入歌曲名、歌手或关键词，快速定位想听的声音"
     />
@@ -28,7 +28,7 @@
     <div v-if="!searched && !loading" class="search-guide page-surface">
       <div class="guide-visual" aria-hidden="true"><span>♫</span><i></i></div>
       <div class="guide-copy">
-        <p>SEARCH YOUR SOUND</p>
+        <p>搜索内容</p>
         <h2>从一个关键词开始</h2>
         <span>可以搜索标题、来源和标签，结果可进入详情页查看结构化信息。</span>
         <div class="suggestions">

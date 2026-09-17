@@ -2,7 +2,7 @@
 <template>
   <section class="playlists-page">
     <PageHeader
-      eyebrow="COLLECTIONS"
+      eyebrow="内容集合"
       title="我的空间"
       subtitle="把关注的内容整理成适合不同场景的专属集合"
     >
@@ -38,7 +38,7 @@
       >
         <div class="cover" :class="`tone-${index % 4}`">
           <span>{{ playlist.name.slice(0, 1) }}</span
-          ><small>PLAYLIST</small>
+          ><small>歌单</small>
         </div>
         <div class="playlist-copy">
           <strong>{{ playlist.name }}</strong>
