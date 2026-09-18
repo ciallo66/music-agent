@@ -5,10 +5,9 @@
       <span>歌曲</span>
       <span>歌手</span>
       <span>{{ variant === 'playlist' ? '时长' : '风格' }}</span>
-      <span v-if="variant === 'catalog'">节拍</span>
+      <span v-if="variant === 'catalog' || variant === 'search'">节拍</span>
+      <span v-if="variant === 'catalog' || variant === 'search'">时长</span>
       <span v-if="variant === 'catalog'">律动</span>
-      <span v-if="variant === 'catalog'">热度</span>
-      <span v-if="variant === 'search'">节拍</span>
       <span v-if="variant === 'favorites'"></span>
     </div>
     <div
@@ -32,11 +31,11 @@
       <span v-if="variant === 'catalog' || variant === 'search'" class="muted numeric">
         {{ song.bpm ? Math.round(song.bpm) : '-' }}
       </span>
-      <span v-if="variant === 'catalog'" class="muted numeric">
-        {{ song.danceability !== null ? `${(song.danceability * 100).toFixed(0)}%` : '-' }}
+      <span v-if="variant === 'catalog' || variant === 'search'" class="muted numeric">
+        {{ song.duration ? formatDuration(song.duration) : '-' }}
       </span>
       <span v-if="variant === 'catalog'" class="muted numeric">
-        {{ song.popularity ? song.popularity : '-' }}
+        {{ song.danceability !== null ? `${(song.danceability * 100).toFixed(0)}%` : '-' }}
       </span>
       <button
         v-if="variant === 'favorites'"
