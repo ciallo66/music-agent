@@ -13,3 +13,9 @@ export function listRecommendationCards(limit = 8) {
     params: { limit },
   })
 }
+
+// 记录一次收听：后端的画像聚合与「最近播放」直接读这张表，没有它行为数据永远长不起来。
+// 演示账号只读，后端会返回 403，由调用方按提示处理。
+export function recordPlay(songId: number) {
+  return http.post<void>('/plays', { song_id: songId })
+}

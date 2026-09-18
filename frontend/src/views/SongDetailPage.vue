@@ -1,4 +1,4 @@
-<!-- 内容详情页：展示结构化特征、雷达图、歌词和收藏操作。 -->
+<!-- 内容详情页：展示结构化特征、雷达图、数据来源说明和收藏/收听记录操作。 -->
 <template>
   <section v-if="song" class="detail-page">
     <div class="song-header">
@@ -15,7 +15,20 @@
         </p>
         <div class="actions">
           <el-button @click="toggleFav">{{ isFav ? '已收藏' : '收藏' }}</el-button>
+          <el-button
+            :loading="recording"
+            :disabled="!canRecordPlay || played"
+            :title="recordPlayHint"
+            @click="recordPlayOnce"
+          >
+            {{ played ? '已记录收听' : '记一次收听' }}
+          </el-button>
         </div>
+        <p class="actions-note">
+          本平台不托管音频，「记一次收听」=
+          把你这次的收听行为记进画像（影响互动趋势、活跃时段与风格偏好）。
+          未登录时先登录；演示账号只读，不会写数据。
+        </p>
       </div>
     </div>
     <div class="features">
@@ -95,15 +108,13 @@
       <p class="structure-text">{{ song.song_structure }}</p>
     </div>
     <div class="detail-block missing-block" v-if="missingFields.length">
-      <h3>数据缺失</h3>
+      <h3>数据来源与缺失字段</h3>
       <p class="structure-text">
-        当前数据源未提供：{{ missingFields.join('、') }}。这些字段不参与展示，也不会用 0
-        或占位值代替。
+        结构化特征来自 AcousticBrainz 音频分析（Essentia）；当前数据源未提供：{{
+          missingFields.join('、')
+        }}。这些字段不参与展示，也不会用 0 或占位值代替。歌词在本平台不做存储与展示（版权），
+        文本类字段不进入数据库。
       </p>
-    </div>
-    <div v-if="song.lyrics" class="notice-block">
-      <h3>文本字段</h3>
-      <p>文本内容不在平台直接展示，仅作为智能体分析的受控数据来源。</p>
     </div>
   </section>
   <section v-else class="detail-page">
@@ -129,6 +140,8 @@ import { RadarChart } from 'echarts/charts'
 import { LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
+import { recordPlay } from '../api/recommendations'
+import { useAuthStore } from '../stores/auth'
 import {
   danceabilityHint,
   danceabilityLabel,
@@ -144,9 +157,20 @@ import StatePanel from '../components/StatePanel.vue'
 use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const route = useRoute()
+const auth = useAuthStore()
 const song = ref<SongDetail | null>(null)
 const loading = ref(false)
 const isFav = ref(false)
+const recording = ref(false)
+const played = ref(false)
+
+// 只有真实登录用户能写：未登录要引导去登录，演示账号后端会拒（403），所以直接禁用。
+const canRecordPlay = computed(() => auth.isAuthenticated && !auth.isDemo)
+const recordPlayHint = computed(() => {
+  if (!auth.isAuthenticated) return '登录后可以记录收听'
+  if (auth.isDemo) return '演示账号只读，不会写入数据'
+  return '记录一次收听，用于你的个人分析'
+})
 
 // 多体系投票得出的流派说明（比单一体系更可解释）
 const genreFusion = computed(() => fusedGenreLabel(song.value?.genre_labels ?? null))
@@ -343,6 +367,21 @@ async function toggleFav() {
   }
 }
 
+// 记录一次收听：成功后禁用按钮，避免同一次浏览被反复计入互动趋势。
+async function recordPlayOnce() {
+  if (!song.value || recording.value || played.value) return
+  recording.value = true
+  try {
+    await recordPlay(song.value.id)
+    played.value = true
+    showSuccess('已记录一次收听')
+  } catch (error) {
+    showError(error, '记录收听失败')
+  } finally {
+    recording.value = false
+  }
+}
+
 onMounted(() => {
   load()
   window.addEventListener('resize', onResize)
@@ -410,8 +449,7 @@ onUnmounted(() => {
 }
 .features,
 .radar-block,
-.detail-block,
-.lyrics-section {
+.detail-block {
   margin-bottom: 18px;
   padding: clamp(18px, 3vw, 26px);
   border: 1px solid var(--border);
@@ -425,8 +463,7 @@ onUnmounted(() => {
 }
 .features h3,
 .radar-block h3,
-.detail-block h3,
-.lyrics-section h3 {
+.detail-block h3 {
   color: var(--text);
   font-size: 18px;
   margin: 0 0 16px;
@@ -491,47 +528,11 @@ onUnmounted(() => {
   padding: 16px 20px;
   margin: 0;
 }
-.lyrics-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 2;
-  white-space: pre-wrap;
-  background: var(--surface-raised);
-  border-radius: 10px;
-  padding: 20px;
-  margin: 0;
-}
-.lyrics-list {
-  max-height: 360px;
-  overflow-y: auto;
-  padding: 12px 20px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  scrollbar-color: var(--border-strong) transparent;
-}
-.lyric-line {
-  display: block;
-  width: 100%;
-  padding: 7px 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
+.actions-note {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
   line-height: 1.7;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-.lyric-line:hover,
-.lyric-line.active {
-  color: var(--accent);
-}
-.lyric-line.active {
-  font-weight: 700;
-  transform: translateX(4px);
 }
 @media (max-width: 640px) {
   .song-header {
