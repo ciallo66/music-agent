@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_admin
+from app.api.dependencies import require_admin, require_real_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.admin import AdminOverview, AdminUserPage, AdminUserUpdate
@@ -20,6 +20,8 @@ from app.services.admin_service import (
 router = APIRouter()
 
 AdminUser = Annotated[User, Depends(require_admin)]
+# 会改数据的入口要求「真实管理员」：演示账号即使有 admin 角色也不能改
+RealAdminUser = Annotated[User, Depends(require_real_admin)]
 Database = Annotated[Session, Depends(get_db)]
 
 
@@ -46,7 +48,7 @@ def update_user(
     user_id: int,
     payload: AdminUserUpdate,
     db: Database,
-    _: AdminUser,
+    _: RealAdminUser,
     keyword: Annotated[str, Query(max_length=64)] = "",
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,

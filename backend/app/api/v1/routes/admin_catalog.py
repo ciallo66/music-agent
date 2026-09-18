@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_admin
+from app.api.dependencies import require_real_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.catalog import (
@@ -32,7 +32,7 @@ router = APIRouter()
 def create_artist(
     payload: ArtistCreate,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> ArtistResponse:
     """创建歌手，仅管理员可用。"""
     return CatalogService(db).create_artist(payload)
@@ -43,7 +43,7 @@ def update_artist(
     artist_id: int,
     payload: ArtistUpdate,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> ArtistResponse:
     """局部更新歌手，仅管理员可用。"""
     try:
@@ -56,7 +56,7 @@ def update_artist(
 def delete_artist(
     artist_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> Response:
     """删除没有歌曲的歌手，仅管理员可用。"""
     try:
@@ -75,7 +75,7 @@ def delete_artist(
 def create_song(
     payload: SongCreate,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> SongDetail:
     """创建歌曲，仅管理员可用。"""
     try:
@@ -89,7 +89,7 @@ def update_song(
     song_id: int,
     payload: SongUpdate,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> SongDetail:
     """局部更新歌曲，仅管理员可用。"""
     try:
@@ -104,7 +104,7 @@ def update_song(
 def delete_song(
     song_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> Response:
     """清理关联并删除歌曲，仅管理员可用。"""
     try:

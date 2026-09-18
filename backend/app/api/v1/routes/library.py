@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import block_demo_writes, get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.library import (
@@ -56,7 +56,7 @@ def get_playlist(
 @router.post("/playlists", response_model=PlaylistItem, status_code=status.HTTP_201_CREATED)
 def create_playlist(
     payload: PlaylistCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PlaylistItem:
     """创建当前用户歌单。"""
@@ -67,7 +67,7 @@ def create_playlist(
 def update_playlist(
     playlist_id: int,
     payload: PlaylistUpdate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PlaylistItem:
     """修改当前用户歌单。"""
@@ -80,7 +80,7 @@ def update_playlist(
 @router.delete("/playlists/{playlist_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_playlist(
     playlist_id: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """删除当前用户歌单。"""
@@ -94,7 +94,7 @@ def delete_playlist(
 def add_playlist_song(
     playlist_id: int,
     payload: SongReference,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
     """向当前用户歌单添加歌曲。"""
@@ -115,7 +115,7 @@ def add_playlist_song(
 def remove_playlist_song(
     playlist_id: int,
     song_id: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """从当前用户歌单删除歌曲。"""
@@ -139,7 +139,7 @@ def list_favorites(
 @router.post("/favorites", response_model=FavoriteItem, status_code=status.HTTP_201_CREATED)
 def add_favorite(
     payload: SongReference,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FavoriteItem:
     """收藏歌曲。"""
@@ -154,7 +154,7 @@ def add_favorite(
 @router.delete("/favorites/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_favorite(
     song_id: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """取消收藏歌曲。"""

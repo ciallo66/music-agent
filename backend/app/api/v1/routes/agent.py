@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import block_demo_writes
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.agent import AgentMessage, ToolConfirmationRequest
@@ -38,10 +38,13 @@ def _sse(stream: Iterator[str], session_id: int) -> StreamingResponse:
 @router.post("/agent/chat")
 def chat(
     payload: AgentMessage,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StreamingResponse:
-    """通过 SSE 流式返回 Agent 事件。"""
+    """通过 SSE 流式返回 Agent 事件。
+
+    对话本身会写入会话与消息表，并且本轮可能产生写工具调用，因此演示账号同样只读。
+    """
     service = AgentService(db, current_user.id)
     try:
         conversation = service.get_or_create_conversation(payload.session_id)
@@ -53,10 +56,13 @@ def chat(
 @router.post("/agent/confirmations")
 def confirm(
     payload: ToolConfirmationRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StreamingResponse:
-    """按用户决定处理待确认工具调用，并继续会话的 SSE 流。"""
+    """按用户决定处理待确认工具调用，并继续会话的 SSE 流。
+
+    确认流程是写工具真正落库的入口，演示账号必须在这里被拦住。
+    """
     service = AgentService(db, current_user.id)
     try:
         conversation = service.get_or_create_conversation(payload.session_id)

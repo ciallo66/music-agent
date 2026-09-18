@@ -78,6 +78,7 @@ class FeedbackRepository:
         """统计用户点赞歌曲的风格分布，供同风格加权。"""
         rows = self.db.execute(
             select(Song.genre, func.count())
+            .select_from(RecommendationFeedback)
             .join(Song, Song.id == RecommendationFeedback.song_id)
             .where(
                 RecommendationFeedback.user_id == user_id,

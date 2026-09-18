@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import block_demo_writes, get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.feedback import (
@@ -40,7 +40,7 @@ def list_feedback_actions(
 )
 def create_feedback(
     payload: RecommendationFeedbackCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RecommendationFeedbackResponse:
     """记录用户对推荐歌曲的反馈。"""
@@ -58,7 +58,7 @@ def create_feedback(
 @router.delete("/feedback/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_feedback(
     song_id: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(block_demo_writes)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
     """删除用户对某首歌的反馈。"""

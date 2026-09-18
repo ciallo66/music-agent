@@ -67,6 +67,16 @@
             >{{ submitLabel }} <span v-if="!submitting" aria-hidden="true">→</span></el-button
           >
         </el-form>
+        <!-- 一键体验：用只读演示账号登录，招聘方无需账号密码即可查看 -->
+        <el-button
+          v-if="mode === 'login'"
+          class="demo-button"
+          :loading="demoLoading"
+          native-type="button"
+          @click="enterDemo"
+        >
+          立即体验演示环境（只读）
+        </el-button>
         <p class="security-note">
           <span aria-hidden="true">◇</span> 登录状态通过安全令牌维护，请勿在公共设备保存密码。
         </p>
@@ -95,6 +105,11 @@ const route = useRoute()
 const mode = ref<Mode>('login')
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
+const demoLoading = ref(false)
+
+// 演示账号只用于「立即体验」按钮，不显示在界面上；
+// 后端按 DEMO_USERNAME 对该账号强制只读，所以这里不担心被改动数据。
+const DEMO_CREDENTIALS = { username: 'demo', password: 'demo1234' }
 const form = reactive({ username: '', password: '' })
 const rules: FormRules = {
   username: [
@@ -122,6 +137,21 @@ const submitLabel = computed(() => ({ login: '登录', register: '创建账号' 
 function changeMode(nextMode: Mode): void {
   mode.value = nextMode
   formRef.value?.clearValidate()
+}
+
+// 一键进入演示环境：用只读演示账号登录并直接进入工作区。
+async function enterDemo(): Promise<void> {
+  if (demoLoading.value || submitting.value) return
+  demoLoading.value = true
+  try {
+    await auth.login(DEMO_CREDENTIALS.username, DEMO_CREDENTIALS.password)
+    showSuccess('已进入演示环境，所有修改都会被拒绝')
+    await router.push('/')
+  } catch (error) {
+    showError(error, '演示环境暂时不可用，请稍后重试')
+  } finally {
+    demoLoading.value = false
+  }
 }
 
 // 统一处理登录和注册；管理员与普通用户走同一个入口，角色由账号决定。
@@ -355,6 +385,12 @@ async function submit(): Promise<void> {
 .submit-button span span {
   margin-left: 18px;
 }
+/* 一键体验按钮：次要动作，不与登录按钮抢主次 */
+.demo-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
 .security-note {
   display: flex;
   align-items: flex-start;

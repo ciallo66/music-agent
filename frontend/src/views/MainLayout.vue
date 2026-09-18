@@ -78,6 +78,11 @@
 
     <main class="main-content">
       <div class="content-frame">
+        <!-- 演示账号横幅：让看的人第一眼知道这是只读演示环境 -->
+        <div v-if="auth.isDemo" class="demo-banner" role="status">
+          <strong>演示账号</strong>
+          <span>可浏览全部页面与数据，但不能新增、修改或删除。想体验完整功能请自行注册账号。</span>
+        </div>
         <div class="workspace-toolbar">
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
             <span aria-hidden="true">⌕</span>
@@ -375,6 +380,29 @@ nav a.router-link-exact-active .nav-icon {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+/* 演示账号横幅：只读提示，每页都可见 */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(232, 172, 96, 0.4);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: rgba(232, 172, 96, 0.1);
+  font-size: 12px;
+}
+
+.demo-banner strong {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #e8ac60;
+  background: rgba(232, 172, 96, 0.18);
+  font-size: 11px;
 }
 
 .workspace-toolbar {

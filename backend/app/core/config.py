@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     refresh_cookie_secure: bool = False
     refresh_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # 演示账号用户名：该账号登录后仍可读全部数据，但所有写操作都会被拒绝。
+    # 长度上限与注册用户名校验（schemas/auth.py 的 Username）保持一致。
+    demo_username: str = Field(default="demo", min_length=1, max_length=18)
 
     database_url: str = "postgresql+psycopg://postgres:your_password@127.0.0.1:5432/music_agent"
 

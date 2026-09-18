@@ -12,6 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
   let initializationRequest: Promise<void> | null = null
   const isAuthenticated = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  // 演示账号（用户名与后端 DEMO_USERNAME 默认值一致）：可浏览、不可写。
+  const DEMO_USERNAME = 'demo'
+  const isDemo = computed(() => user.value?.username.toLowerCase() === DEMO_USERNAME)
 
   configureAuthToken(
     () => accessToken.value,
@@ -83,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAdmin,
     isAuthenticated,
+    isDemo,
     user,
     initialize,
     login,
