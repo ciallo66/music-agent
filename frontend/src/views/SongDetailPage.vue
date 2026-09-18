@@ -30,10 +30,14 @@
           ><span class="feat-val">{{ song.music_key || '-' }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">律动</span
-          ><span class="feat-val">{{
-            song.danceability !== null ? (song.danceability * 100).toFixed(0) + '%' : '-'
+          <span class="feat-label">律动（分档）</span
+          ><span class="feat-val" :title="danceabilityHint(song.danceability)">{{
+            danceabilityLabel(song.danceability) || '-'
           }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">律动（判定分）</span
+          ><span class="feat-val">{{ danceabilityPercent(song.danceability) }}</span>
         </div>
         <div class="feat-item">
           <span class="feat-label">响度</span
@@ -67,16 +71,17 @@
         </div>
       </div>
       <p class="feature-source">
-        来源：AcousticBrainz 音频分析（Essentia）。响度已归一化到 0–1；能量为响度的派生理
-        指标，用于横向比较，不等同于数据源原生的 energy。
+        来源：AcousticBrainz 音频分析（Essentia）。响度是数据源的 average_loudness，已归一化到
+        0–1；律动是「可舞动」分类器的判定概率，因此单曲更适合作分档参考，精确分值仅备查。
       </p>
     </div>
     <div class="radar-block">
       <h3>特征画像</h3>
       <div ref="chartEl" class="radar-chart"></div>
       <p class="radar-note">
-        数值已归一化到 0-100（响度按 -60~0 dB、节拍按 0~180
-        归一化）；能量与愉悦度当前数据源未提供，故不展示
+        五个轴都是数据源真实存在的字段，数值已归一化到 0–100（起音密度 0–8 次/秒、频谱质心 0–4000
+        Hz、响度 0–1、律动 0–1、节拍 0–180）；原生 energy 与 valence 数据源未提供，
+        不画进图里，也不以 0 冒充。
       </p>
     </div>
     <div class="detail-block" v-if="song.instruments">
@@ -124,7 +129,13 @@ import { RadarChart } from 'echarts/charts'
 import { LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
-import { moodTags, voiceLabel } from '../types/music'
+import {
+  danceabilityHint,
+  danceabilityLabel,
+  danceabilityPercent,
+  moodTags,
+  voiceLabel,
+} from '../types/music'
 import { fusedGenreLabel } from '../utils/genre'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { showError, showSuccess } from '../utils/feedback'
@@ -196,8 +207,7 @@ const missingFields = computed(() => {
   const current = song.value
   if (!current) return []
   const checks: { label: string; value: unknown }[] = [
-    { label: '原生 energy', value: current.energy },
-    { label: '原生 valence', value: current.valence },
+    { label: '原生 energy / valence（数据源未提供，不入特征图）', value: current.energy },
     { label: '时长', value: current.duration },
     { label: '乐器', value: current.instruments },
     { label: '歌曲结构', value: current.song_structure },
@@ -228,16 +238,18 @@ async function load(): Promise<void> {
   }
 }
 
-// 将 -60~0 dB 映射到雷达图使用的 0~100 区间并限制边界。
-function normalizeLoudness(value: number | null) {
-  if (value === null) return 0
-  return Math.min(100, Math.max(0, ((value + 60) / 60) * 100))
+// 取频谱特征里的均值，供特征明细与雷达图共用；缺失返回 null。
+function spectralMean(features: Record<string, unknown> | null | undefined, key: string) {
+  const bag = features?.[key]
+  if (!bag || typeof bag !== 'object') return null
+  const mean = (bag as Record<string, unknown>).mean
+  return typeof mean === 'number' && Number.isFinite(mean) ? mean : null
 }
 
-// 将 BPM 按 0~180 归一化，供不同量纲特征共用雷达图。
-function normalizeBpm(value: number | null) {
-  if (value === null) return 0
-  return Math.min(100, (value / 180) * 100)
+// 将 value 从 0~max 线性映射到 0~100 并夹紧边界；缺失返回 0 但不参与展示判定。
+function scaleTo100(value: number | null, max: number) {
+  if (value === null || !Number.isFinite(value)) return 0
+  return Math.min(100, Math.max(0, (value / max) * 100))
 }
 
 // 从全局设计令牌读取图表颜色，保证 ECharts 与页面主题同步。
@@ -245,17 +257,24 @@ function cssVariable(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-// 将歌曲特征转换为雷达图配置；缺失值按 0 展示而不伪造数据。
+// 将歌曲特征转换为雷达图配置。
+// 五个轴全部来自数据源真实字段：原生 energy / valence 整列为空，
+// 画进来只会是一条贴边的零线，因此不设这两个轴（缺失字段在页面下方如实列出）。
 function renderRadar() {
   if (!song.value || !chartEl.value) return
   if (!chart) chart = init(chartEl.value)
   const current = song.value
+  const onsetRate =
+    typeof current.rhythm_features?.onset_rate === 'number'
+      ? current.rhythm_features.onset_rate
+      : null
+  const centroid = spectralMean(current.spectral_features, 'spectral_centroid')
   const values = [
-    current.energy !== null ? Math.round(current.energy * 100) : 0,
-    current.valence !== null ? Math.round(current.valence * 100) : 0,
-    current.danceability !== null ? Math.round(current.danceability * 100) : 0,
-    Math.round(normalizeLoudness(current.loudness)),
-    Math.round(normalizeBpm(current.bpm)),
+    scaleTo100(onsetRate, 8),
+    scaleTo100(centroid, 4000),
+    scaleTo100(current.loudness, 1),
+    scaleTo100(current.danceability, 1),
+    scaleTo100(current.bpm, 180),
   ]
   const textSecondary = cssVariable('--text-secondary')
   const chartBorder = cssVariable('--chart-border')
@@ -268,11 +287,11 @@ function renderRadar() {
     legend: { show: false },
     radar: {
       indicator: [
-        { name: 'Energy', max: 100 },
-        { name: 'Valence', max: 100 },
-        { name: 'Danceability', max: 100 },
-        { name: 'Loudness', max: 100 },
-        { name: 'BPM', max: 100 },
+        { name: '起音密度', max: 100 },
+        { name: '频谱质心', max: 100 },
+        { name: '响度', max: 100 },
+        { name: '律动', max: 100 },
+        { name: '节拍', max: 100 },
       ],
       radius: '68%',
       axisName: { color: textSecondary, fontSize: 12 },

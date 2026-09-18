@@ -1,5 +1,4 @@
 // 音乐领域对象：歌手、歌曲、歌单、推荐结果和反馈。
-// 音乐领域对象：歌手、歌曲、歌单、推荐结果和反馈。
 export interface ArtistBrief {
   id: number
   name: string
@@ -79,6 +78,36 @@ export function voiceLabel(voiceInstrumental: string | null): string {
   if (!voiceInstrumental) return ''
   const labels: Record<string, string> = { instrumental: '器乐', voice: '人声', vocal: '人声' }
   return labels[voiceInstrumental] ?? voiceInstrumental
+}
+
+/**
+ * 律动的三档中文说法。
+ *
+ * `danceability` 取自 AcousticBrainz 的 danceability 分类器，是「判定为可舞动」的
+ * 概率，而不是连续刻度：库里 931 首有 364 首落在 0 附近、244 首落在 1 附近。
+ * 直接按百分比展示会出现大批「0% 律动」，含义也被误读成「没有律动」，
+ * 因此按档位展示，精确分值放进 title 提示里备查。
+ */
+export function danceabilityLabel(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  if (value < 0.05) return '低'
+  if (value > 0.95) return '高'
+  return '中'
+}
+
+/** 律动的百分比文本，保留给提示与详情页使用。 */
+export function danceabilityPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '-'
+  return `${Math.round(value * 100)}%`
+}
+
+/** 律动单元格的悬浮说明：说明档位含义，并给出模型的精确分值。 */
+export function danceabilityHint(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '这首没有可用的律动分析结果'
+  const percent = Math.round(value * 100)
+  if (percent === 0) return '律动：模型判断为可舞动的概率约 0%'
+  if (percent === 100) return '律动：模型判断为可舞动的概率接近 100%'
+  return `律动：模型判断为可舞动的概率约 ${percent}%`
 }
 
 export interface PlaylistItem {

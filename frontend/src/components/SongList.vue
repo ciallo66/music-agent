@@ -5,9 +5,13 @@
       <span>歌曲</span>
       <span>歌手</span>
       <span>{{ variant === 'playlist' ? '时长' : '风格' }}</span>
-      <span v-if="variant === 'catalog' || variant === 'search'">节拍</span>
+      <span v-if="variant === 'catalog' || variant === 'search'">节拍 BPM</span>
       <span v-if="variant === 'catalog' || variant === 'search'">时长</span>
-      <span v-if="variant === 'catalog'">律动</span>
+      <span
+        v-if="variant === 'catalog'"
+        title="按 AcousticBrainz 可舞动分类器的判定分档（低/中/高），鼠标悬停看精确分值"
+        >律动</span
+      >
       <span v-if="variant === 'favorites'"></span>
     </div>
     <div
@@ -34,8 +38,8 @@
       <span v-if="variant === 'catalog' || variant === 'search'" class="muted numeric">
         {{ song.duration ? formatDuration(song.duration) : '-' }}
       </span>
-      <span v-if="variant === 'catalog'" class="muted numeric">
-        {{ song.danceability !== null ? `${(song.danceability * 100).toFixed(0)}%` : '-' }}
+      <span v-if="variant === 'catalog'" class="muted" :title="danceabilityHint(song.danceability)">
+        {{ danceabilityLabel(song.danceability) || '-' }}
       </span>
       <button
         v-if="variant === 'favorites'"
@@ -52,6 +56,7 @@
 
 <script setup lang="ts">
 import type { SongSummary } from '../types/music'
+import { danceabilityHint, danceabilityLabel } from '../types/music'
 import { fusedGenre } from '../utils/genre'
 
 type SongListVariant = 'catalog' | 'search' | 'favorites' | 'playlist'
@@ -101,12 +106,14 @@ function formatDuration(duration: number | null): string {
 
 .variant-catalog .song-row {
   grid-template-columns:
-    minmax(220px, 2fr) minmax(120px, 1.2fr) minmax(90px, 0.8fr)
-    64px 68px 68px;
+    minmax(200px, 2fr) minmax(120px, 1.2fr) minmax(84px, 0.8fr)
+    62px 78px 58px;
 }
 
 .variant-search .song-row {
-  grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.2fr) minmax(90px, 0.8fr) 64px;
+  grid-template-columns:
+    minmax(200px, 2fr) minmax(120px, 1.2fr) minmax(84px, 0.8fr)
+    62px 78px;
 }
 
 .variant-favorites .song-row {

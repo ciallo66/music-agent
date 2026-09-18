@@ -36,8 +36,8 @@
           <span v-if="item.bpm">节奏 {{ Math.round(item.bpm) }} BPM</span>
           <span v-if="item.energy !== null">能量 {{ formatPercent(item.energy) }}</span>
           <span v-if="item.valence !== null">情绪明亮度 {{ formatPercent(item.valence) }}</span>
-          <span v-if="item.danceability !== null"
-            >律动性 {{ formatPercent(item.danceability) }}</span
+          <span v-if="item.danceability !== null" :title="danceabilityHint(item.danceability)"
+            >律动 {{ danceabilityLabel(item.danceability) }}</span
           >
         </div>
         <div class="track-actions">
@@ -75,6 +75,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { StructuredRecommendationCard, FeedbackActionItem } from '../types/music'
+import { danceabilityHint, danceabilityLabel } from '../types/music'
 import { useFeedbackStore } from '../stores/feedback'
 
 const props = defineProps<{

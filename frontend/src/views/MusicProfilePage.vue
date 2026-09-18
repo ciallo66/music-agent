@@ -72,6 +72,10 @@
                 <span :style="{ width: `${feature.percent}%` }"></span>
               </div>
             </div>
+            <p v-if="hiddenFeatureCount" class="feature-note">
+              有 {{ hiddenFeatureCount }} 项特征因分析源未提供而隐藏（不用 0
+              冒充）；律动是「可舞动」分类器的判定分，按互动记录取平均，适合看档位而不是精确百分比。
+            </p>
           </div>
         </article>
 
@@ -218,6 +222,7 @@ import StatePanel from '../components/StatePanel.vue'
 import { useProfileStore } from '../stores/profile'
 import { useFeedbackStore } from '../stores/feedback'
 import { storeToRefs } from 'pinia'
+import { danceabilityLabel } from '../types/music'
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
@@ -246,10 +251,12 @@ const stats = computed(() => {
   ]
 })
 
-// 计算特征进度条的展示值和百分比，缺失值保持为空态。
-const features = computed(() => {
+// 特征行：百分比为 0 表示数据源没给这个字段，展示时整行去掉，避免出现永远空着的进度条。
+const featureRows = computed(() => {
   const feature = profile.value?.feature_profile
   if (!feature) return []
+  const dancePercent = formatPercent(feature.average_danceability)
+  const danceLevel = danceabilityLabel(feature.average_danceability)
   return [
     {
       label: '平均 BPM',
@@ -268,11 +275,16 @@ const features = computed(() => {
     },
     {
       label: '律动 Danceability',
-      display: formatPercent(feature.average_danceability),
+      display: danceLevel ? `${dancePercent}（${danceLevel}）` : dancePercent,
       percent: scale(feature.average_danceability, 1),
     },
   ]
 })
+
+const features = computed(() => featureRows.value.filter((item) => item.percent > 0))
+const hiddenFeatureCount = computed(
+  () => featureRows.value.filter((item) => item.percent <= 0).length,
+)
 
 // 加载画像：数据来自 store 缓存，命中缓存时立即渲染、后台静默刷新。
 async function loadProfile(force = true): Promise<void> {
@@ -621,6 +633,12 @@ onBeforeUnmount(disposeCharts)
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--accent), #59e2a4);
+}
+.feature-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.7;
 }
 .chart {
   width: 100%;
