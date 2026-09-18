@@ -135,4 +135,7 @@ jobs:
             echo "$CNB_TOKEN" | docker login docker.cnb.cool -u cnb --password-stdin
             docker compose --env-file .env.production pull
             docker compose --env-file .env.production up -d
+            # 数据库迁移必须在这里执行：数据库在独立的 Docker 卷里，换镜像不会自动改表结构，
+            # 漏掉这一步就会出现「代码要新字段、库里还是旧表」的 500。
+            docker compose --env-file .env.production exec -T backend alembic upgrade head
             docker image prune -f
