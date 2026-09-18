@@ -3,7 +3,7 @@
   <section class="profile-page">
     <PageHeader title="个人内容画像" subtitle="从你的历史互动和收藏记录里，了解内容偏好">
       <template #actions>
-        <el-button :loading="loading" @click="loadProfile">刷新数据</el-button>
+        <el-button :loading="loading" @click="() => loadProfile(true)">刷新数据</el-button>
       </template>
     </PageHeader>
 
@@ -15,11 +15,27 @@
       :message="errorMessage"
     >
       <template #action>
-        <button class="retry-button" type="button" @click="loadProfile">重新加载</button>
+        <button class="retry-button" type="button" @click="() => loadProfile(true)">
+          重新加载
+        </button>
       </template>
     </StatePanel>
 
     <template v-else-if="profile">
+      <!-- 还没有任何互动记录时，页面照常展示框架，只说明数据从哪来 -->
+      <p v-if="refreshing" class="refresh-note">正在后台刷新…</p>
+      <div
+        v-if="profile.total_plays === 0 && profile.favorite_count === 0 && feedbackCount === 0"
+        class="empty-hint"
+      >
+        <strong>还没有可分析的互动数据</strong>
+        <p>
+          画像来自你的<strong>收藏</strong>与<strong>智能体互动记录</strong>。本平台不托管音频、不提供在线播放，
+          所以不会产生收听记录 —— 去
+          <router-link to="/songs">内容库</router-link> 收藏几首、点「喜欢 / 不感兴趣」，或让
+          <router-link to="/agent">智能助手</router-link> 推荐一批，数据就会出现在这里。
+        </p>
+      </div>
       <div class="stat-grid">
         <article v-for="stat in stats" :key="stat.label" class="stat-card">
           <span class="stat-icon" aria-hidden="true">{{ stat.icon }}</span>
@@ -199,15 +215,18 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
-import { getMusicProfile } from '../api/profile'
-import type { MusicProfileResponse } from '../types/profile'
-import { showError } from '../utils/feedback'
+import { useProfileStore } from '../stores/profile'
+import { useFeedbackStore } from '../stores/feedback'
+import { storeToRefs } from 'pinia'
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
-const profile = ref<MusicProfileResponse | null>(null)
-const loading = ref(false)
-const errorMessage = ref('')
+// 画像放进 store 缓存：再次进入页面立刻用缓存渲染，不再每次都等接口。
+const profileStore = useProfileStore()
+const feedbackStore = useFeedbackStore()
+// 反馈数单独取：它是画像里唯一完全由用户主动产生的信号
+const feedbackCount = computed(() => feedbackStore.stats?.total ?? 0)
+const { profile, loading, refreshing, errorMessage } = storeToRefs(profileStore)
 const trendChart = ref<HTMLDivElement | null>(null)
 const genreChart = ref<HTMLDivElement | null>(null)
 const artistChart = ref<HTMLDivElement | null>(null)
@@ -223,6 +242,7 @@ const stats = computed(() => {
     { label: '累计互动', value: profile.value.total_plays, icon: '◉' },
     { label: '听过歌曲', value: profile.value.unique_songs, icon: '♫' },
     { label: '收藏歌曲', value: profile.value.favorite_count, icon: '♡' },
+    { label: '主动反馈', value: feedbackCount.value, icon: '✓' },
   ]
 })
 
@@ -254,21 +274,11 @@ const features = computed(() => {
   ]
 })
 
-// 加载画像；图表渲染放在数据更新后，避免读取空 DOM。
-async function loadProfile(): Promise<void> {
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const { data } = await getMusicProfile()
-    profile.value = data
-    await nextTick()
-    renderCharts()
-  } catch (error) {
-    errorMessage.value = '暂时无法读取播放数据，请稍后重试。'
-    showError(error, '音乐画像加载失败')
-  } finally {
-    loading.value = false
-  }
+// 加载画像：数据来自 store 缓存，命中缓存时立即渲染、后台静默刷新。
+async function loadProfile(force = true): Promise<void> {
+  await profileStore.fetchProfile(force)
+  await nextTick()
+  renderCharts()
 }
 
 // 根据画像数据创建趋势、风格和歌手图表。
@@ -435,7 +445,17 @@ function formatDate(value: string): string {
     : date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
-onMounted(loadProfile)
+onMounted(async () => {
+  void feedbackStore.loadStats()
+  if (profile.value !== null) {
+    // 命中缓存：先把图表画出来，用户不用等接口
+    await nextTick()
+    renderCharts()
+    void profileStore.fetchProfile(true)
+    return
+  }
+  await loadProfile(false)
+})
 onBeforeUnmount(disposeCharts)
 </script>
 
@@ -443,6 +463,38 @@ onBeforeUnmount(disposeCharts)
 .profile-page {
   padding: var(--page-gutter);
   max-width: 1380px;
+}
+/* 空数据说明：页面框架照常渲染，只把“数据从哪来”讲清楚 */
+.refresh-note {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.empty-hint {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.empty-hint strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+.empty-hint p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.empty-hint a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.empty-hint a:hover {
+  text-decoration: underline;
 }
 .stat-grid {
   display: grid;

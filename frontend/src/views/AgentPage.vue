@@ -20,6 +20,10 @@
       aria-live="polite"
     >
       <div class="conversation-inner">
+        <!-- 运行状态条：吸顶显示「正在分析 / 正在调用工具 / 正在生成」，随时知道智能体在干什么 -->
+        <p v-if="runStatus" class="run-status" role="status">
+          <i aria-hidden="true"></i>{{ runStatus }}
+        </p>
         <div v-for="(item, index) in messages" :key="index" class="message-row" :class="item.role">
           <span class="message-avatar" aria-hidden="true">{{
             item.role === 'user' ? userInitial : '✦'
@@ -67,28 +71,48 @@
 
     <div v-if="awaitingConfirmation" class="confirmation-panel page-surface">
       <div class="confirmation-head">
-        <span class="confirmation-badge">需要确认</span>
-        <div>
-          <strong>以下操作会修改数据，确认后才会执行</strong>
-          <small>执行前你可以拒绝，智能体会改用其它方式回答</small>
+        <span class="confirmation-badge">需确认</span>
+        <strong>以下操作会写入数据，确认后才执行</strong>
+        <div class="confirmation-actions">
+          <el-button
+            size="small"
+            :disabled="loading || Boolean(firstDecision)"
+            @click="respondToConfirmations(false)"
+          >
+            拒绝
+          </el-button>
+          <el-button
+            size="small"
+            type="primary"
+            :loading="loading"
+            :disabled="Boolean(firstDecision)"
+            @click="respondToConfirmations(true)"
+          >
+            确认执行
+          </el-button>
         </div>
       </div>
       <ul class="confirmation-list">
-        <li v-for="item in pendingConfirmations" :key="item.confirmationId">
+        <li
+          v-for="item in pendingConfirmations"
+          :key="item.confirmationId"
+          :class="{ decided: decisionOf(item.confirmationId) !== '' }"
+        >
           <span class="op-tag">{{ operationLabel(item.operation) }}</span>
           <div class="confirmation-detail">
-            <strong>{{ item.name }}</strong>
-            <small v-if="item.reason">{{ item.reason }}</small>
-            <code>{{ formatArguments(item.arguments) }}</code>
+            <strong>{{ confirmationTitle(item) }}</strong>
+            <dl v-if="confirmationFacts(item).length" class="confirmation-facts">
+              <div v-for="fact in confirmationFacts(item)" :key="fact.label">
+                <dt>{{ fact.label }}</dt>
+                <dd>{{ fact.value }}</dd>
+              </div>
+            </dl>
           </div>
+          <span v-if="decisionOf(item.confirmationId)" class="decision-chip">
+            {{ decisionOf(item.confirmationId) }}
+          </span>
         </li>
       </ul>
-      <div class="confirmation-actions">
-        <el-button :disabled="loading" @click="respondToConfirmations(false)">拒绝</el-button>
-        <el-button type="primary" :loading="loading" @click="respondToConfirmations(true)">
-          确认执行
-        </el-button>
-      </div>
     </div>
 
     <form class="composer" @submit.prevent="sendMessage">
@@ -100,7 +124,7 @@
         maxlength="2000"
         resize="none"
         placeholder="直接输入需求，例如：推荐节奏舒缓、器乐为主的内容"
-        :disabled="loading || awaitingConfirmation"
+        :disabled="awaitingConfirmation"
         @keydown="handleComposerKeydown"
       />
       <el-button
@@ -122,13 +146,20 @@
       >
         发送
       </el-button>
+      <!-- 运行中用户仍可打字：明确告诉他这条会在本轮结束后才能发出 -->
+      <p v-if="loading && draft.trim()" class="composer-busy">
+        智能体正在运行，这条将在本轮结束后发送
+      </p>
     </form>
-    <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合歌曲详情与实际数据判断。</p>
+    <div class="composer-foot">
+      <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合详情与实际数据判断。</p>
+      <p class="composer-hint">Enter 发送 · Shift + Enter 换行 · 最多 2000 字</p>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ElInput } from 'element-plus'
 import { useRoute } from 'vue-router'
 import MarkdownContent from '../components/MarkdownContent.vue'
@@ -151,16 +182,59 @@ const messages = ref<Message[]>([])
 const sessionId = ref<number | null>(null)
 const toolStatus = ref('')
 const pendingConfirmations = ref<PendingToolConfirmation[]>([])
+// 已作出的决定：确认后按钮要禁用、卡片转为「已确认」状态，不能还能再点一次。
+const confirmationDecisions = ref<Record<number, string>>({})
 const conversationElement = ref<HTMLElement | null>(null)
 const composerInput = ref<InstanceType<typeof ElInput> | null>(null)
 const activeRequest = ref<AbortController | null>(null)
 const requestStoppedByUser = ref(false)
+// 是否自动跟随到最新消息：用户上滚翻历史时暂停，滚回底部后恢复。
+const autoFollow = ref(true)
+// 内容高度变化时自动滚到底（流式输出、工具状态、确认卡片都会触发）。
+let resizeObserver: ResizeObserver | null = null
+// 一帧内只滚一次，避免滚动 ↔ ResizeObserver 互相触发。
+let scrollScheduled = false
 const userInitial = computed(() => auth.user?.username.slice(0, 1).toUpperCase() || '你')
 const hasPendingAssistant = computed(
   () => messages.value[messages.value.length - 1]?.role === 'assistant',
 )
+// 运行状态：让用户随时知道智能体现在在干什么（正在分析 / 正在调用工具 / 正在生成）。
+const runStatus = computed(() => {
+  if (awaitingConfirmation.value) return '等待你确认高风险操作'
+  if (!loading.value) return ''
+  if (toolStatus.value.startsWith('工具调用失败')) return toolStatus.value
+  if (toolStatus.value && !toolStatus.value.startsWith('有高风险')) return toolStatus.value
+  return hasPendingAssistant.value ? '正在生成回答…' : '正在分析你的问题…'
+})
+
 // 有未确认的高风险操作时，先让用户处理完再继续对话。
 const awaitingConfirmation = computed(() => pendingConfirmations.value.length > 0)
+// 已经有决定时（按钮已点过），关闭按钮避免重复提交。
+const firstDecision = computed(() => {
+  const first = pendingConfirmations.value[0]
+  return first ? (confirmationDecisions.value[first.confirmationId] ?? '') : ''
+})
+
+/** 读取某条确认的决定状态文案。 */
+function decisionOf(confirmationId: number): string {
+  return confirmationDecisions.value[confirmationId] ?? ''
+}
+
+/** 把工具参数转成用户看得懂的事实项，不暴露工具名和 JSON。 */
+function confirmationFacts(item: PendingToolConfirmation): { label: string; value: string }[] {
+  const args = item.arguments ?? {}
+  const facts: { label: string; value: string }[] = []
+  const push = (label: string, value: unknown): void => {
+    if (typeof value === 'string' && value.trim()) facts.push({ label, value: value.trim() })
+    else if (typeof value === 'number') facts.push({ label, value: String(value) })
+  }
+  push('名称', args.name)
+  push('描述', args.description)
+  push('集合', args.playlist_name)
+  push('歌曲', Array.isArray(args.song_ids) ? `共 ${args.song_ids.length} 首` : undefined)
+  if (!facts.length && item.reason) facts.push({ label: '说明', value: item.reason })
+  return facts
+}
 
 // 空状态下的示例问题，点击即发送，降低首次使用门槛。
 const suggestions = [
@@ -170,16 +244,27 @@ const suggestions = [
   '我最近听的歌有什么共同特点？',
 ]
 
-// 流式回复期间跟随到底部。
-// 用瞬时滚动而非平滑滚动：流式增量每秒会触发多次，平滑动画互相打断会让滚动滞后。
-// 用户主动上滚翻历史时不再自动跟随，避免把视角强行拉回底部。
+// 只有消息列表内部滚动（和主流对话产品一致）：输入框固定在底部不随消息滚走。
+// 页面用 ResizeObserver 盯着内容高度，新内容出现就滚到底部。
 async function scrollToLatest(): Promise<void> {
   await nextTick()
-  const element = conversationElement.value
-  if (element === null) return
-  const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight
-  if (distanceToBottom > 120) return
-  element.scrollTo({ top: element.scrollHeight })
+  const surface = conversationElement.value
+  // 单飞保护：ResizeObserver 每次高度变化都会触发，滚动本身也可能引发新的高度变化，
+  // 用一帧只滚一次的阀门避免滚动与观察者互相踢成死循环（会把主线程卡住）。
+  if (surface === null || !autoFollow.value || scrollScheduled) return
+  scrollScheduled = true
+  requestAnimationFrame(() => {
+    scrollScheduled = false
+    surface.scrollTo({ top: surface.scrollHeight })
+  })
+}
+
+/** 用户自己在翻历史时不抢滚动条；滚回底部后恢复自动跟随。 */
+function handleSurfaceScroll(): void {
+  const surface = conversationElement.value
+  if (surface === null) return
+  const distanceToBottom = surface.scrollHeight - surface.scrollTop - surface.clientHeight
+  autoFollow.value = distanceToBottom <= 120
 }
 
 // 创建一次流式消费的事件处理器，内部维护当前助手消息的位置。
@@ -301,11 +386,20 @@ function operationLabel(operation: string): string {
   return '操作'
 }
 
-// 待确认参数只用于展示，截断过长内容避免撑破面板。
-function formatArguments(args: Record<string, unknown>): string {
-  const text = JSON.stringify(args)
-  return text.length > 160 ? `${text.slice(0, 160)}…` : text
+// 待确认内容用人话展示：不把工具名和 JSON 抛给用户。
+// 标题是「这次要做什么」，明细是具体内容（名称、描述等）。
+function confirmationTitle(item: PendingToolConfirmation): string {
+  const args = item.arguments ?? {}
+  if (item.name === 'create_playlist') return `新建集合「${String(args.name ?? '未命名')}」`
+  if (item.name === 'add_song_to_playlist') {
+    return `把歌曲加入集合「${String(args.playlist_name ?? args.playlist_id ?? '')}」`
+  }
+  if (item.name === 'delete_playlist')
+    return `删除集合「${String(args.name ?? args.playlist_id ?? '')}」`
+  return item.reason || '需要你确认后才能执行'
 }
+
+// 明细改由 confirmationFacts 提供（键值对），这里不再输出原始 JSON。
 
 // 清空当前展示和会话 ID，下一次提问会创建新会话。
 function startNewConversation(): void {
@@ -321,12 +415,16 @@ function startNewConversation(): void {
 // Enter 发送、Shift+Enter 换行；输入法组合期间不抢占回车。
 function handleComposerKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return
+  // 运行中回车不发送：此时按钮是「停止」，要中断请点按钮，避免误触
+  if (loading.value || awaitingConfirmation.value) return
   event.preventDefault()
   void sendMessage()
 }
 
 // 页面创建后提交从其它页面带入的话题（如推荐卡片的“在智能体中继续”）。
 onMounted(async () => {
+  // 锁住外层滚动：本页只允许消息列表内部滚动，避免两条滚动条。
+  document.querySelector('.main-content')?.classList.add('main-content--locked')
   const topic = typeof route.query.topic === 'string' ? route.query.topic : ''
   await nextTick()
   composerInput.value?.focus()
@@ -335,30 +433,111 @@ onMounted(async () => {
   await sendMessage()
 })
 
-onBeforeUnmount(() => activeRequest.value?.abort())
+// 释放本页对整站的影响：解锁外层滚动、断开观察者、终止在途请求。
+// 抽成独立函数是为了让路由守卫也能兜底调用 —— 万一组件卸载没跑到，
+// 外面的滚动锁会一直留着，导致切到别的页面后整页滚不动。
+function releasePageLocks(): void {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  document.querySelector('.main-content')?.classList.remove('main-content--locked')
+  activeRequest.value?.abort()
+  activeRequest.value = null
+  loading.value = false
+}
+
+onBeforeUnmount(releasePageLocks)
+defineExpose({ releasePageLocks })
+
+// 消息列表出现/消失时接管滚动：内部滚动 + 内容变化自动跟随到底部。
+watch(conversationElement, (element) => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  element?.removeEventListener('scroll', handleSurfaceScroll)
+  if (element === null) return
+  element.addEventListener('scroll', handleSurfaceScroll, { passive: true })
+  resizeObserver = new ResizeObserver(() => void scrollToLatest())
+  resizeObserver.observe(element)
+  autoFollow.value = true
+  void scrollToLatest()
+})
 </script>
 
 <style scoped>
+/* 本页不允许外层滚动：整页高度锁在一屏内，滚动只发生在消息列表内部。
+   两层都要管住——外层容器禁用滚动，本页自身撑满而不溢出。 */
+:global(.main-content--locked) {
+  overflow-y: hidden;
+}
+:global(.main-content--locked .content-frame) {
+  height: 100%;
+}
 .agent-page {
   display: flex;
-  min-height: 100%;
+  /* 本页对话宽度：比输入框更宽，减少左右空白 */
+  --chat-width: 1080px;
+  height: 100%;
+  min-height: 0;
   flex-direction: column;
   padding: var(--page-gutter);
 }
-.conversation {
-  min-height: 260px;
-  max-height: calc(100vh - 310px);
+/* 对话区撑满剩余高度；滚动在消息列表内部进行 */
+.conversation,
+.agent-empty {
+  min-height: 0;
   flex: 1;
-  padding: clamp(18px, 3vw, 34px);
+}
+.conversation {
+  min-height: 0;
+  flex: 1;
+  padding: clamp(18px, 2.4vw, 30px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* 内容限宽居中：宽屏上长文本一行不会过长，阅读更轻松 */
+/* 内容宽度与下方输入区对齐，宽屏下不再两侧各空一大块 */
 .conversation-inner {
   display: flex;
-  max-width: 780px;
+  width: 100%;
+  max-width: var(--chat-width);
   flex-direction: column;
   margin: 0 auto;
+}
+/* 运行状态条：吸顶，滚动时也能看到智能体当前在做什么 */
+.run-status {
+  position: sticky;
+  z-index: 1;
+  top: -8px;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  backdrop-filter: blur(6px);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.run-status i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: run-pulse 1.2s ease-in-out infinite;
+}
+@keyframes run-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .message-row {
   display: flex;
@@ -399,7 +578,7 @@ onBeforeUnmount(() => activeRequest.value?.abort())
 }
 /* 只给用户消息保留气泡，突出「我说的话」 */
 .user .message {
-  max-width: min(78%, 620px);
+  max-width: min(76%, 720px);
   padding: 10px 14px;
   border: 1px solid rgba(169, 162, 255, 0.22);
   border-radius: 14px 4px 14px 14px;
@@ -442,7 +621,8 @@ onBeforeUnmount(() => activeRequest.value?.abort())
   padding: clamp(28px, 5vw, 56px);
 }
 .empty-copy {
-  max-width: 460px;
+  width: 100%;
+  max-width: var(--chat-width);
   text-align: center;
 }
 .empty-mark {
@@ -471,7 +651,7 @@ onBeforeUnmount(() => activeRequest.value?.abort())
 .suggestion-grid {
   display: grid;
   width: 100%;
-  max-width: 620px;
+  max-width: var(--chat-width);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
@@ -485,11 +665,21 @@ onBeforeUnmount(() => activeRequest.value?.abort())
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 .suggestion-card:hover {
   border-color: var(--border-strong);
   color: var(--text);
   background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+.suggestion-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 @media (max-width: 640px) {
   .suggestion-grid {
@@ -521,30 +711,48 @@ onBeforeUnmount(() => activeRequest.value?.abort())
 .typing i:nth-child(3) {
   animation-delay: 0.3s;
 }
+/* 工具调用状态：做成小胶囊，像主流的“正在执行…”提示，而不是一行裸文字 */
 .tool-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  margin: 4px 0 14px 44px;
-  color: var(--accent-strong);
-  font-size: 10px;
+  gap: 8px;
+  margin: 0 0 14px 40px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.2;
 }
 .tool-status span {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+  box-shadow: 0 0 0 0 rgba(112, 183, 255, 0.6);
+  animation: tool-pulse 1.4s ease-out infinite;
+}
+@keyframes tool-pulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(112, 183, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(112, 183, 255, 0);
+  }
 }
 .confirmation-panel {
-  margin-top: 13px;
-  padding: 14px 16px;
+  width: min(100%, var(--chat-width));
+  margin: 13px auto 0;
+  padding: 10px 14px;
   border-color: rgba(232, 172, 96, 0.35);
 }
+/* 标题与按钮同一行：需要操作时按钮就在眼前，不用往下找 */
 .confirmation-head {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
 }
 .confirmation-badge {
   flex: 0 0 auto;
@@ -552,35 +760,36 @@ onBeforeUnmount(() => activeRequest.value?.abort())
   border: 1px solid rgba(232, 172, 96, 0.45);
   border-radius: 999px;
   color: #e8ac60;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 .confirmation-head strong {
-  display: block;
+  min-width: 0;
+  flex: 1;
   color: var(--text);
   font-size: 12px;
+  font-weight: 600;
 }
-.confirmation-head small {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 10px;
+.confirmation-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
 }
 .confirmation-list {
   display: grid;
-  gap: 8px;
-  margin: 12px 0 0;
+  gap: 6px;
+  margin: 9px 0 0;
   padding: 0;
   list-style: none;
 }
 .confirmation-list li {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 11px;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.03);
 }
 .op-tag {
@@ -589,59 +798,100 @@ onBeforeUnmount(() => activeRequest.value?.abort())
   border-radius: 6px;
   color: #e8ac60;
   background: rgba(232, 172, 96, 0.13);
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
 }
 .confirmation-detail {
+  display: flex;
   min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
 }
 .confirmation-detail strong {
-  display: block;
   color: var(--text);
   font-size: 11px;
-}
-.confirmation-detail small {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 10px;
+  font-weight: 600;
 }
 .confirmation-detail code {
-  display: block;
-  margin-top: 5px;
+  min-width: 0;
   color: var(--text-muted);
-  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
   word-break: break-all;
 }
-.confirmation-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 13px;
+.confirmation-detail small {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 10px;
 }
 .composer {
   position: relative;
-  width: min(100%, 860px);
+  flex: 0 0 auto;
+  width: min(100%, var(--chat-width));
   align-self: center;
-  margin-top: 13px;
+  margin-top: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(8, 15, 30, 0.28);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+/* 聚焦时给出明确反馈，和主流对话产品一致 */
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 10px 30px rgba(8, 15, 30, 0.32),
+    0 0 0 3px var(--accent-soft);
 }
 .composer :deep(.el-textarea__inner) {
-  min-height: 52px !important;
-  padding: 14px 96px 14px 16px;
-  line-height: 1.6;
+  min-height: 56px !important;
+  padding: 16px 62px 16px 16px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.7;
 }
 .send-button {
   position: absolute;
-  right: 7px;
-  bottom: 7px;
-  min-width: 76px;
-  height: 38px;
+  right: 10px;
+  bottom: 10px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 12px;
 }
-.assistant-notice {
-  margin: 8px 0 0;
+.composer-busy {
+  margin: 6px 2px 0;
+  color: var(--accent);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.composer-foot {
+  display: flex;
+  flex: 0 0 auto;
+  width: min(100%, var(--chat-width));
+  align-self: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+.assistant-notice,
+.composer-hint {
+  margin: 0;
   color: var(--text-muted);
-  font-size: 9px;
-  text-align: center;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.composer-hint {
+  color: var(--text-faint, var(--text-muted));
+  opacity: 0.85;
 }
 @keyframes pulse {
   0%,

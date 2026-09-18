@@ -59,10 +59,37 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
-          path: 'admin/imports',
-          name: 'admin-imports',
-          component: () => import('../views/AdminImportsPage.vue'),
+          // 管理后台自带侧边导航与页面骨架，不与前台工作区共用布局
+          path: 'admin',
+          component: () => import('../views/admin/AdminLayout.vue'),
           meta: { requiresAuth: true, requiresAdmin: true },
+          children: [
+            {
+              path: '',
+              name: 'admin-overview',
+              component: () => import('../views/admin/AdminOverviewPage.vue'),
+            },
+            {
+              path: 'catalog',
+              name: 'admin-catalog',
+              component: () => import('../views/admin/AdminCatalogPage.vue'),
+            },
+            {
+              path: 'artists',
+              name: 'admin-artists',
+              component: () => import('../views/admin/AdminArtistsPage.vue'),
+            },
+            {
+              path: 'users',
+              name: 'admin-users',
+              component: () => import('../views/admin/AdminUsersPage.vue'),
+            },
+            {
+              path: 'imports',
+              name: 'admin-imports',
+              component: () => import('../views/admin/AdminImportsView.vue'),
+            },
+          ],
         },
         {
           path: 'access-required',
@@ -119,8 +146,16 @@ router.onError((error, to) => {
   }
 })
 
+// 路由切换前的兜底：清掉可能残留的页面级锁定（外层滚动锁等）。
+// 之前出现过「在智能体页聊完切不走、切走后整页滚不动」，根因就是这类全局副作用没被回收。
+export function releaseStuckPageLocks(): void {
+  document.querySelector('.main-content')?.classList.remove('main-content--locked')
+  isNavigating.value = false
+}
+
 // 所有受保护路由等待认证恢复，避免未登录页面短暂闪现。
 router.beforeEach(async (to) => {
+  releaseStuckPageLocks()
   const auth = useAuthStore()
   if (!auth.initialized) {
     if (to.meta.requiresAuth === true) {

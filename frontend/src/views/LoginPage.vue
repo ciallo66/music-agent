@@ -47,7 +47,7 @@
               v-model="form.username"
               maxlength="18"
               autocomplete="username"
-              placeholder="请输入 6–18 位用户名"
+              placeholder="请输入 4–18 位用户名"
               size="large"
             />
           </el-form-item>
@@ -56,7 +56,7 @@
               v-model="form.password"
               maxlength="18"
               :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
-              placeholder="请输入 6–18 位密码"
+              placeholder="请输入 4–18 位密码"
               show-password
               size="large"
               type="password"
@@ -82,12 +82,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { showError, showSuccess } from '../utils/feedback'
 
-type Mode = 'login' | 'register' | 'admin'
+type Mode = 'login' | 'register'
 
+// 只有登录和注册两种：是不是管理员由账号角色决定，不再走单独入口
 const modes: Array<{ value: Mode; label: string }> = [
   { value: 'login', label: '登录' },
   { value: 'register', label: '注册' },
-  { value: 'admin', label: '管理员' },
 ]
 const auth = useAuthStore()
 const router = useRouter()
@@ -99,28 +99,24 @@ const form = reactive({ username: '', password: '' })
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 6, max: 18, message: '用户名需为 6–18 位', trigger: 'blur' },
+    { min: 4, max: 18, message: '用户名需为 4–18 位', trigger: 'blur' },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 18, message: '密码需为 6–18 位', trigger: 'blur' },
+    { min: 4, max: 18, message: '密码需为 4–18 位', trigger: 'blur' },
   ],
 }
 const panelTitle = computed(
-  () =>
-    ({ login: '继续使用智能体', register: '创建你的工作区', admin: '进入管理控制台' })[mode.value],
+  () => ({ login: '继续使用智能体', register: '创建你的工作区' })[mode.value],
 )
 const panelDescription = computed(
   () =>
     ({
       login: '登录后继续使用个人工作区',
       register: '注册后即可保存偏好、整理内容并生成个人分析',
-      admin: '仅限拥有管理员权限的账号使用',
     })[mode.value],
 )
-const submitLabel = computed(
-  () => ({ login: '登录', register: '创建账号', admin: '管理员登录' })[mode.value],
-)
+const submitLabel = computed(() => ({ login: '登录', register: '创建账号' })[mode.value])
 
 // 切换认证模式，并清除旧模式遗留的校验提示。
 function changeMode(nextMode: Mode): void {
@@ -128,7 +124,7 @@ function changeMode(nextMode: Mode): void {
   formRef.value?.clearValidate()
 }
 
-// 统一处理登录、注册和管理员登录，避免三套表单逻辑分叉。
+// 统一处理登录和注册；管理员与普通用户走同一个入口，角色由账号决定。
 async function submit(): Promise<void> {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid || submitting.value) return
@@ -140,10 +136,11 @@ async function submit(): Promise<void> {
       changeMode('login')
       return
     }
-    await auth.login(form.username, form.password, mode.value === 'admin')
-    showSuccess('登录成功')
+    await auth.login(form.username, form.password)
+    showSuccess(auth.isAdmin ? '已登录管理员账号' : '登录成功')
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.push(redirect.startsWith('/') ? redirect : '/')
+    const target = redirect.startsWith('/') ? redirect : '/'
+    await router.push(auth.isAdmin && target === '/' ? '/admin' : target)
   } catch (error) {
     showError(error)
   } finally {

@@ -6,6 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.recommendation_feedback import RecommendationFeedback
+from app.models.song import Song
+from app.services.recommendation_feedback import EXCLUDED_ACTIONS
 
 
 class FeedbackRepository:
@@ -54,6 +56,37 @@ class FeedbackRepository:
             RecommendationFeedback.action == "like",
         )
         return set(self.db.scalars(statement).all())
+
+    def excluded_ids(self, user_id: int) -> set[int]:
+        """返回用户明确不想再看到的歌曲 ID（不感兴趣、减少此类）。"""
+        statement = select(RecommendationFeedback.song_id).where(
+            RecommendationFeedback.user_id == user_id,
+            RecommendationFeedback.action.in_(sorted(EXCLUDED_ACTIONS)),
+        )
+        return set(self.db.scalars(statement).all())
+
+    def action_map(self, user_id: int) -> dict[int, str]:
+        """返回「歌曲 ID -> 反馈动作」，用于推荐排序加权。"""
+        rows = self.db.execute(
+            select(RecommendationFeedback.song_id, RecommendationFeedback.action).where(
+                RecommendationFeedback.user_id == user_id
+            )
+        ).all()
+        return {int(song_id): str(action) for song_id, action in rows}
+
+    def liked_genres(self, user_id: int) -> dict[str, int]:
+        """统计用户点赞歌曲的风格分布，供同风格加权。"""
+        rows = self.db.execute(
+            select(Song.genre, func.count())
+            .join(Song, Song.id == RecommendationFeedback.song_id)
+            .where(
+                RecommendationFeedback.user_id == user_id,
+                RecommendationFeedback.action == "like",
+                Song.genre.is_not(None),
+            )
+            .group_by(Song.genre)
+        ).all()
+        return {str(genre): int(count) for genre, count in rows}
 
     def feedback_count(self, user_id: int) -> int:
         """统计用户反馈总数。"""

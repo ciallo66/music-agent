@@ -1,7 +1,7 @@
 <!-- 管理员导入任务页面：提交任务并轮询展示进度与失败原因。 -->
 <template>
   <div class="admin-imports-page">
-    <PageHeader title="数据导入" subtitle="管理 Jamendo 音乐元数据导入任务">
+    <PageHeader title="导入任务" subtitle="管理 Jamendo 音乐元数据导入任务">
       <template #actions>
         <el-button type="primary" @click="dialogVisible = true">新建导入任务</el-button>
       </template>
@@ -106,11 +106,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
-import { createJamendoImport, listImportJobs } from '../api/adminImports'
-import PageHeader from '../components/PageHeader.vue'
-import StatePanel from '../components/StatePanel.vue'
-import type { ImportJobResponse, ImportJobStatus } from '../types/importJob'
-import { showError, showSuccess } from '../utils/feedback'
+import { createJamendoImport, listImportJobs } from '../../api/adminImports'
+import PageHeader from '../../components/PageHeader.vue'
+import StatePanel from '../../components/StatePanel.vue'
+import type { ImportJobResponse, ImportJobStatus } from '../../types/importJob'
+import { showError, showSuccess } from '../../utils/feedback'
 
 const jobs = ref<ImportJobResponse[]>([])
 const loading = ref(false)

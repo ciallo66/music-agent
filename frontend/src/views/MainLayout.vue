@@ -67,6 +67,10 @@
             <strong>{{ auth.user.username }}</strong>
             <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
           </span>
+          <!-- 管理员多一个入口按钮：切到专属管理后台 -->
+          <router-link v-if="auth.isAdmin" class="console-link" to="/admin" title="进入管理控制台">
+            管理
+          </router-link>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
         </div>
       </div>
@@ -78,7 +82,6 @@
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
             <span aria-hidden="true">⌕</span>
             <input v-model="quickSearch" type="search" placeholder="搜索内容、来源或标签" />
-            <kbd>回车</kbd>
           </form>
           <span class="toolbar-hint">示例数据 · 可检索、可分析</span>
         </div>
@@ -410,12 +413,18 @@ nav a.router-link-exact-active .nav-icon {
   font-size: 12px;
 }
 
-.quick-search kbd {
-  padding: 3px 6px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text-muted);
-  font-size: 10px;
+/* 管理员入口：与「退出」并排的小按钮，普通用户看不到 */
+.console-link {
+  padding: 5px 9px;
+  border: 1px solid rgba(232, 172, 96, 0.45);
+  border-radius: 8px;
+  color: #e8ac60;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.console-link:hover {
+  background: rgba(232, 172, 96, 0.14);
 }
 
 .toolbar-hint {

@@ -32,10 +32,10 @@ def test_register_hashes_password(client: TestClient, db_session: Session) -> No
 @pytest.mark.parametrize(
     ("username", "password"),
     [
-        ("short", "Abc123"),
-        ("a" * 19, "Abc123"),
-        ("Player01", "12345"),
-        ("Player01", "a" * 19),
+        ("abc", "Abcd123"),  # 用户名低于 4 位
+        ("a" * 19, "Abcd123"),  # 用户名超过 18 位
+        ("Player01", "abc"),  # 密码低于 4 位
+        ("Player01", "a" * 19),  # 密码超过 18 位
     ],
 )
 def test_register_validates_lengths(
@@ -43,13 +43,23 @@ def test_register_validates_lengths(
     username: str,
     password: str,
 ) -> None:
-    """Pydantic应拒绝用户名或密码长度超出6到18位。"""
+    """Pydantic 应拒绝用户名或密码长度超出 4 到 18 位。"""
     response = client.post(
         "/api/v1/auth/register",
         json={"username": username, "password": password},
     )
 
     assert response.status_code == 422
+
+
+def test_register_accepts_minimum_lengths(client: TestClient) -> None:
+    """四位的用户名和密码是允许的下限，应能注册成功。"""
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"username": "abcd", "password": "Abcd"},
+    )
+
+    assert response.status_code == 201
 
 
 def test_username_is_case_sensitive(client: TestClient) -> None:

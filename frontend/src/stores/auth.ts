@@ -33,6 +33,9 @@ export const useAuthStore = defineStore('auth', () => {
     const endpoint = admin ? '/admin/auth/login' : '/auth/login'
     const { data } = await http.post<TokenResponse>(endpoint, { username, password })
     accessToken.value = data.access_token
+    // 换账号时先丢掉上一个账号的画像缓存，避免看到别人的数据
+    const { useProfileStore } = await import('./profile')
+    useProfileStore().clear()
     await fetchProfile(admin)
   }
 
@@ -49,6 +52,9 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       accessToken.value = null
       user.value = null
+      // 动态引入，避免模块循环依赖；清掉画像缓存防止换账号后看到上一个账号的数据
+      const { useProfileStore } = await import('./profile')
+      useProfileStore().clear()
     }
   }
 

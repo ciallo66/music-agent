@@ -2,7 +2,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { FeedbackActionItem, FeedbackStats } from '../types/music'
-import { createFeedback, getFeedbackStats, listFeedbackActions } from '../api/feedback'
+import {
+  createFeedback,
+  getFeedbackStats,
+  listFeedbackActions,
+  removeFeedback,
+} from '../api/feedback'
 import { ElMessage } from 'element-plus'
 
 export const useFeedbackStore = defineStore('feedback', () => {
@@ -32,16 +37,31 @@ export const useFeedbackStore = defineStore('feedback', () => {
     }
   }
 
-  async function submitFeedback(songId: number, action: string) {
-    if (!actions.value.find((a) => a.action === action)) return
-    if (submitted.value.has(songId)) return
+  /** 当前用户对某首歌已提交的反馈动作；没有则无该键。 */
+  const mine = ref<Record<number, string>>({})
+
+  /** 提交反馈；再次提交同一动作视为取消。返回是否处理成功。 */
+  async function submitFeedback(songId: number, action: string): Promise<boolean> {
+    if (!actions.value.find((a) => a.action === action)) return false
+    if (submitted.value.has(songId)) return false
     submitted.value.add(songId)
     try {
-      await createFeedback(songId, action)
+      if (mine.value[songId] === action) {
+        await removeFeedback(songId)
+        const next = { ...mine.value }
+        delete next[songId]
+        mine.value = next
+        ElMessage.success('已取消该反馈')
+      } else {
+        await createFeedback(songId, action)
+        mine.value = { ...mine.value, [songId]: action }
+        ElMessage.success('反馈已记录')
+      }
       await loadStats()
-      ElMessage.success(`已记录你的"${action}"反馈`)
+      return true
     } catch {
       ElMessage.error('记录反馈失败')
+      return false
     } finally {
       submitted.value.delete(songId)
     }
@@ -54,6 +74,7 @@ export const useFeedbackStore = defineStore('feedback', () => {
     loadActions,
     loadStats,
     submitted,
+    mine,
     submitFeedback,
   }
 })

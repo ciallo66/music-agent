@@ -6,8 +6,8 @@
       <span>歌手</span>
       <span>{{ variant === 'playlist' ? '时长' : '风格' }}</span>
       <span v-if="variant === 'catalog'">节拍</span>
-      <span v-if="variant === 'catalog'">能量</span>
-      <span v-if="variant === 'catalog'">愉悦度</span>
+      <span v-if="variant === 'catalog'">律动</span>
+      <span v-if="variant === 'catalog'">热度</span>
       <span v-if="variant === 'search'">节拍</span>
       <span v-if="variant === 'favorites'"></span>
     </div>
@@ -28,15 +28,15 @@
       </router-link>
       <span class="artist">{{ song.artist.name }}</span>
       <span v-if="variant === 'playlist'" class="muted">{{ formatDuration(song.duration) }}</span>
-      <span v-else class="muted">{{ song.genre || '-' }}</span>
+      <span v-else class="muted">{{ genreText(song) }}</span>
       <span v-if="variant === 'catalog' || variant === 'search'" class="muted numeric">
         {{ song.bpm ? Math.round(song.bpm) : '-' }}
       </span>
       <span v-if="variant === 'catalog'" class="muted numeric">
-        {{ song.energy !== null ? `${(song.energy * 100).toFixed(0)}%` : '-' }}
+        {{ song.danceability !== null ? `${(song.danceability * 100).toFixed(0)}%` : '-' }}
       </span>
       <span v-if="variant === 'catalog'" class="muted numeric">
-        {{ song.valence !== null ? `${(song.valence * 100).toFixed(0)}%` : '-' }}
+        {{ song.popularity ? song.popularity : '-' }}
       </span>
       <button
         v-if="variant === 'favorites'"
@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import type { SongSummary } from '../types/music'
+import { fusedGenre } from '../utils/genre'
 
 type SongListVariant = 'catalog' | 'search' | 'favorites' | 'playlist'
 
@@ -60,6 +61,12 @@ const { songs, variant = 'catalog' } = defineProps<{
   songs: SongSummary[]
   variant?: SongListVariant
 }>()
+// 列表里的流派：多体系投票优先，缺失时回退到库里的单一体系结果。
+function genreText(song: SongSummary): string {
+  const vote = fusedGenre(song.genre_labels ?? null)
+  return vote?.name ?? song.genre ?? '-'
+}
+
 const emit = defineEmits<{
   remove: [songId: number]
 }>()
@@ -185,6 +192,38 @@ function formatDuration(duration: number | null): string {
 
 .numeric {
   font-variant-numeric: tabular-nums;
+}
+
+.row-feedback {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.fb-button {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fb-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.fb-button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.fb-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .remove-button {

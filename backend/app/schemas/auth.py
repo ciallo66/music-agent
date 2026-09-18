@@ -7,8 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
-Username = Annotated[str, Field(min_length=6, max_length=18)]
-Password = Annotated[SecretStr, Field(min_length=6, max_length=18)]
+Username = Annotated[str, Field(min_length=4, max_length=18)]
+Password = Annotated[SecretStr, Field(min_length=4, max_length=18)]
 
 
 class RegisterRequest(BaseModel):

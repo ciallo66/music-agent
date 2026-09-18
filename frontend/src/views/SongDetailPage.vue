@@ -7,36 +7,27 @@
         <h2>{{ song.title }}</h2>
         <p class="artist">{{ song.artist.name }}</p>
         <p class="meta">
-          {{ song.genre }} · {{ song.language }} ·
-          {{ song.bpm ? Math.round(song.bpm) + ' BPM' : '' }}
+          {{ song.genre || '流派待判定' }} · {{ song.language || '—' }} ·
+          {{ song.bpm ? Math.round(song.bpm) + ' BPM' : '节拍未知' }}
+        </p>
+        <p v-if="genreFusion" class="meta meta-sub">
+          模型判定：{{ genreFusion }}（不是官方流派标签）
         </p>
         <div class="actions">
           <el-button @click="toggleFav">{{ isFav ? '已收藏' : '收藏' }}</el-button>
         </div>
       </div>
     </div>
-    <div class="features" v-if="song.energy !== null">
+    <div class="features">
       <h3>音乐特征</h3>
       <div class="feature-grid">
         <div class="feat-item">
           <span class="feat-label">节拍</span
-          ><span class="feat-val">{{ song.bpm ? Math.round(song.bpm) : '-' }}</span>
+          ><span class="feat-val">{{ song.bpm ? Math.round(song.bpm) + ' BPM' : '-' }}</span>
         </div>
         <div class="feat-item">
           <span class="feat-label">调性</span
           ><span class="feat-val">{{ song.music_key || '-' }}</span>
-        </div>
-        <div class="feat-item">
-          <span class="feat-label">能量</span
-          ><span class="feat-val">{{
-            song.energy !== null ? (song.energy * 100).toFixed(0) + '%' : '-'
-          }}</span>
-        </div>
-        <div class="feat-item">
-          <span class="feat-label">情绪</span
-          ><span class="feat-val">{{
-            song.valence !== null ? (song.valence * 100).toFixed(0) + '%' : '-'
-          }}</span>
         </div>
         <div class="feat-item">
           <span class="feat-label">律动</span
@@ -47,15 +38,31 @@
         <div class="feat-item">
           <span class="feat-label">响度</span
           ><span class="feat-val">{{
-            song.loudness !== null ? song.loudness.toFixed(1) + ' dB' : '-'
+            song.loudness !== null ? song.loudness.toFixed(2) : '-'
+          }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">人声/器乐</span
+          ><span class="feat-val">{{ voiceLabel(song.voice_instrumental) || '-' }}</span>
+        </div>
+        <div class="feat-item">
+          <span class="feat-label">人声概率</span
+          ><span class="feat-val">{{
+            song.voice_probability !== null ? (song.voice_probability * 100).toFixed(0) + '%' : '-'
           }}</span>
         </div>
       </div>
+      <div v-if="moodTags(song.mood_labels).length" class="tag-list mood-list">
+        <span v-for="tag in moodTags(song.mood_labels)" :key="tag" class="tag">{{ tag }}</span>
+      </div>
     </div>
-    <div class="radar-block" v-if="song.energy !== null">
+    <div class="radar-block">
       <h3>特征画像</h3>
       <div ref="chartEl" class="radar-chart"></div>
-      <p class="radar-note">数值已归一化到 0-100（Loudness 按 -60~0 dB、BPM 按 0~180 归一化）</p>
+      <p class="radar-note">
+        数值已归一化到 0-100（响度按 -60~0 dB、节拍按 0~180
+        归一化）；能量与愉悦度当前数据源未提供，故不展示
+      </p>
     </div>
     <div class="detail-block" v-if="song.instruments">
       <h3>乐器</h3>
@@ -66,6 +73,13 @@
     <div class="detail-block" v-if="song.song_structure">
       <h3>歌曲结构</h3>
       <p class="structure-text">{{ song.song_structure }}</p>
+    </div>
+    <div class="detail-block missing-block" v-if="missingFields.length">
+      <h3>数据缺失</h3>
+      <p class="structure-text">
+        当前数据源未提供：{{ missingFields.join('、') }}。这些字段不参与展示，也不会用 0
+        或占位值代替。
+      </p>
     </div>
     <div v-if="song.lyrics" class="notice-block">
       <h3>文本字段</h3>
@@ -95,6 +109,8 @@ import { RadarChart } from 'echarts/charts'
 import { LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
+import { moodTags, voiceLabel } from '../types/music'
+import { fusedGenreLabel } from '../utils/genre'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { showError, showSuccess } from '../utils/feedback'
 import StatePanel from '../components/StatePanel.vue'
@@ -105,6 +121,10 @@ const route = useRoute()
 const song = ref<SongDetail | null>(null)
 const loading = ref(false)
 const isFav = ref(false)
+
+// 多体系投票得出的流派说明（比单一体系更可解释）
+const genreFusion = computed(() => fusedGenreLabel(song.value?.genre_labels ?? null))
+
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: ECharts | null = null
 
@@ -114,6 +134,20 @@ const instruments = computed(() =>
     .map((item) => item.trim())
     .filter(Boolean),
 )
+
+// 数据源没提供的字段如实列出，避免页面上出现一排没有意义的「-」。
+const missingFields = computed(() => {
+  const current = song.value
+  if (!current) return []
+  const checks: { label: string; value: unknown }[] = [
+    { label: '能量', value: current.energy },
+    { label: '愉悦度', value: current.valence },
+    { label: '时长', value: current.duration },
+    { label: '乐器', value: current.instruments },
+    { label: '歌曲结构', value: current.song_structure },
+  ]
+  return checks.filter((item) => item.value === null || item.value === '').map((item) => item.label)
+})
 
 // 加载详情后绘制特征图，再单独查询收藏状态；后者失败不阻断详情展示。
 async function load(): Promise<void> {
@@ -309,6 +343,10 @@ onUnmounted(() => {
   border-radius: var(--radius);
   background: linear-gradient(145deg, rgba(37, 53, 81, 0.72), rgba(24, 35, 56, 0.62));
   box-shadow: var(--shadow-soft);
+}
+.meta-sub {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .features h3,
 .radar-block h3,

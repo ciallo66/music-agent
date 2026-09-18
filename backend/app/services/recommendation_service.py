@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
+from app.models.song import Song
 from app.repositories.feedback_repository import FeedbackRepository
 from app.repositories.recommendation_repository import RecommendationRepository
 from app.schemas.catalog import SongSummary
@@ -15,6 +16,7 @@ from app.schemas.recommendation import (
     StructuredRecommendationCard,
     StructuredRecommendationItem,
 )
+from app.services.recommendation_feedback import action_weight, preferred_genre_bonus
 
 
 class SongNotFoundError(Exception):
@@ -69,12 +71,15 @@ class RecommendationService:
                 items=[self._item(song, "按平台热度推荐") for song in popular],
                 strategy="popular_fallback",
             )
-        disliked_ids = self.feedback.disliked_ids(user_id)
-        excluded_ids = self.repository.engaged_song_ids(user_id) | disliked_ids
+        excluded_ids = self.repository.engaged_song_ids(user_id) | self.feedback.excluded_ids(
+            user_id
+        )
         genres = self.repository.preferred_genres(user_id)
         profile = self.repository.feature_profile(user_id)
         candidates = self.repository.list_candidates(genres, excluded_ids, limit, profile)
         if candidates:
+            # 反馈参与排序：点赞过的风格优先，"已看过"降权
+            candidates = self._rank_with_feedback(user_id, candidates)
             return RecommendationPage(
                 items=[
                     self._item(song, self._content_reason(song, profile)) for song in candidates
@@ -102,12 +107,14 @@ class RecommendationService:
                     scenario="放松",
                 )
             ]
-        disliked_ids = self.feedback.disliked_ids(user_id)
-        excluded_ids = self.repository.engaged_song_ids(user_id) | disliked_ids
+        excluded_ids = self.repository.engaged_song_ids(user_id) | self.feedback.excluded_ids(
+            user_id
+        )
         genres = self.repository.preferred_genres(user_id)
         profile = self.repository.feature_profile(user_id)
         candidates = self.repository.list_candidates(genres, excluded_ids, limit, profile)
         if candidates:
+            candidates = self._rank_with_feedback(user_id, candidates)
             return [
                 self._build_card(
                     title="按你的口味",
@@ -129,6 +136,19 @@ class RecommendationService:
                 profile=profile,
             )
         ]
+
+    def _rank_with_feedback(self, user_id: int, songs: Sequence[Song]) -> list[Song]:
+        """按用户反馈对候选重排：点赞过的风格提升，"已看过"降权。"""
+        actions = self.feedback.action_map(user_id)
+        liked_genres = self.feedback.liked_genres(user_id)
+
+        def score(song: Song) -> float:
+            base = float(song.popularity or 0)
+            base += preferred_genre_bonus([song.genre] if song.genre else [], liked_genres)
+            base += action_weight(actions.get(song.id, ""))
+            return base
+
+        return sorted(songs, key=score, reverse=True)
 
     def _build_card(
         self,

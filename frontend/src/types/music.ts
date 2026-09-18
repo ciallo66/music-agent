@@ -22,6 +22,8 @@ export interface SongSummary {
   energy: number | null
   valence: number | null
   danceability: number | null
+  /** 多体系流派标签（AcousticBrainz），用于投票判定展示流派；列表接口可能不返回。 */
+  genre_labels?: Record<string, string> | null
 }
 
 export interface SongPage {
@@ -36,6 +38,41 @@ export interface SongDetail extends SongSummary {
   loudness: number | null
   instruments: string | null
   song_structure: string | null
+  /** 音频分析派生特征（AcousticBrainz）。字段都可能为空，展示时按缺失处理。 */
+  voice_instrumental: string | null
+  voice_probability: number | null
+  mood_labels: Record<string, string> | null
+  genre_labels: Record<string, string> | null
+  feature_completeness: number | null
+}
+
+// --- 音频分析标签的中文映射（键来自 AcousticBrainz，值为 not_xxx 表示未命中） ---
+
+/** 情绪标签：中文名与取值键。 */
+const MOOD_KEYS: { key: string; label: string }[] = [
+  { key: 'happy', label: '明亮' },
+  { key: 'sad', label: '忧伤' },
+  { key: 'relaxed', label: '放松' },
+  { key: 'party', label: '派对' },
+  { key: 'aggressive', label: '激烈' },
+  { key: 'acoustic', label: '原声' },
+  { key: 'electronic', label: '电子' },
+]
+
+/** 取歌曲命中的情绪标签；值为 not_xxx 视为未命中，空数据返回空数组。 */
+export function moodTags(labels: Record<string, string> | null): string[] {
+  if (!labels) return []
+  return MOOD_KEYS.filter(({ key }) => {
+    const value = labels[key]
+    return typeof value === 'string' && value !== '' && !value.startsWith('not_')
+  }).map(({ label }) => label)
+}
+
+/** 人声 / 器乐的中文说法；未知值原样返回。 */
+export function voiceLabel(voiceInstrumental: string | null): string {
+  if (!voiceInstrumental) return ''
+  const labels: Record<string, string> = { instrumental: '器乐', voice: '人声', vocal: '人声' }
+  return labels[voiceInstrumental] ?? voiceInstrumental
 }
 
 export interface PlaylistItem {
