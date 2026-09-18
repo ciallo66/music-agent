@@ -7,7 +7,7 @@
       </template>
     </PageHeader>
 
-    <StatePanel v-if="loading && profile === null" type="loading" title="正在整理你的音乐画像" />
+    <StatePanel v-if="loading && profile === null" type="loading" title="正在整理你的内容画像" />
     <StatePanel
       v-else-if="errorMessage && profile === null"
       type="error"
@@ -106,8 +106,8 @@
         <article class="panel chart-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">常听歌手</p>
-              <h3>常听歌手</h3>
+              <p class="panel-kicker">常来源</p>
+              <h3>常来源</h3>
             </div>
           </div>
           <div v-if="profile.top_artists.length" ref="artistChart" class="chart chart-bar"></div>
@@ -240,8 +240,8 @@ const stats = computed(() => {
   if (!profile.value) return []
   return [
     { label: '累计互动', value: profile.value.total_plays, icon: '◉' },
-    { label: '听过歌曲', value: profile.value.unique_songs, icon: '♫' },
-    { label: '收藏歌曲', value: profile.value.favorite_count, icon: '♡' },
+    { label: '浏览条目', value: profile.value.unique_songs, icon: '♫' },
+    { label: '收藏条目', value: profile.value.favorite_count, icon: '♡' },
     { label: '主动反馈', value: feedbackCount.value, icon: '✓' },
   ]
 })

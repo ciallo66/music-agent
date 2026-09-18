@@ -15,7 +15,7 @@
     <div v-else-if="favSongs.length === 0" class="state-surface page-surface">
       <StatePanel title="还没有收藏任何歌曲" message="在歌曲详情页点击收藏即可添加">
         <template #action
-          ><router-link class="browse-link" to="/songs">浏览音乐库</router-link></template
+          ><router-link class="browse-link" to="/songs">浏览内容库</router-link></template
         >
       </StatePanel>
     </div>

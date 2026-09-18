@@ -41,6 +41,12 @@ export interface SongDetail extends SongSummary {
   /** 音频分析派生特征（AcousticBrainz）。字段都可能为空，展示时按缺失处理。 */
   voice_instrumental: string | null
   voice_probability: number | null
+  /** 节奏特征：bpm / onset_rate / beats_count。 */
+  rhythm_features: Record<string, number> | null
+  /** 调性特征：key_key / key_scale / chords_key / chords_scale / key_strength。 */
+  tonal_features: Record<string, string | number> | null
+  /** 频谱特征：每个键是 {mean,max,min,var,...} 结构。 */
+  spectral_features: Record<string, unknown> | null
   mood_labels: Record<string, string> | null
   genre_labels: Record<string, string> | null
   feature_completeness: number | null

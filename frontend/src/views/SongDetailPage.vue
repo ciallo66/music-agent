@@ -56,6 +56,21 @@
         <span v-for="tag in moodTags(song.mood_labels)" :key="tag" class="tag">{{ tag }}</span>
       </div>
     </div>
+
+    <!-- 频谱与节奏：这些是音频分析里真实存在、信息量最大的一批特征 -->
+    <div class="detail-block">
+      <h3>音频特征明细</h3>
+      <div class="feature-grid">
+        <div v-for="item in audioFeatures" :key="item.label" class="feat-item">
+          <span class="feat-label">{{ item.label }}</span
+          ><span class="feat-val">{{ item.value }}</span>
+        </div>
+      </div>
+      <p class="feature-source">
+        来源：AcousticBrainz 音频分析（Essentia）。响度已归一化到 0–1；能量为响度的派生理
+        指标，用于横向比较，不等同于数据源原生的 energy。
+      </p>
+    </div>
     <div class="radar-block">
       <h3>特征画像</h3>
       <div ref="chartEl" class="radar-chart"></div>
@@ -135,13 +150,54 @@ const instruments = computed(() =>
     .filter(Boolean),
 )
 
+// 音频特征明细：优先展示数据源真实存在、且信息量大的字段。
+// energy 不在源数据里，这里用响度派生并在界面上标注，避免假装它是原生指标。
+const audioFeatures = computed(() => {
+  const current = song.value
+  if (!current) return []
+  const spectral = current.spectral_features
+  const rhythm = current.rhythm_features
+  const tonal = current.tonal_features
+
+  const num = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) ? value : null
+  const fixed = (value: unknown, digits = 3): string => {
+    const parsed = num(value)
+    return parsed === null ? '-' : parsed.toFixed(digits)
+  }
+
+  const loudness = num(current.loudness)
+  const spectralDynamic =
+    spectral && typeof spectral.dynamic_complexity === 'number' ? spectral.dynamic_complexity : null
+  const mean = (key: string): unknown => {
+    const bag = spectral?.[key]
+    return bag && typeof bag === 'object' ? (bag as Record<string, unknown>).mean : undefined
+  }
+
+  const rows: { label: string; value: string }[] = [
+    { label: '能量（由响度派生）', value: loudness === null ? '-' : loudness.toFixed(2) },
+    { label: '起始速率', value: fixed(rhythm?.onset_rate) },
+    { label: '拍数', value: fixed(rhythm?.beats_count, 0) },
+    { label: '调性强度', value: fixed(tonal?.key_strength) },
+    { label: '调式', value: tonal?.key_scale ? String(tonal.key_scale) : '-' },
+    { label: '和弦调性', value: tonal?.chords_key ? String(tonal.chords_key) : '-' },
+    { label: '频谱质心', value: fixed(mean('spectral_centroid'), 1) },
+    { label: '频谱滚降', value: fixed(mean('spectral_rolloff'), 1) },
+    { label: '频谱通量', value: fixed(mean('spectral_flux'), 4) },
+    { label: '频谱熵', value: fixed(mean('spectral_entropy'), 3) },
+    { label: '不协和度', value: fixed(mean('dissonance'), 3) },
+    { label: '动态复杂度', value: fixed(spectralDynamic, 3) },
+  ]
+  return rows.filter((row) => row.value !== '-')
+})
+
 // 数据源没提供的字段如实列出，避免页面上出现一排没有意义的「-」。
 const missingFields = computed(() => {
   const current = song.value
   if (!current) return []
   const checks: { label: string; value: unknown }[] = [
-    { label: '能量', value: current.energy },
-    { label: '愉悦度', value: current.valence },
+    { label: '原生 energy', value: current.energy },
+    { label: '原生 valence', value: current.valence },
     { label: '时长', value: current.duration },
     { label: '乐器', value: current.instruments },
     { label: '歌曲结构', value: current.song_structure },
@@ -382,6 +438,12 @@ onUnmounted(() => {
 .radar-chart {
   width: 100%;
   height: 320px;
+}
+.feature-source {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.7;
 }
 .radar-note {
   color: var(--text-muted);

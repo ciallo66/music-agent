@@ -12,7 +12,7 @@
     <StatePanel
       v-if="playlist.songs.length === 0"
       title="歌单里还没有歌曲"
-      message="去音乐库添加一些歌曲吧"
+      message="去内容库收录一些条目吧"
     />
     <SongList v-else :songs="playlist.songs" variant="playlist" />
   </section>

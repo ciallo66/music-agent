@@ -64,7 +64,7 @@
     </div>
 
     <div v-if="loading" class="recommendation-state page-surface">
-      <StatePanel type="loading" title="正在生成推荐" message="结合你的偏好寻找合适的音乐" />
+      <StatePanel type="loading" title="正在生成推荐" message="结合你的偏好筛选合适的内容" />
     </div>
     <div v-else-if="cards.length" class="recommendations">
       <RecommendationCard
@@ -165,7 +165,7 @@ const quickActions = [
     tone: 'rose',
     requiresAuth: true,
   },
-  { to: '/search', label: '搜索', description: '快速定位歌曲与歌手', icon: '⌕', tone: 'blue' },
+  { to: '/search', label: '搜索', description: '快速定位内容与来源', icon: '⌕', tone: 'blue' },
 ]
 const router = useRouter()
 const auth = useAuthStore()
