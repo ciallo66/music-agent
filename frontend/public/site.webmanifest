@@ -1,0 +1,23 @@
+{
+  "name": "智能数据平台 · 内容检索与智能分析",
+  "short_name": "智能数据平台",
+  "description": "内容数据检索、音频特征分析与可解释推荐的智能体工作区",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

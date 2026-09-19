@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 64 64" role="img" aria-label="智能数据平台">
+  <title>智能数据平台</title>
+  <!-- iOS 主屏图标：与 favicon 同一标记，圆角由系统裁切，因此底图铺满 -->
+  <rect width="64" height="64" fill="#16233a"/>
+  <rect x="13" y="16" width="34" height="28" rx="5.5" fill="#6ee7d2"/>
+  <g fill="#16233a">
+    <rect x="17.5" y="21" width="6" height="18" rx="2.6"/>
+    <rect x="27" y="21" width="6" height="18" rx="2.6"/>
+    <rect x="36.5" y="21" width="6" height="18" rx="2.6"/>
+  </g>
+  <circle cx="51" cy="49" r="4" fill="#38bfae"/>
+</svg>
