@@ -6,7 +6,7 @@
         <el-button
           type="primary"
           :disabled="!auth.canManageData"
-          :title="readonlyHint"
+          :title="auth.canManageData ? undefined : readonlyHint"
           @click="dialogVisible = true"
           >新建导入任务</el-button
         >

@@ -6,7 +6,7 @@
         <el-button
           type="primary"
           :disabled="!auth.canManageData"
-          :title="readonlyHint"
+          :title="auth.canManageData ? undefined : readonlyHint"
           @click="openCreate"
           >新建曲目</el-button
         >
@@ -52,7 +52,7 @@
             <el-button
               size="small"
               :disabled="!auth.canManageData"
-              :title="readonlyHint"
+              :title="auth.canManageData ? undefined : readonlyHint"
               @click="openEdit(row)"
               >编辑</el-button
             >
@@ -61,7 +61,7 @@
               type="danger"
               plain
               :disabled="!auth.canManageData"
-              :title="readonlyHint"
+              :title="auth.canManageData ? undefined : readonlyHint"
               @click="remove(row)"
               >删除</el-button
             >

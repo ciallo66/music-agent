@@ -49,7 +49,7 @@
             <el-button
               size="small"
               :disabled="busyId === row.id || !auth.canManageData"
-              :title="readonlyHint"
+              :title="auth.canManageData ? undefined : readonlyHint"
               @click="toggleRole(row)"
             >
               {{ row.role === 'admin' ? '降为普通' : '设为管理员' }}
@@ -59,7 +59,7 @@
               type="danger"
               plain
               :disabled="busyId === row.id || !auth.canManageData"
-              :title="readonlyHint"
+              :title="auth.canManageData ? undefined : readonlyHint"
               @click="toggleStatus(row)"
             >
               {{ row.status === 'active' ? '禁用' : '启用' }}

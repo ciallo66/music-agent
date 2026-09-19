@@ -179,7 +179,9 @@ router.beforeEach(async (to) => {
     }
   }
   if (to.path === '/login' && auth.isAuthenticated) {
-    return '/'
+    // 管理员整页跳到 /admin 时会先落到登录页：这里要放行到 /admin，
+    // 否则会被弹回首页，用户看到「管理控制台一闪而过又回到前台」。
+    return auth.isAdmin ? '/admin' : '/'
   }
   if (to.meta.requiresAdmin === true && !auth.isAdmin) {
     // 以前这里静默跳回首页，用户不知道自己为什么进不去，也没法换账号

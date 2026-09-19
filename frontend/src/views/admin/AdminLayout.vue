@@ -18,10 +18,16 @@
       </nav>
 
       <footer class="admin-foot">
-        <router-link class="admin-link" to="/">
+        <!-- 回到前台同样是整页切换：后台与工作区是两套布局，不做局部路由替换 -->
+        <a
+          class="admin-link"
+          href="/"
+          :class="{ 'admin-link-loading': leavingConsole }"
+          @click="leaveConsole"
+        >
           <span aria-hidden="true">←</span>
           <span>返回前台工作区</span>
-        </router-link>
+        </a>
       </footer>
     </aside>
 
@@ -37,9 +43,20 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
+// 返回前台是整页跳转，用这个标记加过渡态（会话由 Refresh Cookie 恢复）
+const leavingConsole = ref(false)
+
+function leaveConsole(event: MouseEvent): void {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+  event.preventDefault()
+  if (leavingConsole.value) return
+  leavingConsole.value = true
+  window.location.assign('/')
+}
 
 const navItems = [
   { to: '/admin', label: '概览', icon: '◧' },
@@ -114,6 +131,10 @@ const navItems = [
 .admin-link.router-link-exact-active {
   color: var(--accent);
   background: var(--accent-soft);
+}
+.admin-link-loading {
+  cursor: wait;
+  opacity: 0.72;
 }
 .admin-foot {
   padding-top: 12px;

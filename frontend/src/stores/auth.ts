@@ -64,6 +64,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 应用启动时尝试恢复会话；失败只代表未登录，不阻断应用启动。
+  // 失败时把 initialized 复位：前台与后台是两个独立入口，跨入口是整页跳转，
+  // 新文档启动后要能再恢复一次会话，否则会被守卫误判成未登录。
   async function initialize(): Promise<void> {
     if (initialized.value) return
     if (initializationRequest !== null) return initializationRequest
@@ -72,11 +74,12 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         await refreshAccessToken()
         await fetchProfile()
+        initialized.value = true
       } catch {
         accessToken.value = null
         user.value = null
+        initialized.value = false
       } finally {
-        initialized.value = true
         initializationRequest = null
       }
     })()

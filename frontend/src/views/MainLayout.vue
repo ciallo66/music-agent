@@ -51,10 +51,17 @@
         </router-link>
         <template v-if="auth.isAdmin">
           <p class="nav-label">管理</p>
-          <router-link to="/admin/imports">
-            <span class="nav-icon" aria-hidden="true">↥</span>
-            <span>数据导入</span>
-          </router-link>
+          <!-- 前后台是两个独立入口：这里走整页跳转（全局替换），不是小范围路由切换 -->
+          <a
+            class="console-entry"
+            href="/admin"
+            :class="{ 'nav-link-loading': enteringConsole }"
+            @click="enterConsole"
+          >
+            <span class="nav-icon" aria-hidden="true">▣</span>
+            <span>管理控制台</span>
+            <span class="console-hint" aria-hidden="true">整页进入</span>
+          </a>
         </template>
       </nav>
 
@@ -67,10 +74,17 @@
             <strong>{{ auth.user.username }}</strong>
             <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
           </span>
-          <!-- 管理员多一个入口按钮：切到专属管理后台 -->
-          <router-link v-if="auth.isAdmin" class="console-link" to="/admin" title="进入管理控制台">
+          <!-- 管理员多一个入口：整页切到独立的管理控制台 -->
+          <a
+            v-if="auth.isAdmin"
+            class="console-link"
+            href="/admin"
+            title="进入管理控制台（整页切换）"
+            :class="{ 'nav-link-loading': enteringConsole }"
+            @click="enterConsole"
+          >
             管理
-          </router-link>
+          </a>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
         </div>
       </div>
@@ -128,6 +142,20 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const quickSearch = ref('')
+// 进入管理控制台是整页跳转（全局替换），用这个标记给入口加过渡态
+const enteringConsole = ref(false)
+
+// 整页切到管理控制台：前后台是两套布局，用全局替换而不是局部路由切换。
+// 会话不会丢——新文档会用 Refresh Cookie 恢复登录态。
+function enterConsole(event: MouseEvent): void {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+    return // 保留新标签页打开等浏览器默认行为
+  }
+  event.preventDefault()
+  if (enteringConsole.value) return
+  enteringConsole.value = true
+  window.location.assign('/admin')
+}
 
 // 悬停或聚焦导航时预取目标页面的懒加载 chunk，减少点击后的等待感。
 function prefetchRoute(path: string): void {
@@ -455,6 +483,31 @@ nav a.router-link-exact-active .nav-icon {
 
 .console-link:hover {
   background: rgba(232, 172, 96, 0.14);
+}
+
+.console-link.nav-link-loading {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+/* 侧边栏里的管理控制台入口：右侧标注「整页进入」，避免被当成普通站内跳转 */
+.console-entry {
+  align-items: center;
+}
+
+.console-hint {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.console-entry.nav-link-loading {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .toolbar-hint {
