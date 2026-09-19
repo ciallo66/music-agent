@@ -14,6 +14,7 @@ from app.models.song import Song  # 歌曲"表"的模型（查询结果的类型
 from app.repositories.catalog_repository import SongRepository  # 仓库：去数据库搜歌
 from app.repositories.recommendation_repository import RecommendationRepository  # 仓库：查用户口味
 from app.schemas.agent import (  # 工具的"入参校验器"：生成参数 schema + 校验模型传参
+    AddSongsToPlaylistInput,  # 加入歌单工具的入参
     KnowledgeSearchInput,  # 知识问答工具的入参
     SearchSongsInput,  # 搜歌工具的入参
     SimilarSongsInput,  # 相似歌工具的入参
@@ -32,7 +33,12 @@ from app.services.embedding_provider import (  # 生成"向量"的服务（相�
     EmbeddingProviderError,  # 向量服务异常
     OpenAICompatibleEmbeddingProvider,  # 向量服务实现（真干活那个）
 )
-from app.services.library_service import LibraryService  # 歌单与收藏业务（写操作复用）
+from app.services.library_service import (  # 歌单与收藏业务（写操作复用）
+    DuplicateRelationError,
+    LibraryService,
+    PlaylistNotFoundError,
+    SongNotFoundError,
+)
 from app.services.rag_service import MusicKnowledgeService  # RAG 音乐知识库服务
 from app.services.song_embedding_text import (  # 歌曲向量化文本（与批量向量化共用）
     build_song_text,
@@ -72,7 +78,8 @@ class MusicAgentTools:
     def register_all(self, registry: ToolRegistry) -> None:
         """注册文档规定的核心工具。
 
-        分组注册，注册顺序与原先保持一致；除 create_playlist 外均为只读工具。
+        分组注册，注册顺序与原先保持一致；写操作只有 create_playlist 与
+        add_songs_to_playlist 两个，都要经过用户确认。
         """
         self._register_lookup_tools(registry)
         self._register_recommendation_tools(registry)
@@ -119,6 +126,14 @@ class MusicAgentTools:
                 self.analyze_user_taste,
             )
         )
+        registry.register(
+            AgentTool(
+                "list_playlists",
+                "列出当前用户的歌单（含歌单 ID 与歌曲数），用于把歌曲加进已有歌单。",
+                {"type": "object", "properties": {}, "additionalProperties": False},
+                self.list_playlists,
+            )
+        )
 
     def _register_knowledge_tools(self, registry: ToolRegistry) -> None:
         """注册知识库检索与联网搜索工具。"""
@@ -147,6 +162,19 @@ class MusicAgentTools:
                 "为当前用户创建新歌单；这是写操作，需要用户确认后才会真正执行。",
                 PlaylistCreate.model_json_schema(),
                 self.create_playlist,
+                ToolOperation.WRITE,
+            )
+        )
+        registry.register(
+            AgentTool(
+                "add_songs_to_playlist",
+                (
+                    "把若干歌曲加入当前用户的某个歌单；写操作，需要用户确认后才会执行。"
+                    "歌单与歌曲都必须用主键：先用 list_playlists 拿 playlist_id，"
+                    "用 search_songs / find_similar_songs 拿 song_id。"
+                ),
+                AddSongsToPlaylistInput.model_json_schema(),
+                self.add_songs_to_playlist,
                 ToolOperation.WRITE,
             )
         )
@@ -192,6 +220,55 @@ class MusicAgentTools:
             "user_id": self.user_id,
             "preferred_genres": self.recommendations.preferred_genres(self.user_id),
             "feature_profile": self.recommendations.feature_profile(self.user_id),
+        }
+
+    def list_playlists(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """列出当前用户的歌单，供写操作定位目标歌单。"""
+        if arguments:
+            raise AgentToolError("该工具不接受参数")
+        self._apply_statement_timeout()
+        page = self.library.list_playlists(self.user_id)
+        return {
+            "items": [item.model_dump(mode="json") for item in page.items],
+            "count": len(page.items),
+        }
+
+    def add_songs_to_playlist(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """把歌曲加入当前用户的歌单（写操作，所有权由服务端身份决定）。
+
+        歌单不存在、歌曲不存在、重复加入都按可读的中文原因返回，
+        让模型能据此改口或换目标，而不是抛一堆栈信息。
+        """
+        payload = AddSongsToPlaylistInput.model_validate(arguments)
+        self._apply_statement_timeout()
+        added: list[int] = []
+        already: list[int] = []
+        for song_id in payload.song_ids:
+            try:
+                # 逐首放进保存点：某一首失败不影响同一批里的其它歌曲
+                with self.db.begin_nested():
+                    self.library.add_playlist_song(payload.playlist_id, self.user_id, song_id)
+            except PlaylistNotFoundError as error:
+                raise AgentToolError("歌单不存在，或不属于当前用户") from error
+            except SongNotFoundError as error:
+                raise AgentToolError(f"歌曲不存在：{song_id}") from error
+            except DuplicateRelationError:
+                already.append(song_id)
+                continue
+            added.append(song_id)
+        # 歌单对象可能在本轮更早的工具调用里已经加载过，先让它过期再读，
+        # 否则 song_count 会拿到加入之前的旧关系。
+        self.db.expire_all()
+        playlist = self.library.get_playlist(payload.playlist_id, self.user_id)
+
+        return {
+            "playlist": {
+                "id": playlist.id,
+                "name": playlist.name,
+                "song_count": playlist.song_count,
+            },
+            "added_song_ids": added,
+            "already_in_playlist": already,
         }
 
     def search_music_knowledge(self, arguments: dict[str, Any]) -> dict[str, Any]:

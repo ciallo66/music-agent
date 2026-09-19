@@ -81,3 +81,16 @@ class WebSearchInput(BaseModel):
     freshness: Literal["day", "week", "month", "year"] | None = None
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class AddSongsToPlaylistInput(BaseModel):
+    """把歌曲加入歌单的工具参数。
+
+    歌单与歌曲都按主键定位：歌单必须属于当前用户，歌曲必须存在，
+    两者都在工具执行前校验，避免模型凭歌名猜测。
+    """
+
+    playlist_id: Annotated[int, Field(gt=0)]
+    song_ids: Annotated[list[Annotated[int, Field(gt=0)]], Field(min_length=1, max_length=20)]
+
+    model_config = ConfigDict(extra="forbid")
