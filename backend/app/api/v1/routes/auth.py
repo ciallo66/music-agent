@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.auth_cookie import clear_refresh_cookie, set_refresh_cookie
-from app.api.dependencies import get_current_user
+from app.api.dependencies import can_manage_data, get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
@@ -25,13 +25,32 @@ from app.services.auth_service import (
 router = APIRouter()
 
 
+def _user_response(user: User) -> UserResponse:
+    """把用户模型转成响应，并标注「能否改动后台数据」。
+
+    能力由服务端判定：角色为 admin 且不是演示账号。前端用它决定后台按钮
+    是否可点，避免演示访客点下去才收到 403。
+    """
+    return UserResponse.model_validate(
+        {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "status": user.status,
+            "created_at": user.created_at,
+            "can_manage_data": can_manage_data(user),
+        }
+    )
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> User:
+def register(payload: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> UserResponse:
     """校验注册请求并创建用户。"""
     try:
-        return AuthService(db).register(payload.username, payload.password.get_secret_value())
+        user = AuthService(db).register(payload.username, payload.password.get_secret_value())
     except UsernameAlreadyExistsError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="用户名已存在") from error
+    return _user_response(user)
 
 
 @router.post("/login", response_model=AccessTokenResponse)
@@ -89,9 +108,9 @@ def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-def read_current_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+def read_current_user(current_user: Annotated[User, Depends(get_current_user)]) -> UserResponse:
     """返回 Access Token 对应的当前用户。"""
-    return current_user
+    return _user_response(current_user)
 
 
 def _access_response(access_token: str) -> AccessTokenResponse:

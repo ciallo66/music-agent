@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import block_demo_writes
+from app.api.dependencies import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.agent import AgentMessage, ToolConfirmationRequest
@@ -38,12 +38,13 @@ def _sse(stream: Iterator[str], session_id: int) -> StreamingResponse:
 @router.post("/agent/chat")
 def chat(
     payload: AgentMessage,
-    current_user: Annotated[User, Depends(block_demo_writes)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StreamingResponse:
     """通过 SSE 流式返回 Agent 事件。
 
-    对话本身会写入会话与消息表，并且本轮可能产生写工具调用，因此演示账号同样只读。
+    对话会写入会话与消息表，属于正常使用范围：登录用户都可以用，
+    只有后台改数据的接口才对演示账号只读。
     """
     service = AgentService(db, current_user.id)
     try:
@@ -56,7 +57,7 @@ def chat(
 @router.post("/agent/confirmations")
 def confirm(
     payload: ToolConfirmationRequest,
-    current_user: Annotated[User, Depends(block_demo_writes)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StreamingResponse:
     """按用户决定处理待确认工具调用，并继续会话的 SSE 流。

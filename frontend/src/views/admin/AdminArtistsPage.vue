@@ -3,7 +3,13 @@
   <section class="admin-page">
     <PageHeader title="歌手管理" subtitle="维护曲库中的歌手条目">
       <template #actions>
-        <el-button type="primary" @click="openCreate">新建歌手</el-button>
+        <el-button
+          type="primary"
+          :disabled="!auth.canManageData"
+          :title="readonlyHint"
+          @click="openCreate"
+          >新建歌手</el-button
+        >
       </template>
     </PageHeader>
 
@@ -27,8 +33,22 @@
         <el-table-column prop="avatar_url" label="头像地址" min-width="220" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" plain @click="remove(row)">删除</el-button>
+            <el-button
+              size="small"
+              :disabled="!auth.canManageData"
+              :title="readonlyHint"
+              @click="openEdit(row)"
+              >编辑</el-button
+            >
+            <el-button
+              size="small"
+              type="danger"
+              plain
+              :disabled="!auth.canManageData"
+              :title="readonlyHint"
+              @click="remove(row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -79,6 +99,11 @@ import {
   type AdminArtistItem,
 } from '../../api/admin'
 import { showError, showSuccess } from '../../utils/feedback'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
+// 演示账号在后台只读：按钮直接禁用并说明原因，避免点下去才收到 403
+const readonlyHint = '演示账号只能查看后台数据，不能修改'
 
 const rows = ref<AdminArtistItem[]>([])
 const total = ref(0)

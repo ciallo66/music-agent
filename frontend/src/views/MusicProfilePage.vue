@@ -30,10 +30,9 @@
       >
         <strong>还没有可分析的互动数据</strong>
         <p>
-          画像来自你的<strong>收藏</strong>与<strong>智能体互动记录</strong>。本平台不托管音频、不提供在线播放，
-          所以不会产生收听记录 —— 去
-          <router-link to="/songs">内容库</router-link> 收藏几首、点「喜欢 / 不感兴趣」，或让
-          <router-link to="/agent">智能助手</router-link> 推荐一批，数据就会出现在这里。
+          画像来自你的<strong>收藏</strong>、<strong>收听记录</strong>与<strong>反馈</strong>。去
+          <router-link to="/songs">内容库</router-link> 收藏几首、在歌曲详情点「记一次收听」，或让
+          <router-link to="/agent">智能体</router-link> 推荐一批，数据就会出现在这里。
         </p>
       </div>
       <div class="stat-grid">

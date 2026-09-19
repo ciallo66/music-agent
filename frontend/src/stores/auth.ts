@@ -12,9 +12,11 @@ export const useAuthStore = defineStore('auth', () => {
   let initializationRequest: Promise<void> | null = null
   const isAuthenticated = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
-  // 演示账号（用户名与后端 DEMO_USERNAME 默认值一致）：可浏览、不可写。
+  // 演示账号（用户名与后端 DEMO_USERNAME 默认值一致）：正常功能可用，仅后台改数据只读。
   const DEMO_USERNAME = 'demo'
   const isDemo = computed(() => user.value?.username.toLowerCase() === DEMO_USERNAME)
+  // 能否改后台数据由服务端判定（admin 角色且不是演示账号），前端据此禁用入口。
+  const canManageData = computed(() => user.value?.can_manage_data === true)
 
   configureAuthToken(
     () => accessToken.value,
@@ -87,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isAuthenticated,
     isDemo,
+    canManageData,
     user,
     initialize,
     login,

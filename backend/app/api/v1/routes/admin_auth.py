@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.auth_cookie import set_refresh_cookie
-from app.api.dependencies import require_admin
+from app.api.dependencies import can_manage_data, require_admin
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
@@ -54,6 +54,15 @@ def admin_login(
 
 
 @router.get("/me", response_model=UserResponse)
-def read_current_admin(admin: Annotated[User, Depends(require_admin)]) -> User:
-    """返回当前管理员身份并验证实时权限。"""
-    return admin
+def read_current_admin(admin: Annotated[User, Depends(require_admin)]) -> UserResponse:
+    """返回当前管理员身份并验证实时权限（含能否改动后台数据）。"""
+    return UserResponse.model_validate(
+        {
+            "id": admin.id,
+            "username": admin.username,
+            "role": admin.role,
+            "status": admin.status,
+            "created_at": admin.created_at,
+            "can_manage_data": can_manage_data(admin),
+        }
+    )

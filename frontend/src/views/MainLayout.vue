@@ -78,10 +78,12 @@
 
     <main class="main-content">
       <div class="content-frame">
-        <!-- 演示账号横幅：让看的人第一眼知道这是只读演示环境 -->
+        <!-- 演示环境横幅：写给访客/面试官看，说明能用什么，而不是罗列不能做什么 -->
         <div v-if="auth.isDemo" class="demo-banner" role="status">
-          <strong>演示账号</strong>
-          <span>可浏览全部页面与数据，但不能新增、修改或删除。想体验完整功能请自行注册账号。</span>
+          <strong>演示环境</strong>
+          <span
+            >全部功能可用：收藏、歌单、反馈、智能体对话与收听记录都会真实保存。后台的数据维护入口对该账号保持只读，避免演示数据被改动。</span
+          >
         </div>
         <div class="workspace-toolbar">
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
@@ -115,7 +117,7 @@ interface NavigationItem {
 const discoveryItems: NavigationItem[] = [
   { to: '/', label: '首页', icon: '⌂' },
   { to: '/songs', label: '内容数据', icon: '▦' },
-  { to: '/agent', label: '智能助手', icon: '✦', requiresAuth: true },
+  { to: '/agent', label: '智能体', icon: '✦', requiresAuth: true },
 ]
 const personalItems: NavigationItem[] = [
   { to: '/playlists', label: '我的空间', icon: '▤', requiresAuth: true },

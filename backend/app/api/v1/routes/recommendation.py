@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import block_demo_writes, get_optional_current_user
+from app.api.dependencies import get_current_user, get_optional_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.library import SongReference
@@ -42,7 +42,7 @@ def list_recommendation_cards(
 @router.post("/plays", status_code=status.HTTP_204_NO_CONTENT)
 def record_play(
     payload: SongReference,
-    current_user: Annotated[User, Depends(block_demo_writes)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
     """记录当前用户的一次播放行为，供推荐画像使用。"""

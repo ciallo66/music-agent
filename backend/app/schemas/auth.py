@@ -37,6 +37,9 @@ class UserResponse(BaseModel):
     role: str
     status: str
     created_at: datetime
+    # 能否改动后台数据：角色是 admin 且不是演示账号。
+    # 前端据此把后台操作按钮置为只读，避免访客点了才收到 403。
+    can_manage_data: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

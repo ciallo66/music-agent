@@ -3,7 +3,13 @@
   <div class="admin-imports-page">
     <PageHeader title="导入任务" subtitle="管理 Jamendo 音乐元数据导入任务">
       <template #actions>
-        <el-button type="primary" @click="dialogVisible = true">新建导入任务</el-button>
+        <el-button
+          type="primary"
+          :disabled="!auth.canManageData"
+          :title="readonlyHint"
+          @click="dialogVisible = true"
+          >新建导入任务</el-button
+        >
       </template>
     </PageHeader>
 
@@ -111,6 +117,11 @@ import PageHeader from '../../components/PageHeader.vue'
 import StatePanel from '../../components/StatePanel.vue'
 import type { ImportJobResponse, ImportJobStatus } from '../../types/importJob'
 import { showError, showSuccess } from '../../utils/feedback'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
+// 演示账号在后台只读：按钮直接禁用并说明原因，避免点下去才收到 403
+const readonlyHint = '演示账号只能查看后台数据，不能修改'
 
 const jobs = ref<ImportJobResponse[]>([])
 const loading = ref(false)

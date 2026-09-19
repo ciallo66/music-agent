@@ -20,9 +20,18 @@ def test_register_hashes_password(client: TestClient, db_session: Session) -> No
     )
 
     assert response.status_code == 201
-    assert set(response.json()) == {"id", "username", "role", "status", "created_at"}
+    assert set(response.json()) == {
+        "id",
+        "username",
+        "role",
+        "status",
+        "created_at",
+        # 能力标记：前端据此决定后台按钮是否可点
+        "can_manage_data",
+    }
     assert response.json()["role"] == "user"
     assert response.json()["status"] == "active"
+    assert response.json()["can_manage_data"] is False
     user = db_session.scalar(select(User).where(User.username == "Player01"))
     assert user is not None
     assert user.password_hash != "Abc123"

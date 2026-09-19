@@ -26,8 +26,7 @@
         </div>
         <p class="actions-note">
           本平台不托管音频，「记一次收听」=
-          把你这次的收听行为记进画像（影响互动趋势、活跃时段与风格偏好）。
-          未登录时先登录；演示账号只读，不会写数据。
+          把你这次的收听行为记进画像（影响互动趋势、活跃时段与风格偏好）。未登录时先登录。
         </p>
       </div>
     </div>
@@ -164,13 +163,11 @@ const isFav = ref(false)
 const recording = ref(false)
 const played = ref(false)
 
-// 只有真实登录用户能写：未登录要引导去登录，演示账号后端会拒（403），所以直接禁用。
-const canRecordPlay = computed(() => auth.isAuthenticated && !auth.isDemo)
-const recordPlayHint = computed(() => {
-  if (!auth.isAuthenticated) return '登录后可以记录收听'
-  if (auth.isDemo) return '演示账号只读，不会写入数据'
-  return '记录一次收听，用于你的个人分析'
-})
+// 登录用户都能记录收听（演示账号也属于正常使用）；未登录时引导先登录。
+const canRecordPlay = computed(() => auth.isAuthenticated)
+const recordPlayHint = computed(() =>
+  auth.isAuthenticated ? '记录一次收听，用于你的个人分析' : '登录后可以记录收听',
+)
 
 // 多体系投票得出的流派说明（比单一体系更可解释）
 const genreFusion = computed(() => fusedGenreLabel(song.value?.genre_labels ?? null))

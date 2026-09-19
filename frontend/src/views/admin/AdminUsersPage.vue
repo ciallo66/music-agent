@@ -46,14 +46,20 @@
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" :disabled="busyId === row.id" @click="toggleRole(row)">
+            <el-button
+              size="small"
+              :disabled="busyId === row.id || !auth.canManageData"
+              :title="readonlyHint"
+              @click="toggleRole(row)"
+            >
               {{ row.role === 'admin' ? '降为普通' : '设为管理员' }}
             </el-button>
             <el-button
               size="small"
               type="danger"
               plain
-              :disabled="busyId === row.id"
+              :disabled="busyId === row.id || !auth.canManageData"
+              :title="readonlyHint"
               @click="toggleStatus(row)"
             >
               {{ row.status === 'active' ? '禁用' : '启用' }}
@@ -82,6 +88,11 @@ import PageHeader from '../../components/PageHeader.vue'
 import StatePanel from '../../components/StatePanel.vue'
 import { listAdminUsers, updateAdminUser, type AdminUserItem } from '../../api/admin'
 import { showError, showSuccess } from '../../utils/feedback'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
+// 演示账号在后台只读：按钮直接禁用并说明原因，避免点下去才收到 403
+const readonlyHint = '演示账号只能查看后台数据，不能修改'
 
 const rows = ref<AdminUserItem[]>([])
 const total = ref(0)

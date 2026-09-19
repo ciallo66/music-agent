@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_admin
+from app.api.dependencies import require_real_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.import_job import ImportJobResponse, JamendoImportRequest
@@ -31,7 +31,7 @@ def create_jamendo_import(
     payload: JamendoImportRequest,
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> ImportJobResponse:
     """创建 Jamendo 后台导入任务。"""
     try:
@@ -53,7 +53,7 @@ def create_jamendo_import(
 @router.get("", response_model=list[ImportJobResponse])
 def list_import_jobs(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[ImportJobResponse]:
     """查询最近的导入任务。"""
@@ -64,7 +64,7 @@ def list_import_jobs(
 def read_import_job(
     job_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_admin)],
+    _admin: Annotated[User, Depends(require_real_admin)],
 ) -> ImportJobResponse:
     """查询单个导入任务进度。"""
     try:

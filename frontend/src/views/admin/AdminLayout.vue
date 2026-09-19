@@ -26,6 +26,11 @@
     </aside>
 
     <main class="admin-main">
+      <!-- 演示账号进后台：能看数据，但改数据的按钮会被禁用，这里先说明原因 -->
+      <p v-if="!auth.canManageData" class="admin-readonly" role="status">
+        <strong>只读模式</strong>
+        当前账号可以查看后台数据，但不能改动。数据维护入口已禁用，换管理员账号登录后可操作。
+      </p>
       <router-view />
     </main>
   </div>
@@ -118,5 +123,24 @@ const navItems = [
   min-width: 0;
   overflow-y: auto;
   padding: 22px clamp(18px, 3vw, 34px) 40px;
+}
+.admin-readonly {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 209, 128, 0.32);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: rgba(255, 209, 128, 0.1);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.admin-readonly strong {
+  color: #ffd180;
+  font-size: 11px;
+  letter-spacing: 0.08em;
 }
 </style>

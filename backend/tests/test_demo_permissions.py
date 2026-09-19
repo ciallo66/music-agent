@@ -1,6 +1,9 @@
-"""演示账号只读保护测试。
+"""演示账号权限契约测试。
 
-覆盖三类契约：演示账号写操作被拒、演示账号读操作照常、普通账号写操作不受影响。
+覆盖三类契约：
+- 演示账号的**正常使用**（收藏、歌单、反馈、收听、对话）与普通账号一致，可以写入；
+- 演示账号在**后台改数据**的入口上被拒绝（即使它有 admin 角色）；
+- 用户名比较不区分大小写，且不会误伤名字近似的普通账号。
 """
 
 from __future__ import annotations
@@ -45,6 +48,13 @@ def _login(client: TestClient, username: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
+def _demo_admin_headers(client: TestClient, db: Session, monkeypatch: Any) -> dict[str, str]:
+    """创建带 admin 角色的演示账号并登录，用于验证后台写入口的拦截。"""
+    _use_demo_username(monkeypatch)
+    _make_user(db, DEMO_USERNAME, role=UserRole.ADMIN)
+    return _login(client, DEMO_USERNAME)
+
+
 def _song(db: Session) -> Song:
     """创建可供收藏接口引用的歌曲。"""
     artist = Artist(name="Demo Artist", avatar_url=None)
@@ -74,10 +84,10 @@ def _song(db: Session) -> Song:
     return song
 
 
-def test_demo_user_cannot_add_favorite(
+def test_demo_user_can_add_favorite(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """演示账号收藏歌曲应返回 403，且提示包含「只读」。"""
+    """演示账号属于正常使用，收藏歌曲应当成功。"""
     _use_demo_username(monkeypatch)
     _make_user(db_session, DEMO_USERNAME)
     song = _song(db_session)
@@ -85,8 +95,33 @@ def test_demo_user_cannot_add_favorite(
 
     response = client.post("/api/v1/favorites", headers=headers, json={"song_id": song.id})
 
-    assert response.status_code == 403
-    assert "只读" in response.json()["detail"]
+    assert response.status_code == 201
+
+
+def test_demo_user_can_use_library_feedback_and_plays(
+    client: TestClient, db_session: Session, monkeypatch: Any
+) -> None:
+    """演示账号可以建歌单、提交反馈、记录收听——这些都属于正常功能。"""
+    _use_demo_username(monkeypatch)
+    _make_user(db_session, DEMO_USERNAME)
+    song = _song(db_session)
+    headers = _login(client, DEMO_USERNAME)
+
+    playlist = client.post("/api/v1/playlists", headers=headers, json={"name": "演示歌单"})
+    add_song = client.post(
+        f"/api/v1/playlists/{playlist.json()['id']}/songs",
+        headers=headers,
+        json={"song_id": song.id},
+    )
+    feedback = client.post(
+        "/api/v1/feedback", headers=headers, json={"song_id": song.id, "action": "like"}
+    )
+    play = client.post("/api/v1/plays", headers=headers, json={"song_id": song.id})
+
+    assert playlist.status_code == 201
+    assert add_song.status_code == 204
+    assert feedback.status_code == 201
+    assert play.status_code == 204
 
 
 def test_demo_user_can_read_catalog(
@@ -121,42 +156,45 @@ def test_demo_user_can_read_own_library(
     assert playlists.json()["items"] == []
 
 
-def test_demo_user_write_endpoints_are_blocked(
+def test_demo_admin_can_read_admin_console(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """演示账号的各写入口（歌单、反馈、播放、Agent）都应返回 403。"""
-    _use_demo_username(monkeypatch)
-    _make_user(db_session, DEMO_USERNAME)
+    """演示账号带 admin 角色时可以查看后台统计（只读）。"""
+    headers = _demo_admin_headers(client, db_session, monkeypatch)
+
+    overview = client.get("/api/v1/admin/overview", headers=headers)
+    users = client.get("/api/v1/admin/users", headers=headers)
+
+    assert overview.status_code == 200
+    assert users.status_code == 200
+
+
+def test_demo_admin_cannot_mutate_admin_data(
+    client: TestClient, db_session: Session, monkeypatch: Any
+) -> None:
+    """演示账号在后台所有会改数据的入口上都必须被拒（403 + 可读提示）。"""
+    headers = _demo_admin_headers(client, db_session, monkeypatch)
     song = _song(db_session)
-    headers = _login(client, DEMO_USERNAME)
 
     requests: list[tuple[str, str, dict[str, Any] | None]] = [
-        ("post", "/api/v1/playlists", {"name": "演示歌单"}),
-        ("patch", "/api/v1/playlists/1", {"name": "改名"}),
-        ("delete", "/api/v1/playlists/1", None),
-        ("post", "/api/v1/playlists/1/songs", {"song_id": song.id}),
-        ("delete", f"/api/v1/playlists/1/songs/{song.id}", None),
-        ("delete", f"/api/v1/favorites/{song.id}", None),
-        ("post", "/api/v1/feedback", {"song_id": song.id, "action": "like"}),
-        ("delete", f"/api/v1/feedback/{song.id}", None),
-        ("post", "/api/v1/plays", {"song_id": song.id}),
-        ("post", "/api/v1/agent/chat", {"message": "帮我看歌"}),
-        (
-            "post",
-            "/api/v1/agent/confirmations",
-            {"session_id": 1, "decisions": [{"confirmation_id": 1, "approved": True}]},
-        ),
+        ("post", "/api/v1/admin/artists", {"name": "演示歌手"}),
+        ("delete", "/api/v1/admin/artists/1", None),
+        ("post", "/api/v1/admin/songs", {"title": "演示歌曲", "artist_id": 1}),
+        ("delete", f"/api/v1/admin/songs/{song.id}", None),
+        ("patch", "/api/v1/admin/users/1", {"status": "disabled"}),
+        ("post", "/api/v1/admin/imports/jamendo", {"limit": 1}),
     ]
     for method, url, payload in requests:
         response = client.request(method, url, headers=headers, json=payload)
-        assert response.status_code == 403, f"{method.upper()} {url} 未被只读保护拦截"
-        assert "只读" in response.json()["detail"]
+        assert response.status_code == 403, f"{method.upper()} {url} 未被后台只读保护拦截"
+        detail = response.json()["detail"]
+        assert "只能查看" in detail and "不能修改" in detail
 
 
 def test_plain_user_writes_are_not_blocked(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """普通账号的写操作不受演示账号保护影响。"""
+    """普通账号的写操作不受影响。"""
     _use_demo_username(monkeypatch)
     _make_user(db_session, PLAIN_USERNAME)
     song = _song(db_session)
@@ -172,28 +210,26 @@ def test_plain_user_writes_are_not_blocked(
 def test_username_comparison_is_case_insensitive(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """配置为 Demo99 时，用户名 DEMO99 同样被判定为演示账号。"""
+    """配置为 Demo99 时，用户名 DEMO99 同样被判定为演示账号（后台写入口被拦）。"""
     _use_demo_username(monkeypatch, "Demo99")
-    _make_user(db_session, "DEMO99")
-    song = _song(db_session)
+    _make_user(db_session, "DEMO99", role=UserRole.ADMIN)
     headers = _login(client, "DEMO99")
 
-    response = client.post("/api/v1/favorites", headers=headers, json={"song_id": song.id})
+    response = client.post("/api/v1/admin/artists", headers=headers, json={"name": "X"})
 
     assert response.status_code == 403
-    assert "只读" in response.json()["detail"]
+    assert "不能修改" in response.json()["detail"]
 
 
 def test_similar_username_is_not_treated_as_demo(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """用户名只是包含演示账号名（Demo999）时不应被误判。"""
+    """用户名只是包含演示账号名（Demo999）时不应被误判：后台写入口按角色判断。"""
     _use_demo_username(monkeypatch, "Demo99")
-    _make_user(db_session, "Demo999")
-    song = _song(db_session)
+    _make_user(db_session, "Demo999", role=UserRole.ADMIN)
     headers = _login(client, "Demo999")
 
-    response = client.post("/api/v1/favorites", headers=headers, json={"song_id": song.id})
+    response = client.post("/api/v1/admin/artists", headers=headers, json={"name": "真实管理员"})
 
     assert response.status_code == 201
 
@@ -201,10 +237,10 @@ def test_similar_username_is_not_treated_as_demo(
 def test_admin_write_still_requires_admin_role(
     client: TestClient, db_session: Session, monkeypatch: Any
 ) -> None:
-    """演示账号不是管理员，后台写接口仍按管理员权限拒绝。"""
+    """普通账号访问后台写接口仍按管理员权限拒绝。"""
     _use_demo_username(monkeypatch)
-    _make_user(db_session, DEMO_USERNAME)
-    headers = _login(client, DEMO_USERNAME)
+    _make_user(db_session, PLAIN_USERNAME)
+    headers = _login(client, PLAIN_USERNAME)
 
     response = client.post("/api/v1/admin/artists", headers=headers, json={"name": "X"})
 

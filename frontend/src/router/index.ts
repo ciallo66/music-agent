@@ -96,6 +96,11 @@ const router = createRouter({
           name: 'access-required',
           component: () => import('../views/AuthRequiredPage.vue'),
         },
+        {
+          path: 'no-permission',
+          name: 'no-permission',
+          component: () => import('../views/NoPermissionPage.vue'),
+        },
       ],
     },
     {
@@ -177,7 +182,8 @@ router.beforeEach(async (to) => {
     return '/'
   }
   if (to.meta.requiresAdmin === true && !auth.isAdmin) {
-    return '/'
+    // 以前这里静默跳回首页，用户不知道自己为什么进不去，也没法换账号
+    return { name: 'no-permission', query: { redirect: to.fullPath } }
   }
 })
 
