@@ -27,9 +27,14 @@ class Settings(BaseSettings):
     refresh_cookie_secure: bool = False
     refresh_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
-    # 演示账号用户名：该账号登录后仍可读全部数据，但所有写操作都会被拒绝。
-    # 长度上限与注册用户名校验（schemas/auth.py 的 Username）保持一致。
+    # 演示账号用户名：正常功能（收藏、歌单、反馈、对话、收听记录）照常可用，
+    # 只有后台改数据的入口对它只读。长度上限与注册用户名校验（schemas/auth.py
+    # 的 Username）保持一致。
     demo_username: str = Field(default="demo", min_length=1, max_length=18)
+    # 演示账号密码：登录页的「一键进入演示账号」用它登录，因此必须与前端
+    # VITE_DEMO_PASSWORD 一致；换环境时改这里，再用
+    # `python -m scripts.ensure_demo_account` 把库里的账号对上。
+    demo_password: str = Field(default="demo1234", min_length=4, max_length=18)
 
     database_url: str = "postgresql+psycopg://postgres:your_password@127.0.0.1:5432/music_agent"
 

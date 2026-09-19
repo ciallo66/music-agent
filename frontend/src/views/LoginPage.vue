@@ -90,7 +90,7 @@
             native-type="button"
             @click="enterDemo"
           >
-            一键进入演示环境
+            一键进入演示账号
           </el-button>
           <p class="demo-hint">无需注册即可体验完整功能：收藏、歌单、反馈与智能体对话。</p>
         </div>
@@ -123,8 +123,13 @@ const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const demoLoading = ref(false)
 
-// 演示账号凭证只用于「一键进入演示环境」，不展示在界面上。
-const DEMO_CREDENTIALS = { username: 'demo', password: 'demo1234' }
+// 演示凭证必须与后端 DEMO_USERNAME / DEMO_PASSWORD 一致。
+// 换环境时改前端 .env 的 VITE_DEMO_USERNAME / VITE_DEMO_PASSWORD，
+// 再用 `python -m scripts.ensure_demo_account` 把库里的账号对上。
+const DEMO_CREDENTIALS = {
+  username: import.meta.env.VITE_DEMO_USERNAME ?? 'demo',
+  password: import.meta.env.VITE_DEMO_PASSWORD ?? 'demo1234',
+}
 const form = reactive({ username: '', password: '' })
 const rules: FormRules = {
   username: [
@@ -154,16 +159,17 @@ function changeMode(nextMode: Mode): void {
   formRef.value?.clearValidate()
 }
 
-// 一键进入演示环境：用演示账号登录并直接进入工作区。
+// 一键进入演示账号：用配置里的演示凭证登录并直接进入工作区。
 async function enterDemo(): Promise<void> {
   if (demoLoading.value || submitting.value) return
   demoLoading.value = true
   try {
     await auth.login(DEMO_CREDENTIALS.username, DEMO_CREDENTIALS.password)
-    showSuccess('已进入演示环境')
+    showSuccess('已进入演示账号')
     await router.push('/')
   } catch (error) {
-    showError(error, '演示环境暂时不可用，请稍后重试')
+    // 凭证对不上时给出可操作的提示，而不是笼统的「不可用」
+    showError(error, '演示账号登录失败，请用注册的账号登录或联系管理员')
   } finally {
     demoLoading.value = false
   }

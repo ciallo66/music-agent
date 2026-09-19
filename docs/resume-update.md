@@ -20,7 +20,7 @@
 
 | 能力 | 怎么写在简历上 | 证据 |
 |---|---|---|
-| **演示账号只读保护** | 「为演示环境设计只读账号：后端按 `DEMO_USERNAME` 拦截全部写接口，管理员角色下仍不可改数据」 | `app/api/dependencies.py` 的 `block_demo_writes` / `require_real_admin`，14 个写接口挂载 |
+| **演示账号权限边界** | 「演示账号按能力分权：正常功能（收藏、歌单、反馈、对话）可写，只有后台改数据入口只读；能力标记由服务端下发，前端据此禁用入口」 | `app/api/dependencies.py` 的 `can_manage_data` / `require_real_admin`，`/auth/me` 返回 `can_manage_data` |
 | **数据完整性治理** | 「音频特征字段按数据源可用性如实标注，不使用 0 或占位值填充；时长从 MusicBrainz 分批补全至 931/931」 | `SongDetailPage.vue` 的「数据缺失」区块、`scripts/backfill_duration.py` |
 | **多体系流派投票** | 「音频分类的 4 套体系标签做投票融合，展示层标注为模型判定，不与官方流派混淆」 | `frontend/src/utils/genre.ts` |
 | **反馈驱动排序** | 「显式反馈接入推荐权重：喜欢 +0.25、已看过 −0.2、不感兴趣排除」 | `app/services/recommendation_feedback.py` |
@@ -39,7 +39,7 @@
 
 ```
 在线演示：https://music-agent.cloud
-演示账号：登录页点「立即体验演示环境（只读）」即可，无需注册
+演示账号：登录页点「一键进入演示账号」即可，无需注册
 ```
 
 > ⚠️ **不要**在简历、GitHub、聊天记录里出现 `admin / 123456`（那是你自己的完整权限号）。

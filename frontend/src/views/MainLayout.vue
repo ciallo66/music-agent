@@ -92,9 +92,9 @@
 
     <main class="main-content">
       <div class="content-frame">
-        <!-- 演示环境横幅：写给访客/面试官看，说明能用什么，而不是罗列不能做什么 -->
+        <!-- 演示账号横幅：写给访客/面试官看，说明能用什么，而不是罗列不能做什么 -->
         <div v-if="auth.isDemo" class="demo-banner" role="status">
-          <strong>演示环境</strong>
+          <strong>演示账号</strong>
           <span
             >全部功能可用：收藏、歌单、反馈、智能体对话与收听记录都会真实保存。后台的数据维护入口对该账号保持只读，避免演示数据被改动。</span
           >
