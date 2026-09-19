@@ -154,6 +154,16 @@ a:focus-visible,
   --el-button-hover-border-color: var(--accent-strong);
   --el-button-active-bg-color: var(--accent-deep);
   --el-button-active-border-color: var(--accent-deep);
+  /* 禁用态：Element Plus 默认把主色淡化 40%，深色底上几乎看不出是按钮，
+     这里改成低不透明度的实心块 + 明确的禁用光标。 */
+  --el-button-disabled-bg-color: rgba(110, 231, 210, 0.16);
+  --el-button-disabled-border-color: rgba(110, 231, 210, 0.24);
+  --el-button-disabled-text-color: rgba(233, 240, 255, 0.55);
+}
+
+.el-button.is-disabled,
+.el-button.is-disabled:hover {
+  cursor: not-allowed;
 }
 
 .el-button:not(.el-button--primary) {

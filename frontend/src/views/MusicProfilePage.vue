@@ -28,7 +28,7 @@
         v-if="profile.total_plays === 0 && profile.favorite_count === 0 && feedbackCount === 0"
         class="empty-hint"
       >
-        <strong>还没有可分析的互动数据</strong>
+        <strong class="empty-hint-title">还没有可分析的互动数据</strong>
         <p>
           画像来自你的<strong>收藏</strong>、<strong>收听记录</strong>与<strong>反馈</strong>。去
           <router-link to="/songs">内容库</router-link> 收藏几首、在歌曲详情点「记一次收听」，或让
@@ -95,7 +95,7 @@
         <article class="panel chart-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">风格分布</p>
+              <p class="panel-kicker">你听的内容</p>
               <h3>风格分布</h3>
             </div>
           </div>
@@ -109,7 +109,7 @@
         <article class="panel chart-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">常来源</p>
+              <p class="panel-kicker">Top 5</p>
               <h3>常来源</h3>
             </div>
           </div>
@@ -133,7 +133,7 @@
         <article class="panel insight-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">活跃时段</p>
+              <p class="panel-kicker">按小时统计</p>
               <h3>活跃时段</h3>
             </div>
           </div>
@@ -148,7 +148,7 @@
         <article class="panel insight-panel">
           <div class="panel-heading">
             <div>
-              <p class="panel-kicker">兴趣分布</p>
+              <p class="panel-kicker">按标签统计</p>
               <h3>兴趣分布</h3>
             </div>
           </div>
@@ -164,7 +164,7 @@
       <article v-if="profile.preference_change?.length" class="panel preference-change-panel">
         <div class="panel-heading">
           <div>
-            <p class="panel-kicker">偏好变化</p>
+            <p class="panel-kicker">近两期对比</p>
             <h3>偏好变化</h3>
           </div>
         </div>
@@ -488,11 +488,17 @@ onBeforeUnmount(disposeCharts)
   border-radius: 14px;
   background: var(--surface);
 }
-.empty-hint strong {
+/* 只让标题块级显示：这条规则以前会命中段落里的 <strong>，
+   把整句拆成一行一个词，并把顿号、句号甩到行首。 */
+.empty-hint .empty-hint-title {
   display: block;
   margin-bottom: 6px;
   color: var(--text);
   font-size: 13px;
+}
+.empty-hint p strong {
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 .empty-hint p {
   margin: 0;
@@ -509,7 +515,8 @@ onBeforeUnmount(disposeCharts)
 }
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 四张统计卡排一行，避免 3 列布局在第二行留一个空洞 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -811,6 +818,11 @@ onBeforeUnmount(disposeCharts)
   .chart-grid,
   .insight-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 980px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 620px) {
