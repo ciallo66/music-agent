@@ -106,6 +106,45 @@
             </div>
             <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
           </div>
+
+          <!-- 输入区贴在对话卡片底部：以前它是卡片外面单独一条，
+               结果消息和输入框之间空出一大块，看着就又挤又空。 -->
+          <form class="composer" @submit.prevent="sendMessage">
+            <el-input
+              ref="composerInput"
+              v-model="draft"
+              type="textarea"
+              :autosize="{ minRows: 1, maxRows: 5 }"
+              maxlength="2000"
+              resize="none"
+              placeholder="直接输入需求，例如：推荐节奏舒缓、器乐为主的内容"
+              :disabled="awaitingConfirmation"
+              @keydown="handleComposerKeydown"
+            />
+            <el-button
+              v-if="loading"
+              class="send-button"
+              native-type="button"
+              aria-label="停止分析"
+              @click="stopRequest"
+            >
+              停止
+            </el-button>
+            <el-button
+              v-else
+              class="send-button"
+              native-type="submit"
+              type="primary"
+              :disabled="draft.trim().length === 0 || awaitingConfirmation"
+              aria-label="发送问题"
+            >
+              发送
+            </el-button>
+            <!-- 运行中用户仍可打字：明确告诉他这条会在本轮结束后才能发出 -->
+            <p v-if="loading && draft.trim()" class="composer-busy">
+              智能体正在运行，这条将在本轮结束后发送
+            </p>
+          </form>
         </div>
 
         <div v-else class="agent-empty page-surface">
@@ -173,42 +212,6 @@
           </ul>
         </div>
 
-        <form class="composer" @submit.prevent="sendMessage">
-          <el-input
-            ref="composerInput"
-            v-model="draft"
-            type="textarea"
-            :autosize="{ minRows: 1, maxRows: 5 }"
-            maxlength="2000"
-            resize="none"
-            placeholder="直接输入需求，例如：推荐节奏舒缓、器乐为主的内容"
-            :disabled="awaitingConfirmation"
-            @keydown="handleComposerKeydown"
-          />
-          <el-button
-            v-if="loading"
-            class="send-button"
-            native-type="button"
-            aria-label="停止分析"
-            @click="stopRequest"
-          >
-            停止
-          </el-button>
-          <el-button
-            v-else
-            class="send-button"
-            native-type="submit"
-            type="primary"
-            :disabled="draft.trim().length === 0 || awaitingConfirmation"
-            aria-label="发送问题"
-          >
-            发送
-          </el-button>
-          <!-- 运行中用户仍可打字：明确告诉他这条会在本轮结束后才能发出 -->
-          <p v-if="loading && draft.trim()" class="composer-busy">
-            智能体正在运行，这条将在本轮结束后发送
-          </p>
-        </form>
         <div class="composer-foot">
           <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合详情与实际数据判断。</p>
           <p class="composer-hint">Enter 发送 · Shift + Enter 换行 · 最多 2000 字</p>
@@ -858,6 +861,8 @@ watch(conversationElement, (element) => {
   max-width: var(--chat-width);
   flex-direction: column;
   margin: 0 auto;
+  /* 给底部吸底输入条留位置，最后一条消息不会被它压住 */
+  padding-bottom: 8px;
 }
 /* 运行状态条：吸顶，滚动时也能看到智能体当前在做什么 */
 .run-status {
@@ -1184,18 +1189,20 @@ watch(conversationElement, (element) => {
   font-size: 10px;
 }
 .composer {
-  position: relative;
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
   flex: 0 0 auto;
   width: min(100%, var(--chat-width));
+  /* 贴在对话卡片底部：负外边距抵消卡片内边距，让输入条横向占满 */
   align-self: center;
-  margin-top: 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 10px 30px rgba(8, 15, 30, 0.28);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  margin: 12px calc(-1 * clamp(16px, 2vw, 24px)) calc(-1 * 14px);
+  padding: 12px clamp(16px, 2vw, 24px);
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, rgba(24, 36, 58, 0.86), rgba(20, 31, 51, 0.98) 38%);
+  backdrop-filter: blur(6px);
 }
 /* 聚焦时给出明确反馈，和主流对话产品一致 */
 .composer:focus-within {
