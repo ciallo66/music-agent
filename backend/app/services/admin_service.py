@@ -47,7 +47,6 @@ class AdminService:
             favorites=counts["favorites"],
             plays=counts["plays"],
             knowledge=counts["knowledge"],
-            import_jobs=counts["import_jobs"],
             songs_with_embedding=counts["songs_with_embedding"],
             songs_with_audio_features=counts["songs_with_audio_features"],
             genre_distribution=distribution,

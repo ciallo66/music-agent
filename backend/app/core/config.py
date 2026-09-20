@@ -68,12 +68,6 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = 30.0
     embedding_similarity_threshold: float = 0.35
 
-    jamendo_client_id: str = ""
-    jamendo_base_url: str = "https://api.jamendo.com/v3.0"
-    jamendo_timeout_seconds: float = 30.0
-    jamendo_max_retries: int = 3
-    jamendo_retry_base_seconds: float = 1.0
-
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",
         env_file_encoding="utf-8",
@@ -128,17 +122,6 @@ class Settings(BaseSettings):
             raise ValueError("WEB_SEARCH_MAX_RESULTS 必须大于 0")
         if self.web_search_timeout_seconds <= 0:
             raise ValueError("WEB_SEARCH_TIMEOUT_SECONDS 必须大于 0")
-        return self
-
-    @model_validator(mode="after")
-    def validate_jamendo_timeout(self) -> Settings:
-        """确保 Jamendo 请求、重试配置有效。"""
-        if self.jamendo_timeout_seconds <= 0:
-            raise ValueError("JAMENDO_TIMEOUT_SECONDS 必须大于 0")
-        if self.jamendo_max_retries < 0:
-            raise ValueError("JAMENDO_MAX_RETRIES 不能小于 0")
-        if self.jamendo_retry_base_seconds < 0:
-            raise ValueError("JAMENDO_RETRY_BASE_SECONDS 不能小于 0")
         return self
 
 

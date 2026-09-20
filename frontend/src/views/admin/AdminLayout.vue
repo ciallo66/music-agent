@@ -85,7 +85,6 @@ const navItems = [
   { to: '/admin/catalog', label: '曲目管理', icon: '♫' },
   { to: '/admin/artists', label: '歌手管理', icon: '☻' },
   { to: '/admin/users', label: '账号管理', icon: '⚇' },
-  { to: '/admin/imports', label: '导入任务', icon: '⇪' },
 ]
 </script>
 

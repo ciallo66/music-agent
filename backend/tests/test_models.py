@@ -11,7 +11,6 @@ EXPECTED_TABLES = {
     "chat_sessions",
     "chat_messages",
     "music_knowledge",
-    "import_jobs",
     "play_records",
     "playlist_songs",
     "playlists",

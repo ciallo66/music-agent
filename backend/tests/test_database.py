@@ -17,7 +17,6 @@ EXPECTED_TABLES = {
     "chat_sessions",
     "chat_messages",
     "music_knowledge",
-    "import_jobs",
     "play_records",
     "playlist_songs",
     "playlists",
@@ -53,14 +52,6 @@ def test_catalog_source_indexes_are_unique() -> None:
         assert any(
             index["name"] == f"uq_{table}_source_source_id" and index["unique"] for index in indexes
         )
-
-
-def test_import_job_active_source_index_is_unique() -> None:
-    """同一来源只允许一个待执行或执行中的任务。"""
-    indexes = inspect(engine).get_indexes("import_jobs")
-    assert any(
-        index["name"] == "uq_import_jobs_active_source" and index["unique"] for index in indexes
-    )
 
 
 def test_pgvector_extension_is_enabled() -> None:

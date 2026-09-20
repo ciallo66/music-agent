@@ -8,7 +8,6 @@ from app.api.v1.routes import (
     admin_auth,
     admin_catalog,
     admin_console,
-    admin_imports,
     agent,
     auth,
     catalog,
@@ -29,4 +28,3 @@ router.include_router(feedback.router, tags=["feedback"])
 router.include_router(agent.router, tags=["agent"])
 router.include_router(admin_console.router, prefix="/admin", tags=["admin-console"])
 router.include_router(admin_catalog.router, prefix="/admin", tags=["admin-catalog"])
-router.include_router(admin_imports.router, prefix="/admin/imports", tags=["admin-imports"])

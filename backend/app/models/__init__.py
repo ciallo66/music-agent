@@ -4,7 +4,6 @@ from app.models.artist import Artist
 from app.models.associations import PlaylistSong, SongTag
 from app.models.chat import ChatMessage, ChatSession
 from app.models.favorite import Favorite
-from app.models.import_job import ImportJob, ImportJobStatus
 from app.models.music_knowledge import MusicKnowledge
 from app.models.play_record import PlayRecord
 from app.models.playlist import Playlist
@@ -20,8 +19,6 @@ __all__ = [
     "ChatMessage",
     "ChatSession",
     "Favorite",
-    "ImportJob",
-    "ImportJobStatus",
     "PlayRecord",
     "Playlist",
     "PlaylistSong",

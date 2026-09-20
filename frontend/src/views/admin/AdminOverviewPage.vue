@@ -58,10 +58,6 @@
               <span>知识库切片</span>
               <strong>{{ overview.knowledge }}</strong>
             </li>
-            <li>
-              <span>导入任务</span>
-              <strong>{{ overview.import_jobs }}</strong>
-            </li>
           </ul>
           <p class="muted">
             说明：本平台不托管音频，「收听次数」只有在接入可播放音源后才会增长；当前推荐依据收藏与主动反馈。

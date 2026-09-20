@@ -26,7 +26,6 @@ class AdminOverview(BaseModel):
     favorites: int
     plays: int
     knowledge: int
-    import_jobs: int
     songs_with_embedding: int
     songs_with_audio_features: int
     genre_distribution: list[AdminCountItem]

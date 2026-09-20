@@ -164,13 +164,9 @@ def test_demo_admin_can_read_admin_console(
 
     overview = client.get("/api/v1/admin/overview", headers=headers)
     users = client.get("/api/v1/admin/users", headers=headers)
-    # 导入任务的列表与进度是只读查询，演示账号也要能看，
-    # 否则后台「导入任务」页一进去就报错
-    jobs = client.get("/api/v1/admin/imports", headers=headers)
 
     assert overview.status_code == 200
     assert users.status_code == 200
-    assert jobs.status_code == 200
 
 
 def test_demo_admin_cannot_mutate_admin_data(
@@ -186,7 +182,6 @@ def test_demo_admin_cannot_mutate_admin_data(
         ("post", "/api/v1/admin/songs", {"title": "演示歌曲", "artist_id": 1}),
         ("delete", f"/api/v1/admin/songs/{song.id}", None),
         ("patch", "/api/v1/admin/users/1", {"status": "disabled"}),
-        ("post", "/api/v1/admin/imports/jamendo", {"limit": 1}),
     ]
     for method, url, payload in requests:
         response = client.request(method, url, headers=headers, json=payload)

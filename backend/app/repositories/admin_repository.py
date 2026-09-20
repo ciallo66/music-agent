@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from app.models.artist import Artist
 from app.models.chat import ChatSession
 from app.models.favorite import Favorite
-from app.models.import_job import ImportJob
 from app.models.music_knowledge import MusicKnowledge
 from app.models.play_record import PlayRecord
 from app.models.playlist import Playlist
@@ -43,7 +42,6 @@ class AdminRepository:
             "favorites": self._count(Favorite),
             "plays": self._count(PlayRecord),
             "knowledge": self._count(MusicKnowledge),
-            "import_jobs": self._count(ImportJob),
             "chat_sessions": self._count(ChatSession),
             "songs_with_embedding": self._count(Song, Song.embedding.is_not(None)),
             "songs_with_audio_features": self._count(Song, Song.bpm.is_not(None)),
