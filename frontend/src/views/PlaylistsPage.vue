@@ -11,13 +11,14 @@
       >
     </PageHeader>
 
-    <SkeletonList v-if="loading" :rows="6" variant="card" status="正在加载内容集合" />
+    <!-- 加载慢（>150ms）才显示骨架，避免骨架一闪就被真实内容替换 -->
+    <SkeletonList v-if="showSkeleton" :rows="5" variant="card" status="正在加载内容集合" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="歌单加载失败" message="服务暂时不可用，请稍后重试">
         <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
       </StatePanel>
     </div>
-    <div v-else-if="playlists.length === 0" class="state-surface page-surface">
+    <div v-else-if="playlists.length === 0 && !loading" class="state-surface page-surface">
       <StatePanel title="还没有歌单" message="创建一个歌单，开始整理喜欢的歌曲">
         <template #action
           ><el-button type="primary" @click="showCreate = true">创建第一个歌单</el-button></template
@@ -92,6 +93,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createPlaylist, listPlaylists, type PlaylistItem } from '../api/playlists'
 import { showError, showSuccess } from '../utils/feedback'
+import { useDelayedFlag } from '../composables/useDelayedFlag'
 import PageHeader from '../components/PageHeader.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
@@ -99,6 +101,8 @@ import StatePanel from '../components/StatePanel.vue'
 const router = useRouter()
 const playlists = ref<PlaylistItem[]>([])
 const loading = ref(false)
+// 只有加载超过 150ms 才显示骨架，响应快时不出占位
+const showSkeleton = useDelayedFlag(loading)
 const loadFailed = ref(false)
 const creating = ref(false)
 const showCreate = ref(false)

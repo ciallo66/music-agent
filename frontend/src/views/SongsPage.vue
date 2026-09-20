@@ -32,7 +32,9 @@
       <button v-if="hasFilters" type="button" @click="clearFilters">清除筛选 ×</button>
     </div>
 
-    <SkeletonList v-if="loading" :rows="8" status="正在加载内容库" />
+    <!-- 占位只在「加载真的慢」时出现：请求 150ms 内返回就完全不显示骨架，
+         避免「骨架一闪就被真实内容替换」的闪烁（延迟加载占位，主流做法）。 -->
+    <SkeletonList v-if="showSkeleton" :rows="5" status="正在加载内容库" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="音乐库加载失败" message="服务暂时不可用，请稍后重新加载">
         <template #action
@@ -40,7 +42,7 @@
         >
       </StatePanel>
     </div>
-    <div v-else-if="songs.length === 0" class="state-surface page-surface">
+    <div v-else-if="songs.length === 0 && !loading" class="state-surface page-surface">
       <StatePanel
         title="暂无歌曲"
         :message="hasFilters ? '没有匹配当前筛选条件的歌曲' : '歌曲数据导入后会展示在这里'"
@@ -69,6 +71,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { listSongGenres, listSongs, type SongSummary } from '../api/songs'
 import { showError } from '../utils/feedback'
+import { useDelayedFlag } from '../composables/useDelayedFlag'
 import PageHeader from '../components/PageHeader.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
@@ -79,6 +82,8 @@ const pageSize = 20
 const genres = ref<string[]>([])
 const songs = ref<SongSummary[]>([])
 const loading = ref(false)
+// 只有加载超过 150ms 才显示骨架：响应快的时候完全不出占位，切换页面就没有中间那一下跳动
+const showSkeleton = useDelayedFlag(loading)
 const loadFailed = ref(false)
 const page = ref(1)
 const total = ref(0)

@@ -53,22 +53,17 @@
       </aside>
 
       <div class="agent-main">
-        <header class="agent-head">
-          <button
-            type="button"
-            class="drawer-toggle"
-            :aria-expanded="sessionsOpen"
-            :title="sessionsOpen ? '收起历史对话' : '展开历史对话'"
-            @click="sessionsOpen = !sessionsOpen"
-          >
-            <span aria-hidden="true">☰</span>
-          </button>
-          <div class="agent-head-copy">
-            <h1>智能体</h1>
-            <p>调用已接入的数据工具，完成检索、分析与知识问答</p>
-          </div>
-        </header>
-
+        <!-- 不设页头：标题与说明在这里没有信息价值，只会占掉一条对话高度。
+             会话栏开关只渲染一份，绝对定位悬浮在主区左上角，不占任何布局高度。 -->
+        <button
+          type="button"
+          class="drawer-toggle"
+          :aria-expanded="sessionsOpen"
+          :title="sessionsOpen ? '收起历史对话' : '展开历史对话'"
+          @click="sessionsOpen = !sessionsOpen"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
         <div class="agent-body">
           <div
             v-if="messages.length"
@@ -258,7 +253,29 @@ const sessionId = ref<number | null>(null)
 // 历史会话列表：刷新页面后仍能找回之前的对话。窄屏默认收起，把宽度让给对话。
 const sessions = ref<AgentSessionSummary[]>([])
 const sessionsLoading = ref(false)
-const sessionsOpen = ref(true)
+// 会话栏开合状态：记住用户上次的选择（刷新后不再自己弹开）。
+// 没有保存过偏好时按屏宽决定：窄屏（≤1100px）抽屉是浮层、会盖住左上角的悬浮开关，默认收起。
+const SESSIONS_OPEN_KEY = 'music-agent:agent-drawer-open'
+
+function readSessionsOpen(): boolean {
+  try {
+    const saved = window.localStorage.getItem(SESSIONS_OPEN_KEY)
+    if (saved !== null) return saved === '1'
+  } catch {
+    // 隐私模式下不可用：退回按屏宽决定
+  }
+  return window.innerWidth > 1100
+}
+
+const sessionsOpen = ref(readSessionsOpen())
+
+watch(sessionsOpen, (open) => {
+  try {
+    window.localStorage.setItem(SESSIONS_OPEN_KEY, open ? '1' : '0')
+  } catch {
+    // 存不下就算了，不影响使用
+  }
+})
 const toolStatus = ref('')
 const pendingConfirmations = ref<PendingToolConfirmation[]>([])
 // 已作出的决定：确认后按钮要禁用、卡片转为「已确认」状态，不能还能再点一次。
@@ -560,8 +577,8 @@ async function removeSession(item: AgentSessionSummary): Promise<void> {
 
 // 页面创建后提交从其它页面带入的话题（如推荐卡片的“在智能体中继续”）。
 onMounted(async () => {
-  // 锁住外层滚动：本页只允许消息列表内部滚动，避免两条滚动条。
-  document.querySelector('.main-content')?.classList.add('main-content--locked')
+  // 滚动锁由外壳按路由标记在渲染阶段加上（见 MainLayout 的 isFullHeightPage），
+  // 这里不再用命令式加类：那会晚一帧生效，切换页面时先闪一下前台骨架。
   const topic = typeof route.query.topic === 'string' ? route.query.topic : ''
   await nextTick()
   composerInput.value?.focus()
@@ -584,15 +601,11 @@ function handleComposerKeydown(event: KeyboardEvent): void {
   void sendMessage()
 }
 
-// 页面创建后提交从其它页面带入的话题（如推荐卡片的“在智能体中继续”）。
-
-// 释放本页对整站的影响：解锁外层滚动、断开观察者、终止在途请求。
-// 抽成独立函数是为了让路由守卫也能兜底调用 —— 万一组件卸载没跑到，
-// 外面的滚动锁会一直留着，导致切到别的页面后整页滚不动。
+// 释放本页对整站的影响：断开观察者、终止在途请求。
+// 滚动锁已经改由外壳按路由标记控制，这里不再操作 .main-content 的类。
 function releasePageLocks(): void {
   resizeObserver?.disconnect()
   resizeObserver = null
-  document.querySelector('.main-content')?.classList.remove('main-content--locked')
   activeRequest.value?.abort()
   activeRequest.value = null
   loading.value = false
@@ -616,48 +629,50 @@ watch(conversationElement, (element) => {
 </script>
 
 <style scoped>
-/* 本页不允许外层滚动：整页高度锁在一屏内，滚动只发生在消息列表内部。
-   两层都要管住——外层容器禁用滚动，本页自身撑满而不溢出。 */
-:global(.main-content--locked) {
-  overflow-y: hidden;
-}
-:global(.main-content--locked .content-frame) {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-/* 关键：height:100% 会等于父高、再叠加自身上下内边距，整页高度溢出——
-   「输入框被裁掉、外层莫名出现滚动条」就是这么来的。用 flex 填充并允许收缩。 */
+/* 整页锁一屏：外壳（MainLayout）按路由 meta.fullHeight 在渲染阶段就打上
+   .main-content--locked，这里只需要保证本页填满内容区、不产生外层滚动。 */
 :global(.main-content--locked .content-frame > *) {
   min-height: 0;
 }
 .agent-page {
-  /* 本页对话宽度：比输入框更宽，减少左右空白 */
-  --chat-width: 1080px;
+  /* 抽屉宽度（窄屏浮层与展开动画都用它） */
   --drawer-width: 244px;
-  /* 用 100% + box-sizing 让内容区真正撑满视口，
-     否则整列只长到内容高度，输入框下面会空出上百像素 */
+  /* flex:1 + min-height:0 撑满内容区并允许收缩，height:100% 只是非 flex 父容器时的兜底。
+     两者都写是因为 height:100% 在父高为 auto 时不生效，会出现「输入框下面空一大块」。 */
   box-sizing: border-box;
   height: 100%;
   min-height: 0;
+  flex: 1;
   padding: var(--page-gutter);
 }
-/* 抽屉 + 主区：整页一行 flex，抽屉收起时宽度归零、主区自动占满 */
+/* 抽屉 + 主区：整页一行 flex。
+   align-items: stretch 让两侧都吃满整列高度：历史对话面板顶部/底部与对话卡片对齐，
+   之前用 center 时抽屉是内容高度（8 条约 514px）被垂直居中，上下各差一截，看着就散。 */
 .agent-shell {
   display: flex;
+  /* 关键：必须自己撑满内容区（父级是 flex 纵向容器，只写 height 会被内容撑宽），
+     否则「对话列居中」是相对一个被内容撑出来的宽度算的，视觉上仍然偏右。 */
+  width: 100%;
   height: 100%;
   min-height: 0;
+  align-items: stretch;
   gap: 0;
   transition: gap 0.2s ease;
 }
 .agent-shell.side-open {
-  gap: 16px;
+  gap: 24px;
 }
-/* 会话抽屉：宽度动画开合，像主流对话产品的左侧栏 */
+/* 会话抽屉：宽度动画开合，像主流对话产品的左侧栏。
+   高度与右侧对话卡片精确等高：卡片下方固定是「输入区 + 提示行」这一块（实测 117px），
+   所以抽屉高度 = 整列高度 − 这一块。以前它要么是内容高度（被居中，上下各差一截），
+   要么拉到整列高度（比卡片长一截），两种都和卡片对不齐。 */
+.agent-shell {
+  --drawer-inset-bottom: 117px;
+}
 .session-drawer {
   width: 0;
+  min-height: 0;
+  height: calc(100% - var(--drawer-inset-bottom));
   flex-shrink: 0;
   overflow: hidden;
   transition:
@@ -681,50 +696,50 @@ watch(conversationElement, (element) => {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* 主区：页头 + 对话 + 输入，撑满抽屉之外的全部宽度 */
+/* 主区：对话 + 输入，撑满抽屉之外的全部宽度；没有页头，纵向全给对话。
+   整列封顶并居中：对话卡片、输入框、提示行都由它统一宽度，
+   三者永远同宽同轴 —— 不会出现「上面一张宽带子、下面一个窄框」的错位。
+   1040px 是主流对话产品的正文列宽，再宽反而不利于阅读。 */
 .agent-main {
+  position: relative; /* 悬浮的会话栏开关以这里为定位基准 */
   display: flex;
+  /* 必须自己有确定高度：外壳用 align-items:center，列不会被拉伸，
+     一旦高度变成 auto，下面的 flex:1 消息区就会被内容撑高，
+     把输入框顶出视口（踩过这个坑）。 */
+  height: 100%;
+  max-height: 100%;
+  max-width: 1040px;
   min-width: 0;
   min-height: 0;
-  flex: 1;
+  /* 缺省 1040px，空间不够时才收缩；margin auto 负责居中 */
+  flex: 0 1 1040px;
   flex-direction: column;
+  margin: 0 auto;
 }
-/* 紧凑页头：汉堡开关固定在左上角，展开与收起都在同一处 */
-.agent-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-bottom: 12px;
-}
+/* 会话栏开关：悬浮在对话卡片左上角，不占布局高度 */
 .drawer-toggle {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 10px;
   display: grid;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
   place-items: center;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   color: var(--text-secondary);
   background: var(--surface-solid);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
 }
 .drawer-toggle:hover {
+  opacity: 1;
   color: var(--text);
   background: var(--surface-hover);
-}
-.agent-head h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: 20px;
-  letter-spacing: -0.02em;
-}
-.agent-head p {
-  margin: 3px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
 }
 .drawer-head {
   flex-shrink: 0;
@@ -852,7 +867,8 @@ watch(conversationElement, (element) => {
 .session-remove:disabled {
   cursor: not-allowed;
 }
-/* 窄屏：抽屉改成浮层，展开时盖在对话上，不挤压内容宽度 */
+/* 窄屏：抽屉改成浮层，展开时盖在对话上，不挤压内容宽度。
+   浮层 z-index 高于悬浮开关，所以开关要右移让开抽屉，否则点不到（实测踩到过）。 */
 @media (max-width: 1100px) {
   .agent-shell {
     position: relative;
@@ -863,33 +879,43 @@ watch(conversationElement, (element) => {
     top: 0;
     bottom: 0;
     left: 0;
+    /* 浮层模式覆盖整个对话区，不再按卡片高度收缩 */
+    height: 100%;
     box-shadow: var(--shadow-soft);
   }
   .agent-shell.side-open .session-drawer {
     width: 260px;
   }
+  .agent-shell.side-open .drawer-toggle {
+    left: 274px;
+  }
 }
 /* 对话区撑满剩余高度；滚动在消息列表内部进行 */
 .conversation,
 .agent-empty {
+  position: relative;
+  display: flex;
   min-height: 0;
   flex: 1;
+  flex-direction: column;
+  /* 内容从顶部开始排：以前这里是 center，消息少时整段被垂直居中，
+     上下各留一大条空白，用户看到的就是「挤」和「一堆空白」 */
+  justify-content: flex-start;
+  align-items: stretch;
 }
 .conversation {
-  min-height: 0;
-  flex: 1;
-  /* 上下内边距收紧：这块是消息的可视高度，padding 越大能看到的对话越少 */
-  padding: 14px clamp(16px, 2vw, 24px);
+  /* 顶部留出悬浮开关的位置，第一条消息不被它压住 */
+  padding: 52px 0 18px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* 内容宽度与下方输入区对齐，宽屏下不再两侧各空一大块 */
+/* 左右内边距给到内容层：卡片边到消息之间留白，
+   宽度仍与输入框同宽（内边距不影响卡片外框对齐） */
 .conversation-inner {
   display: flex;
   width: 100%;
-  max-width: var(--chat-width);
   flex-direction: column;
-  margin: 0 auto;
+  padding: 0 clamp(16px, 1.8vw, 26px);
 }
 /* 运行状态条：吸顶，滚动时也能看到智能体当前在做什么 */
 .run-status {
@@ -999,12 +1025,9 @@ watch(conversationElement, (element) => {
     opacity: 0.15;
   }
 }
-/* 空状态：居中引导 + 示例问题，降低首次使用门槛 */
+/* 空状态：居中引导 + 示例问题，降低首次使用门槛
+   （只有这一处需要垂直居中；对话列表按上方规则从顶部开始排） */
 .agent-empty {
-  display: flex;
-  min-height: 340px;
-  flex: 1;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 28px;
@@ -1012,7 +1035,6 @@ watch(conversationElement, (element) => {
 }
 .empty-copy {
   width: 100%;
-  max-width: var(--chat-width);
   text-align: center;
 }
 .empty-mark {
@@ -1041,7 +1063,6 @@ watch(conversationElement, (element) => {
 .suggestion-grid {
   display: grid;
   width: 100%;
-  max-width: var(--chat-width);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
@@ -1133,7 +1154,7 @@ watch(conversationElement, (element) => {
   }
 }
 .confirmation-panel {
-  width: min(100%, var(--chat-width));
+  width: 100%;
   margin: 13px auto 0;
   padding: 10px 14px;
   border-color: rgba(232, 172, 96, 0.35);
@@ -1216,11 +1237,11 @@ watch(conversationElement, (element) => {
   font-size: 10px;
 }
 .composer {
-  /* 固定在整列最底部：不是 sticky，而是 flex 布局里排在消息区之后的一层 */
+  /* 固定在整列最底部：不是 sticky，而是 flex 布局里排在消息区之后的一层。
+     宽度交给整列（.agent-main）统一决定，自己不再封顶，才能和对话卡片同宽。 */
   position: relative;
   flex: 0 0 auto;
-  width: min(100%, var(--chat-width));
-  align-self: center;
+  width: 100%;
   margin-top: 12px;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
@@ -1244,10 +1265,15 @@ watch(conversationElement, (element) => {
   font-size: 13px;
   line-height: 1.7;
 }
+/* 发送按钮贴在输入框右下角内侧，并相对输入框垂直居中：
+   输入框相对 .composer 内缩 14px（表单 padding），输入框高 56px、按钮 40px，
+   上下留白各 8px ⇒ right = 14 + 10 = 24、bottom = 14 + 8 = 22。
+   原来写 right/bottom: 10px 是挂在表单边框上的，实测按钮超出输入框右边 4px、
+   底边 2px、垂直中心低 10px，看起来就是「位置不对」。 */
 .send-button {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 24px;
+  bottom: 22px;
   width: 40px;
   min-width: 40px;
   height: 40px;
@@ -1264,8 +1290,7 @@ watch(conversationElement, (element) => {
 .composer-foot {
   display: flex;
   flex: 0 0 auto;
-  width: min(100%, var(--chat-width));
-  align-self: center;
+  width: 100%;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 12px;

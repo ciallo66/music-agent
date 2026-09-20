@@ -1,8 +1,9 @@
 <!-- 集合详情页：展示集合信息并复用信息列表查看条目。 -->
 <template>
   <section v-if="playlist" class="detail-page">
+    <!-- 返回入口统一用 BackLink：造型与搜索框一致，且没有历史时能退回语义父级 -->
+    <BackLink label="我的空间" :fallback="{ name: 'playlists' }" />
     <div class="page-header legacy-header">
-      <button class="back-btn" type="button" @click="router.back()">← 返回歌单</button>
       <div class="pl-info">
         <h2>{{ playlist.name }}</h2>
         <p class="desc">{{ playlist.description || '还没有添加描述' }}</p>
@@ -17,6 +18,7 @@
     <SongList v-else :songs="playlist.songs" variant="playlist" />
   </section>
   <section v-else class="detail-page">
+    <BackLink label="我的空间" :fallback="{ name: 'playlists' }" />
     <div class="state-surface page-surface">
       <StatePanel v-if="loading" type="loading" title="正在加载歌单" />
       <StatePanel
@@ -40,6 +42,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPlaylist } from '../api/playlists'
 import type { PlaylistDetail } from '../types/music'
 import { showError } from '../utils/feedback'
+import BackLink from '../components/BackLink.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 const route = useRoute()
@@ -73,15 +76,6 @@ onMounted(load)
     radial-gradient(circle at 92% 20%, rgba(110, 231, 210, 0.18), transparent 26%),
     linear-gradient(145deg, rgba(42, 60, 91, 0.8), rgba(25, 38, 62, 0.72));
   box-shadow: var(--shadow-soft);
-}
-.back-btn {
-  background: none;
-  border: none;
-  color: var(--accent-strong);
-  cursor: pointer;
-  font-size: 14px;
-  margin-bottom: 16px;
-  padding: 0;
 }
 .pl-info h2 {
   color: var(--text);

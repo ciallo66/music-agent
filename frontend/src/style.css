@@ -42,6 +42,9 @@
   --radius: 18px;
   --page-gutter: clamp(20px, 3.2vw, 48px);
   --content-width: 1440px;
+  /* 内容区最小高度：加载骨架、真实列表、空态都按这个高度占位。
+     三者高度接近，页面切换/数据到达时就不会「先撑很高再塌下来」地闪一下。 */
+  --content-min-height: 420px;
 }
 
 * {
@@ -237,6 +240,15 @@ a:focus-visible,
   box-shadow: var(--shadow-soft);
 }
 
+/* 加载中 / 空态 / 错误占位也要占住内容区高度：
+   否则「骨架很高 → 内容很矮」或「空态很矮 → 内容很高」都会让整页跳动一下。 */
+.state-surface {
+  display: flex;
+  min-height: var(--content-min-height);
+  align-items: center;
+  justify-content: center;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   a,
   button,
@@ -359,6 +371,8 @@ body.admin-console .content-frame {
   :root {
     --page-gutter: 16px;
     --radius: 15px;
+    /* 手机上一屏能放的内容更少，占位高度同步收紧 */
+    --content-min-height: 320px;
   }
 
   .el-dialog {

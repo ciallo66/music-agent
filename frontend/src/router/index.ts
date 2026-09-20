@@ -56,7 +56,8 @@ const router = createRouter({
           path: 'agent',
           name: 'agent',
           component: () => import('../views/AgentPage.vue'),
-          meta: { requiresAuth: true },
+          // fullHeight：整页锁一屏高、只允许页面内部滚动；外壳据此隐藏横幅/工具条/页脚
+          meta: { requiresAuth: true, fullHeight: true },
         },
         {
           // 管理后台自带侧边导航与页面骨架，不与前台工作区共用布局
@@ -106,12 +107,53 @@ const router = createRouter({
   ],
 })
 
+// 导航进度条：只在「真的慢」的时候出现。
+// 原来 beforeResolve 立刻置 true、afterEach 立刻置 false，组件是本地 chunk 时
+// 整个过程不到一帧 —— 用户看到的就是「页面没跳路由也闪一下」。加延迟阈值后，
+// 亚帧级导航完全不显示进度条，只有懒加载 chunk 真的在等时才亮。
+const NAV_INDICATOR_DELAY_MS = 140
+const NAV_INDICATOR_MIN_MS = 220
+let navIndicatorTimer: ReturnType<typeof setTimeout> | null = null
+let navIndicatorShownAt = 0
+
+function clearNavIndicatorTimer(): void {
+  if (navIndicatorTimer === null) return
+  clearTimeout(navIndicatorTimer)
+  navIndicatorTimer = null
+}
+
+function startNavIndicator(): void {
+  clearNavIndicatorTimer()
+  const startedAt = Date.now()
+  navIndicatorTimer = setTimeout(() => {
+    navIndicatorTimer = null
+    navIndicatorShownAt = startedAt
+    isNavigating.value = true
+  }, NAV_INDICATOR_DELAY_MS)
+}
+
+function stopNavIndicator(): void {
+  clearNavIndicatorTimer()
+  if (!isNavigating.value) return
+  // 已经亮起来的进度条至少显示一小段，避免「刚亮就灭」的闪烁
+  const elapsed = Date.now() - navIndicatorShownAt
+  const remaining = Math.max(0, NAV_INDICATOR_MIN_MS - elapsed)
+  if (remaining === 0) {
+    isNavigating.value = false
+    return
+  }
+  navIndicatorTimer = setTimeout(() => {
+    navIndicatorTimer = null
+    isNavigating.value = false
+  }, remaining)
+}
+
 router.beforeResolve(() => {
-  isNavigating.value = true
+  startNavIndicator()
 })
 
 router.afterEach(() => {
-  isNavigating.value = false
+  stopNavIndicator()
 })
 
 // 判断错误是否来自动态 import 失败：浏览器持有过期资源清单时，
@@ -140,25 +182,28 @@ function reloadForFreshAssets(target: string): void {
 }
 
 router.onError((error, to) => {
-  isNavigating.value = false
+  releaseStuckPageLocks()
   if (isChunkLoadError(error)) {
     reloadForFreshAssets(to.fullPath)
   }
 })
 
-// 路由切换前的兜底：清掉可能残留的页面级锁定（外层滚动锁等）。
-// 之前出现过「在智能体页聊完切不走、切走后整页滚不动」，根因就是这类全局副作用没被回收。
+// 路由切换前的兜底：清掉可能残留的页面级状态。
+// 滚动锁本身由外壳按路由 meta.fullHeight 控制，这里只兜住导航进度条。
 export function releaseStuckPageLocks(): void {
-  document.querySelector('.main-content')?.classList.remove('main-content--locked')
+  clearNavIndicatorTimer()
   isNavigating.value = false
 }
 
 // 所有受保护路由等待认证恢复，避免未登录页面短暂闪现。
+// 关键：凡是需要身份判定的路由（requiresAuth / requiresAdmin）都必须等恢复完成再决策——
+// 否则恢复还没回来就先按「未登录」算，用户会先闪一下登录页/无权限页再被弹回去。
 router.beforeEach(async (to) => {
   releaseStuckPageLocks()
   const auth = useAuthStore()
+  const needsIdentity = to.meta.requiresAuth === true || to.meta.requiresAdmin === true
   if (!auth.initialized) {
-    if (to.meta.requiresAuth === true) {
+    if (needsIdentity) {
       await auth.initialize()
     } else {
       void auth.initialize()

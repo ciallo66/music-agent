@@ -47,6 +47,13 @@ withDefaults(
   gap: 10px;
 }
 
+/* 加载占位与真实列表占用相近的高度：
+   以前这里是固定行数（内容库 8 行 ≈ 896px），而真实内容区只有 300~500px 高，
+   数据到达时整页会塌下来一大截 —— 用户看到的就是「跳转时闪一下」。 */
+.skeleton-wrap {
+  min-height: var(--content-min-height, 420px);
+}
+
 .skeleton-card {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

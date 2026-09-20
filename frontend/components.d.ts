@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BackLink: typeof import('./src/components/BackLink.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElForm: typeof import('element-plus/es')['ElForm']
@@ -30,6 +31,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SkeletonList: typeof import('./src/components/SkeletonList.vue')['default']
+    SongCover: typeof import('./src/components/SongCover.vue')['default']
     SongList: typeof import('./src/components/SongList.vue')['default']
     StatePanel: typeof import('./src/components/StatePanel.vue')['default']
   }

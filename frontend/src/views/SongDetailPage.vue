@@ -1,6 +1,7 @@
 <!-- 内容详情页：展示结构化特征、雷达图、数据来源说明和收藏/收听记录操作。 -->
 <template>
   <section v-if="song" class="detail-page">
+    <BackLink label="内容库" :fallback="{ name: 'songs' }" />
     <div class="song-header">
       <SongCover :song="song" size="lg" show-source />
       <div class="info">
@@ -117,6 +118,7 @@
     </div>
   </section>
   <section v-else class="detail-page">
+    <BackLink label="内容库" :fallback="{ name: 'songs' }" />
     <div class="detail-state page-surface">
       <StatePanel v-if="loading" type="loading" title="正在加载歌曲详情" />
       <StatePanel
@@ -141,6 +143,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { getSong, type SongDetail } from '../api/songs'
 import { recordPlay } from '../api/recommendations'
 import { useAuthStore } from '../stores/auth'
+import BackLink from '../components/BackLink.vue'
 import {
   danceabilityHint,
   danceabilityLabel,
@@ -392,8 +395,11 @@ onUnmounted(() => {
 })
 </script>
 <style scoped>
+/* 详情页整块居中：以前只有 max-width 没有 margin:auto，1040px 的块被钉在左边，
+   宽屏下右边空出一大块。auto 之后左右留白对称，和对话页保持同一种版式语言。 */
 .detail-page {
   max-width: 1040px;
+  margin: 0 auto;
   padding: var(--page-gutter);
 }
 .detail-state {

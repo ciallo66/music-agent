@@ -6,13 +6,14 @@
       title="我的收藏"
       subtitle="把打动你的声音留在这里，随时回来重温"
     />
-    <SkeletonList v-if="loading" :rows="6" status="正在加载收藏" />
+    <!-- 加载慢（>150ms）才显示骨架，避免骨架一闪就被真实内容替换 -->
+    <SkeletonList v-if="showSkeleton" :rows="5" status="正在加载收藏" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
       <StatePanel type="error" title="收藏加载失败" message="服务暂时不可用，请稍后重新加载">
         <template #action><el-button type="primary" @click="load">重新加载</el-button></template>
       </StatePanel>
     </div>
-    <div v-else-if="favSongs.length === 0" class="state-surface page-surface">
+    <div v-else-if="favSongs.length === 0 && !loading" class="state-surface page-surface">
       <StatePanel title="还没有收藏任何歌曲" message="在歌曲详情页点击收藏即可添加">
         <template #action
           ><router-link class="browse-link" to="/songs">浏览内容库</router-link></template
@@ -27,12 +28,15 @@ import { ref, onMounted } from 'vue'
 import { listFavorites, removeFavorite } from '../api/favorites'
 import { getSong, type SongDetail } from '../api/songs'
 import { showError, showSuccess } from '../utils/feedback'
+import { useDelayedFlag } from '../composables/useDelayedFlag'
 import PageHeader from '../components/PageHeader.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
 const favSongs = ref<SongDetail[]>([])
 const loading = ref(false)
+// 只有加载超过 150ms 才显示骨架，响应快时不出占位
+const showSkeleton = useDelayedFlag(loading)
 const loadFailed = ref(false)
 // 先取收藏 ID，再并发加载歌曲详情；单条歌曲失效不影响其他收藏。
 async function load() {

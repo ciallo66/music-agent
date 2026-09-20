@@ -83,16 +83,17 @@
       </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-content" :class="{ 'main-content--locked': isFullHeightPage }">
       <div class="content-frame">
-        <!-- 演示账号横幅：写给访客/面试官看，说明能用什么，而不是罗列不能做什么 -->
-        <div v-if="auth.isDemo" class="demo-banner" role="status">
+        <!-- 演示账号横幅：写给访客/面试官看，说明能用什么，而不是罗列不能做什么。
+             整页锁一屏的页面（智能体）不显示：它只吃纵向空间，还会把消息区挤扁。 -->
+        <div v-if="auth.isDemo && !isFullHeightPage" class="demo-banner" role="status">
           <strong>演示账号</strong>
           <span
             >全部功能可用：收藏、歌单、反馈、智能体对话与收听记录都会真实保存。后台的数据维护入口对该账号保持只读，避免演示数据被改动。</span
           >
         </div>
-        <div class="workspace-toolbar">
+        <div v-if="!isFullHeightPage" class="workspace-toolbar">
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
             <span aria-hidden="true">⌕</span>
             <input v-model="quickSearch" type="search" placeholder="搜索内容、来源或标签" />
@@ -100,7 +101,7 @@
           <span class="toolbar-hint">示例数据 · 可检索、可分析</span>
         </div>
         <router-view />
-        <footer class="site-footer">
+        <footer v-if="!isFullHeightPage" class="site-footer">
           智能数据平台 · 示例数据仅用于检索、分析与演示 · 不提供内容下载或交易
         </footer>
       </div>
@@ -109,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { isNavigating } from '../router'
@@ -137,6 +138,9 @@ const route = useRoute()
 const quickSearch = ref('')
 // 进入管理控制台是整页跳转（全局替换），用这个标记给入口加过渡态
 const enteringConsole = ref(false)
+// 整页锁一屏的页面（如智能体对话）：外壳不渲染横幅/工具条/页脚，
+// 滚动锁也在渲染阶段就生效 —— 不再等组件 onMounted 才加类，避免切换时先闪一帧错误骨架。
+const isFullHeightPage = computed(() => route.meta.fullHeight === true)
 
 // 整页切到管理控制台：前后台是两套布局，用全局替换而不是局部路由切换。
 // 会话不会丢——新文档会用 Refresh Cookie 恢复登录态。
@@ -403,6 +407,23 @@ nav a.router-link-exact-active .nav-icon {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+/* 整页锁一屏的页面（智能体）：外层不再滚动，滚动只发生在页面内部。
+   这两个规则挂在渲染阶段就生效的类上，切换页面时不会先闪一帧错误骨架。 */
+.main-content--locked {
+  overflow-y: hidden;
+}
+
+.main-content--locked .content-frame {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.main-content--locked :deep(.content-frame > *) {
+  min-height: 0;
 }
 
 /* 演示账号横幅：每页都在，压成一条细带，别抢对话页的纵向空间 */

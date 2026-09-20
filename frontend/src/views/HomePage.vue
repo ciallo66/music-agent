@@ -170,7 +170,9 @@ const auth = useAuthStore()
 const feedbackStore = useFeedbackStore()
 const hotSongs = ref<RecommendationItem[]>([])
 const cards = ref<StructuredRecommendationCard[]>([])
-const loading = ref(false)
+// 初值就是「加载中」：以前初值是 false，而数据在 onMounted 才请求，
+// 于是每次进首页都会先渲染一帧「还没有足够的推荐数据」空态再换成推荐卡 —— 一次可见的闪烁。
+const loading = ref(true)
 const loadFailed = ref(false)
 
 async function loadRecommendations(): Promise<void> {
@@ -486,6 +488,9 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 13px;
+  /* 与加载占位同高：从「正在生成推荐」切到实实在在的卡片时页面不跳动 */
+  min-height: var(--content-min-height, 420px);
+  align-content: start;
 }
 
 .hot-card {
@@ -567,8 +572,13 @@ onMounted(async () => {
   font-size: 10px;
 }
 
+/* 推荐区三种状态（加载中 / 有卡片 / 空态）共用同一片高度：
+   否则从「正在生成推荐」切到卡片、或卡片切到空态时，整页会跳一下。 */
 .recommendation-state {
-  min-height: 245px;
+  min-height: var(--content-min-height, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .feedback-summary {
