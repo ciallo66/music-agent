@@ -81,7 +81,7 @@ export function voiceLabel(voiceInstrumental: string | null): string {
 }
 
 /**
- * 律动的三档中文说法。
+ * 律动的三档中文说法，用于**单曲**。
  *
  * `danceability` 取自 AcousticBrainz 的 danceability 分类器，是「判定为可舞动」的
  * 概率，而不是连续刻度：库里 931 首有 364 首落在 0 附近、244 首落在 1 附近。
@@ -93,6 +93,17 @@ export function danceabilityLabel(value: number | null | undefined): string {
   if (value < 0.05) return '低'
   if (value > 0.95) return '高'
   return '中'
+}
+
+/**
+ * 聚合后的律动档位（个人画像用）。
+ *
+ * 多首歌取平均后分值落在连续区间，再用单曲那套 0.05/0.95 阈值会出现
+ * 「22%（中）」这种自相矛盾的展示，所以这里按 0.5 划线，让档位与数值一致。
+ */
+export function danceabilityAverageLabel(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  return value < 0.5 ? '偏低' : '偏高'
 }
 
 /** 律动的百分比文本，保留给提示与详情页使用。 */

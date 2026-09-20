@@ -221,7 +221,7 @@ import StatePanel from '../components/StatePanel.vue'
 import { useProfileStore } from '../stores/profile'
 import { useFeedbackStore } from '../stores/feedback'
 import { storeToRefs } from 'pinia'
-import { danceabilityLabel } from '../types/music'
+import { danceabilityAverageLabel } from '../types/music'
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
@@ -255,7 +255,7 @@ const featureRows = computed(() => {
   const feature = profile.value?.feature_profile
   if (!feature) return []
   const dancePercent = formatPercent(feature.average_danceability)
-  const danceLevel = danceabilityLabel(feature.average_danceability)
+  const danceLevel = danceabilityAverageLabel(feature.average_danceability)
   return [
     {
       label: '平均 BPM',

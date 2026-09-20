@@ -180,11 +180,21 @@ class MusicAgentTools:
         )
 
     def search_songs(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """执行歌曲搜索工具。"""
+        """执行歌曲搜索工具。
+
+        同时返回符合条件的**总数**：搜索本身分页，只给一页的话，
+        模型被问「库里有多少首歌」时只能回答「不确定」。
+        """
         payload = SearchSongsInput.model_validate(arguments)
         self._apply_statement_timeout()
         songs = self.songs.search(payload.query, payload.genre, payload.tags, payload.limit)
-        return {"items": [self._summary(song) for song in songs], "count": len(songs)}
+        total = self.songs.count(payload.query, payload.genre)
+        return {
+            "items": [self._summary(song) for song in songs],
+            "count": len(songs),
+            "total_matching": total,
+            "note": "total_matching 是符合筛选条件的歌曲总数，count 只是本次返回的条数",
+        }
 
     def analyze_song(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """返回一首歌曲的完整音乐特征。"""

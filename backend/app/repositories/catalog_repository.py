@@ -140,6 +140,22 @@ class SongRepository:
         )
         return list(self.db.scalars(statement))
 
+    def count(self, query: str | None = None, genre: str | None = None) -> int:
+        """统计符合筛选条件的歌曲总数。
+
+        Agent 被问「库里有多少首歌」时要能给出准确数字：分页列表只返回一页，
+        拿一页的条数当总数会答错。
+        """
+        statement = select(func.count()).select_from(Song)
+        if query:
+            keyword = f"%{query.lower()}%"
+            statement = statement.where(
+                or_(func.lower(Song.title).like(keyword), func.lower(Song.genre).like(keyword))
+            )
+        if genre:
+            statement = statement.where(func.lower(Song.genre) == genre.lower())
+        return int(self.db.scalar(statement) or 0)
+
     def search(
         self, query: str | None, genre: str | None, tags: list[str], limit: int
     ) -> list[Song]:

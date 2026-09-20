@@ -601,14 +601,24 @@ watch(conversationElement, (element) => {
   overflow-y: hidden;
 }
 :global(.main-content--locked .content-frame) {
+  display: flex;
   height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* 关键：height:100% 会等于父高、再叠加自身上下内边距，整页高度溢出——
+   「输入框被裁掉、外层莫名出现滚动条」就是这么来的。用 flex 填充并允许收缩。 */
+:global(.main-content--locked .content-frame > *) {
+  min-height: 0;
 }
 .agent-page {
   display: flex;
   /* 本页对话宽度：比输入框更宽，减少左右空白 */
   --chat-width: 1080px;
-  height: 100%;
+  height: auto;
   min-height: 0;
+  flex: 1;
   flex-direction: column;
   padding: var(--page-gutter);
 }
