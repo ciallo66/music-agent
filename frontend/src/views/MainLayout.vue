@@ -52,6 +52,24 @@
       </nav>
 
       <div class="sidebar-bottom">
+        <!-- 管理员入口放在用户信息**上面**：靠底、贴着账号区，位置固定；
+            从控制台返回时也是回到这里，来回切换不用换地方找。 -->
+        <div v-if="auth.isAdmin" class="console-slot">
+          <a
+            class="console-entry"
+            href="/admin"
+            :class="{ 'nav-link-loading': enteringConsole }"
+            @click="enterConsole"
+          >
+            <span class="console-mark" aria-hidden="true">▣</span>
+            <span class="console-text">
+              <strong>管理控制台</strong>
+              <small>数据维护与账号管理</small>
+            </span>
+            <span class="console-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+
         <div v-if="auth.user" class="user-card">
           <span class="avatar" aria-hidden="true">{{
             auth.user.username.slice(0, 1).toUpperCase()
@@ -61,23 +79,6 @@
             <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
           </span>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
-        </div>
-
-        <div class="console-slot">
-          <template v-if="auth.isAdmin">
-            <!-- 管理员入口只留这一处：位置固定，从控制台返回时也回到这里 -->
-            <a
-              class="console-entry"
-              href="/admin"
-              :class="{ 'nav-link-loading': enteringConsole }"
-              @click="enterConsole"
-            >
-              <span class="nav-icon" aria-hidden="true">▣</span>
-              <span>进入管理控制台</span>
-              <span class="console-arrow" aria-hidden="true">↗</span>
-            </a>
-          </template>
-          <p v-else class="console-slot-hint">仅管理员可进入管理控制台</p>
         </div>
       </div>
     </aside>
@@ -464,46 +465,76 @@ nav a.router-link-exact-active .nav-icon {
   font-size: 12px;
 }
 
-/* 管理员入口固定在侧栏底部：与后台里的「返回前台工作区」同一位置，
-   来回切换时眼睛不用换地方找。 */
+/* 管理员入口固定在侧栏底部、用户信息上方：靠底、不抢导航，
+   与后台里的「返回前台工作区」是同一处位置。 */
 .console-slot {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  margin-bottom: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .console-entry {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 11px;
-  border: 1px solid rgba(232, 172, 96, 0.45);
-  border-radius: 10px;
-  color: #e8ac60;
-  background: rgba(232, 172, 96, 0.08);
-  font-size: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 172, 96, 0.4);
+  border-radius: 12px;
+  color: var(--text);
+  background: linear-gradient(120deg, rgba(232, 172, 96, 0.16), rgba(232, 172, 96, 0.06));
   text-decoration: none;
 }
 
 .console-entry:hover {
-  background: rgba(232, 172, 96, 0.16);
+  border-color: rgba(232, 172, 96, 0.65);
+  background: linear-gradient(120deg, rgba(232, 172, 96, 0.24), rgba(232, 172, 96, 0.1));
 }
 
-.console-entry .console-arrow {
-  margin-left: auto;
+.console-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  color: #e8ac60;
+  background: rgba(232, 172, 96, 0.18);
+  font-size: 14px;
+}
+
+.console-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.console-text strong,
+.console-text small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.console-text strong {
+  color: var(--text);
   font-size: 12px;
+}
+
+.console-text small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.console-arrow {
+  flex-shrink: 0;
+  color: #e8ac60;
+  font-size: 13px;
 }
 
 .console-entry.nav-link-loading {
   cursor: wait;
   opacity: 0.72;
-}
-
-.console-slot-hint {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  text-align: center;
 }
 
 .toolbar-hint {
