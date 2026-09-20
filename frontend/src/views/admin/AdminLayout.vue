@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
@@ -61,7 +61,9 @@ function markConsoleShell(active: boolean): void {
   document.body.classList.toggle('admin-console', active)
 }
 
-onMounted(() => markConsoleShell(true))
+// 在 setup 同步阶段就打标记，而不是等 onMounted：
+// 整页跳到 /admin 时，onMounted 晚于浏览器首帧，会先闪一下前台外壳。
+markConsoleShell(true)
 onBeforeUnmount(() => markConsoleShell(false))
 
 function leaveConsole(event: MouseEvent): void {

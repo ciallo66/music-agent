@@ -250,8 +250,72 @@ a:focus-visible,
   }
 }
 
-/* ── 管理控制台：独立界面 ─────────────────────────────────────
-   后台与前台是两套壳子。路由本身是整页跳转（window.location.assign），
+/* ── Element Plus 组件的深色兜底 ──────────────────────────────
+   官方深色变量（main.ts 里引入）解决大部分组件，但表格/抽屉/加载遮罩
+   在深色变量下仍有偏亮的实底，这里按设计令牌再兜一层，
+   保证管理控制台不会出现白色块。 */
+.el-table,
+.el-table__inner-wrapper,
+.el-table__body-wrapper,
+.el-table__header-wrapper,
+.el-table tr,
+.el-table th.el-table__cell,
+.el-table td.el-table__cell {
+  background-color: transparent !important;
+}
+.el-table th.el-table__cell {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.el-table td.el-table__cell {
+  color: var(--text-secondary);
+  border-bottom-color: var(--border) !important;
+}
+.el-table__empty-block {
+  background-color: transparent !important;
+}
+.el-table__empty-text {
+  color: var(--text-muted);
+}
+.el-table--border,
+.el-table--group {
+  border-color: var(--border) !important;
+}
+.el-table::before,
+.el-table__inner-wrapper::before {
+  background-color: var(--border) !important;
+}
+.el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--surface-hover) !important;
+}
+.el-loading-mask {
+  background-color: rgba(12, 20, 34, 0.72) !important;
+}
+.el-drawer,
+.el-drawer__header,
+.el-drawer__body {
+  background-color: var(--surface-solid) !important;
+  color: var(--text) !important;
+}
+.el-message-box {
+  background-color: var(--surface-solid) !important;
+  border-color: var(--border) !important;
+}
+.el-message-box__title,
+.el-message-box__content {
+  color: var(--text) !important;
+}
+.el-popper.is-light,
+.el-select-dropdown {
+  background-color: var(--surface-solid) !important;
+  border-color: var(--border) !important;
+}
+.el-popper.is-light .el-popper__arrow::before {
+  background-color: var(--surface-solid) !important;
+  border-color: var(--border) !important;
+}
+
+/* ── 管理控制台：独立界面 ─────────────────────────────────────   后台与前台是两套壳子。路由本身是整页跳转（window.location.assign），
    这里再把前台的外壳整体隐藏：侧边导航、顶部搜索条、演示横幅都不该出现在
    控制台里，否则整页跳转也会被看成「同一页换了个路由」。
    标记打在 body 上：前台的侧栏与内容区是兄弟节点，挂在内容区里管不到它。
