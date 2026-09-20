@@ -1,13 +1,17 @@
 // Agent SSE 通信：处理鉴权刷新、事件拆包与类型收窄。
-import { getAccessToken, refreshAccessToken } from './http'
+import { http, getAccessToken, refreshAccessToken } from './http'
 import type {
   AgentEvent,
+  AgentSessionDetail,
+  AgentSessionSummary,
   PendingToolConfirmation,
   StreamAgentChatOptions,
   StreamToolConfirmationOptions,
 } from '../types/agent'
 export type {
   AgentEvent,
+  AgentSessionDetail,
+  AgentSessionSummary,
   StreamAgentChatOptions,
   StreamToolConfirmationOptions,
 } from '../types/agent'
@@ -38,6 +42,21 @@ export async function streamToolConfirmations(
     options.onEvent,
     options.signal,
   )
+}
+
+/** 列出当前用户的历史会话（按最近活跃倒序）。 */
+export function listAgentSessions(limit = 30) {
+  return http.get<AgentSessionSummary[]>('/agent/sessions', { params: { limit } })
+}
+
+/** 读取某个历史会话的完整消息，用于刷新页面后恢复对话。 */
+export function getAgentSession(sessionId: number) {
+  return http.get<AgentSessionDetail>(`/agent/sessions/${sessionId}`)
+}
+
+/** 删除一个历史会话（连同其中的消息）。 */
+export function deleteAgentSession(sessionId: number) {
+  return http.delete<void>(`/agent/sessions/${sessionId}`)
 }
 
 /** 解析 confirmation_required 事件负载；负载异常时返回 null。 */

@@ -32,3 +32,27 @@ export interface StreamToolConfirmationOptions {
   onEvent: (event: AgentEvent) => void
   signal?: AbortSignal
 }
+
+/** 历史会话列表项。 */
+export interface AgentSessionSummary {
+  id: number
+  created_at: string
+  message_count: number
+  /** 会话标题（第一条用户消息）；新建还没说话的会话为 null。 */
+  title: string | null
+  last_message_id: number | null
+}
+
+/** 历史会话里的一条消息。 */
+export interface AgentSessionMessage {
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+/** 单个历史会话的完整内容。 */
+export interface AgentSessionDetail {
+  id: number
+  created_at: string
+  messages: AgentSessionMessage[]
+}

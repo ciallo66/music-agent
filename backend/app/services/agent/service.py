@@ -12,7 +12,12 @@ from app.models.chat import ChatSession
 from app.models.tool_confirmation import ToolConfirmationStatus
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.tool_confirmation_repository import ToolConfirmationRepository
-from app.schemas.agent import ToolConfirmationDecision
+from app.schemas.agent import (
+    AgentSessionDetail,
+    AgentSessionMessage,
+    AgentSessionSummary,
+    ToolConfirmationDecision,
+)
 from app.services.agent.orchestrator import AgentOrchestrator, ToolResolution
 from app.services.agent.provider import ToolCall
 
@@ -61,6 +66,48 @@ class AgentService:
             for item in self.chats.list_messages(chat_session.id)
         ]
         return AgentConversation(session_id=chat_session.id, history=history)
+
+    def list_sessions(self, limit: int = 30) -> list[AgentSessionSummary]:
+        """列出当前用户的历史会话，附带消息条数与标题。
+
+        标题取该会话的第一条用户消息；没有用户消息（例如刚建就离开）时，
+        由接口层给出「新对话」这类兜底文案。
+        """
+        rows = self.chats.list_sessions(self.user_id, limit)
+        titles = self.chats.first_user_messages([row[0].id for row in rows])
+        return [
+            AgentSessionSummary(
+                id=session.id,
+                created_at=session.created_at,
+                message_count=message_count,
+                title=titles.get(session.id),
+                last_message_id=last_message_id,
+            )
+            for session, message_count, last_message_id in rows
+        ]
+
+    def read_session(self, session_id: int) -> AgentSessionDetail:
+        """读取当前用户某个会话的完整消息，用于刷新后恢复对话。"""
+        chat_session = self.chats.get_session(session_id, self.user_id)
+        if chat_session is None:
+            raise AgentSessionNotFoundError
+        messages = self.chats.list_messages(session_id)
+        return AgentSessionDetail(
+            id=chat_session.id,
+            created_at=chat_session.created_at,
+            messages=[
+                AgentSessionMessage(
+                    role=item.role, content=item.content, created_at=item.created_at
+                )
+                for item in messages
+                if item.role in {"user", "assistant"}
+            ],
+        )
+
+    def delete_session(self, session_id: int) -> None:
+        """删除当前用户的一个历史会话。"""
+        if not self.chats.delete_session(session_id, self.user_id):
+            raise AgentSessionNotFoundError
 
     def stream(self, conversation: AgentConversation, message: str) -> Iterator[str]:
         """启动指定会话的 Agent SSE 流。"""

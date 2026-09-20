@@ -5,14 +5,19 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.agent import AgentMessage, ToolConfirmationRequest
+from app.schemas.agent import (
+    AgentMessage,
+    AgentSessionDetail,
+    AgentSessionSummary,
+    ToolConfirmationRequest,
+)
 from app.services.agent.service import (
     AgentConfirmationError,
     AgentService,
@@ -33,6 +38,45 @@ def _sse(stream: Iterator[str], session_id: int) -> StreamingResponse:
             "X-Session-Id": str(session_id),
         },
     )
+
+
+@router.get("/agent/sessions", response_model=list[AgentSessionSummary])
+def list_sessions(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> list[AgentSessionSummary]:
+    """列出当前用户的历史会话，供侧栏切换。"""
+    return AgentService(db, current_user.id).list_sessions(limit)
+
+
+@router.get("/agent/sessions/{session_id}", response_model=AgentSessionDetail)
+def read_session(
+    session_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> AgentSessionDetail:
+    """读取某个历史会话的完整消息，用于刷新页面后恢复对话。"""
+    try:
+        return AgentService(db, current_user.id).read_session(session_id)
+    except AgentSessionNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在") from error
+
+
+@router.delete("/agent/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(
+    session_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    """删除当前用户的一个历史会话（连同消息）。"""
+    service = AgentService(db, current_user.id)
+    try:
+        service.delete_session(session_id)
+    except AgentSessionNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在") from error
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/agent/chat")
