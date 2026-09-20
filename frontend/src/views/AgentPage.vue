@@ -1,120 +1,191 @@
 <!-- Agent 对话页面：展示流式回复、工具状态和可复用的提问入口。 -->
 <template>
   <section class="agent-page">
-    <!-- 一条紧凑的页内标题条：标题在左、能力说明跟着、右侧放历史对话的开关。
-        原来这里是「工具条 + 大标题区」两条，吃掉近 160px 纵向空间，把对话挤扁了。 -->
-    <header class="agent-head">
-      <div class="agent-head-copy">
-        <h1>智能体</h1>
-        <p>调用已接入的数据工具，完成检索、分析与知识问答</p>
-      </div>
-      <button
-        type="button"
-        class="session-toggle"
-        :aria-pressed="sessionsOpen"
-        @click="sessionsOpen = !sessionsOpen"
-      >
-        <span aria-hidden="true">☰</span>
-        历史对话
-        <span v-if="sessions.length" class="session-toggle-count">{{ sessions.length }}</span>
-      </button>
-    </header>
-
-    <div class="agent-workspace">
-      <aside v-show="sessionsOpen" class="session-side page-surface" aria-label="历史对话">
-        <div class="session-head">
-          <strong>历史对话</strong>
-          <button
-            type="button"
-            class="session-new"
-            :disabled="loading"
-            title="开始一个新对话"
-            @click="startNewConversation"
-          >
-            ＋ 新对话
-          </button>
-        </div>
-        <p v-if="sessionsLoading" class="session-state">正在读取…</p>
-        <p v-else-if="sessions.length === 0" class="session-state">
-          还没有历史对话。问点什么，这里会自动留下记录。
-        </p>
-        <ul v-else class="session-list">
-          <li v-for="item in sessions" :key="item.id" :class="{ active: item.id === sessionId }">
+    <div class="agent-shell" :class="{ 'side-open': sessionsOpen }">
+      <!-- 左侧会话栏：仿主流对话产品的抽屉式侧栏。
+           收起时整条滑出画面（宽度归零），主区域自动吃掉全部宽度；
+           开关固定在页头左上角，展开/收起都是同一个位置。 -->
+      <aside class="session-drawer" aria-label="历史对话" :aria-hidden="!sessionsOpen">
+        <div class="drawer-inner">
+          <div class="drawer-head">
             <button
               type="button"
-              class="session-item"
+              class="drawer-new"
               :disabled="loading"
-              :title="sessionTitle(item)"
-              @click="openSession(item)"
+              title="开始新对话"
+              @click="startNewConversation"
             >
-              <span class="session-title">{{ sessionTitle(item) }}</span>
-              <span class="session-meta">
-                {{ formatSessionTime(item.created_at) }} · {{ item.message_count }} 条
-              </span>
+              <span aria-hidden="true">＋</span> 新对话
             </button>
-            <button
-              type="button"
-              class="session-remove"
-              :disabled="loading"
-              :aria-label="`删除对话「${sessionTitle(item)}」`"
-              @click.stop="removeSession(item)"
-            >
-              ×
-            </button>
-          </li>
-        </ul>
-      </aside>
-
-      <div class="agent-body">
-        <div
-          v-if="messages.length"
-          ref="conversationElement"
-          class="conversation page-surface"
-          aria-live="polite"
-        >
-          <div class="conversation-inner">
-            <!-- 运行状态条：吸顶显示「正在分析 / 正在调用工具 / 正在生成」，随时知道智能体在干什么 -->
-            <p v-if="runStatus" class="run-status" role="status">
-              <i aria-hidden="true"></i>{{ runStatus }}
-            </p>
-            <div
-              v-for="(item, index) in messages"
-              :key="index"
-              class="message-row"
-              :class="item.role"
-            >
-              <span class="message-avatar" aria-hidden="true">{{
-                item.role === 'user' ? userInitial : '✦'
-              }}</span>
-              <div class="message">
-                <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
-                <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
-                <p v-else class="user-text">{{ item.content }}</p>
-                <!-- 正在流式输出时，在最后一条回复末尾显示光标。 -->
-                <span
-                  v-if="item.role === 'assistant' && loading && index === messages.length - 1"
-                  class="stream-cursor"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-            <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
-              <span class="message-avatar" aria-hidden="true">✦</span>
-              <div class="message">
-                <p class="typing"><i></i><i></i><i></i></p>
-              </div>
-            </div>
-            <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
           </div>
 
-          <!-- 输入区贴在对话卡片底部：以前它是卡片外面单独一条，
-               结果消息和输入框之间空出一大块，看着就又挤又空。 -->
+          <p class="drawer-label">历史对话</p>
+          <p v-if="sessionsLoading" class="session-state">正在读取…</p>
+          <p v-else-if="sessions.length === 0" class="session-state">
+            还没有记录。问点什么，这里会自动留下对话。
+          </p>
+          <ul v-else class="session-list">
+            <li v-for="item in sessions" :key="item.id" :class="{ active: item.id === sessionId }">
+              <button
+                type="button"
+                class="session-item"
+                :disabled="loading"
+                :title="sessionTitle(item)"
+                @click="openSession(item)"
+              >
+                <span class="session-title">{{ sessionTitle(item) }}</span>
+                <span class="session-meta">
+                  {{ formatSessionTime(item.created_at) }} · {{ item.message_count }} 条
+                </span>
+              </button>
+              <button
+                type="button"
+                class="session-remove"
+                :disabled="loading"
+                :aria-label="`删除对话「${sessionTitle(item)}」`"
+                @click.stop="removeSession(item)"
+              >
+                ×
+              </button>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <div class="agent-main">
+        <header class="agent-head">
+          <button
+            type="button"
+            class="drawer-toggle"
+            :aria-expanded="sessionsOpen"
+            :title="sessionsOpen ? '收起历史对话' : '展开历史对话'"
+            @click="sessionsOpen = !sessionsOpen"
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
+          <div class="agent-head-copy">
+            <h1>智能体</h1>
+            <p>调用已接入的数据工具，完成检索、分析与知识问答</p>
+          </div>
+        </header>
+
+        <div class="agent-body">
+          <div
+            v-if="messages.length"
+            ref="conversationElement"
+            class="conversation page-surface"
+            aria-live="polite"
+          >
+            <div class="conversation-inner">
+              <!-- 运行状态条：吸顶显示「正在分析 / 正在调用工具 / 正在生成」，随时知道智能体在干什么 -->
+              <p v-if="runStatus" class="run-status" role="status">
+                <i aria-hidden="true"></i>{{ runStatus }}
+              </p>
+              <div
+                v-for="(item, index) in messages"
+                :key="index"
+                class="message-row"
+                :class="item.role"
+              >
+                <span class="message-avatar" aria-hidden="true">{{
+                  item.role === 'user' ? userInitial : '✦'
+                }}</span>
+                <div class="message">
+                  <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
+                  <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
+                  <p v-else class="user-text">{{ item.content }}</p>
+                  <!-- 正在流式输出时，在最后一条回复末尾显示光标。 -->
+                  <span
+                    v-if="item.role === 'assistant' && loading && index === messages.length - 1"
+                    class="stream-cursor"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+              <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
+                <span class="message-avatar" aria-hidden="true">✦</span>
+                <div class="message">
+                  <p class="typing"><i></i><i></i><i></i></p>
+                </div>
+              </div>
+              <p v-if="toolStatus" class="tool-status"><span></span>{{ toolStatus }}</p>
+            </div>
+          </div>
+
+          <div v-else class="agent-empty page-surface">
+            <div class="empty-copy">
+              <span class="empty-mark" aria-hidden="true">✦</span>
+              <h2>今天想分析点什么？</h2>
+              <p>我可以调用已接入的数据工具，完成检索、特征分析与知识问答。</p>
+            </div>
+            <div class="suggestion-grid">
+              <button
+                v-for="item in suggestions"
+                :key="item"
+                type="button"
+                class="suggestion-card"
+                @click="sendSuggestion(item)"
+              >
+                {{ item }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="awaitingConfirmation" class="confirmation-panel page-surface">
+            <div class="confirmation-head">
+              <span class="confirmation-badge">需确认</span>
+              <strong>以下操作会写入数据，确认后才执行</strong>
+              <div class="confirmation-actions">
+                <el-button
+                  size="small"
+                  :disabled="loading || Boolean(firstDecision)"
+                  @click="respondToConfirmations(false)"
+                >
+                  拒绝
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  :loading="loading"
+                  :disabled="Boolean(firstDecision)"
+                  @click="respondToConfirmations(true)"
+                >
+                  确认执行
+                </el-button>
+              </div>
+            </div>
+            <ul class="confirmation-list">
+              <li
+                v-for="item in pendingConfirmations"
+                :key="item.confirmationId"
+                :class="{ decided: decisionOf(item.confirmationId) !== '' }"
+              >
+                <span class="op-tag">{{ operationLabel(item.operation) }}</span>
+                <div class="confirmation-detail">
+                  <strong>{{ confirmationTitle(item) }}</strong>
+                  <dl v-if="confirmationFacts(item).length" class="confirmation-facts">
+                    <div v-for="fact in confirmationFacts(item)" :key="fact.label">
+                      <dt>{{ fact.label }}</dt>
+                      <dd>{{ fact.value }}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <span v-if="decisionOf(item.confirmationId)" class="decision-chip">
+                  {{ decisionOf(item.confirmationId) }}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 输入区固定在整列最底部：它是 agent-body 的最后一层，
+             消息区（.conversation）用 flex 吃掉剩下的全部高度，
+             两边不再互相挤。 -->
           <form class="composer" @submit.prevent="sendMessage">
             <el-input
               ref="composerInput"
               v-model="draft"
               type="textarea"
-              :autosize="{ minRows: 1, maxRows: 5 }"
+              :autosize="{ minRows: 1, maxRows: 6 }"
               maxlength="2000"
               resize="none"
               placeholder="直接输入需求，例如：推荐节奏舒缓、器乐为主的内容"
@@ -145,76 +216,11 @@
               智能体正在运行，这条将在本轮结束后发送
             </p>
           </form>
-        </div>
 
-        <div v-else class="agent-empty page-surface">
-          <div class="empty-copy">
-            <span class="empty-mark" aria-hidden="true">✦</span>
-            <h2>今天想分析点什么？</h2>
-            <p>我可以调用已接入的数据工具，完成检索、特征分析与知识问答。</p>
+          <div class="composer-foot">
+            <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合详情与实际数据判断。</p>
+            <p class="composer-hint">Enter 发送 · Shift + Enter 换行 · 最多 2000 字</p>
           </div>
-          <div class="suggestion-grid">
-            <button
-              v-for="item in suggestions"
-              :key="item"
-              type="button"
-              class="suggestion-card"
-              @click="sendSuggestion(item)"
-            >
-              {{ item }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="awaitingConfirmation" class="confirmation-panel page-surface">
-          <div class="confirmation-head">
-            <span class="confirmation-badge">需确认</span>
-            <strong>以下操作会写入数据，确认后才执行</strong>
-            <div class="confirmation-actions">
-              <el-button
-                size="small"
-                :disabled="loading || Boolean(firstDecision)"
-                @click="respondToConfirmations(false)"
-              >
-                拒绝
-              </el-button>
-              <el-button
-                size="small"
-                type="primary"
-                :loading="loading"
-                :disabled="Boolean(firstDecision)"
-                @click="respondToConfirmations(true)"
-              >
-                确认执行
-              </el-button>
-            </div>
-          </div>
-          <ul class="confirmation-list">
-            <li
-              v-for="item in pendingConfirmations"
-              :key="item.confirmationId"
-              :class="{ decided: decisionOf(item.confirmationId) !== '' }"
-            >
-              <span class="op-tag">{{ operationLabel(item.operation) }}</span>
-              <div class="confirmation-detail">
-                <strong>{{ confirmationTitle(item) }}</strong>
-                <dl v-if="confirmationFacts(item).length" class="confirmation-facts">
-                  <div v-for="fact in confirmationFacts(item)" :key="fact.label">
-                    <dt>{{ fact.label }}</dt>
-                    <dd>{{ fact.value }}</dd>
-                  </div>
-                </dl>
-              </div>
-              <span v-if="decisionOf(item.confirmationId)" class="decision-chip">
-                {{ decisionOf(item.confirmationId) }}
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="composer-foot">
-          <p class="assistant-notice">智能回答可能存在偏差，重要信息请结合详情与实际数据判断。</p>
-          <p class="composer-hint">Enter 发送 · Shift + Enter 换行 · 最多 2000 字</p>
         </div>
       </div>
     </div>
@@ -628,23 +634,86 @@ watch(conversationElement, (element) => {
   min-height: 0;
 }
 .agent-page {
-  display: flex;
   /* 本页对话宽度：比输入框更宽，减少左右空白 */
   --chat-width: 1080px;
-  height: auto;
+  --drawer-width: 244px;
+  /* 用 100% + box-sizing 让内容区真正撑满视口，
+     否则整列只长到内容高度，输入框下面会空出上百像素 */
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding: var(--page-gutter);
+}
+/* 抽屉 + 主区：整页一行 flex，抽屉收起时宽度归零、主区自动占满 */
+.agent-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+  transition: gap 0.2s ease;
+}
+.agent-shell.side-open {
+  gap: 16px;
+}
+/* 会话抽屉：宽度动画开合，像主流对话产品的左侧栏 */
+.session-drawer {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition:
+    width 0.22s ease,
+    opacity 0.18s ease;
+  opacity: 0;
+}
+.agent-shell.side-open .session-drawer {
+  width: var(--drawer-width);
+  opacity: 1;
+}
+.drawer-inner {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-solid);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* 主区：页头 + 对话 + 输入，撑满抽屉之外的全部宽度 */
+.agent-main {
+  display: flex;
+  min-width: 0;
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  padding: var(--page-gutter);
 }
-/* 紧凑页头：一行搞定，右侧是历史对话开关 */
+/* 紧凑页头：汉堡开关固定在左上角，展开与收起都在同一处 */
 .agent-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+.drawer-toggle {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-solid);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+.drawer-toggle:hover {
+  color: var(--text);
+  background: var(--surface-hover);
 }
 .agent-head h1 {
   margin: 0;
@@ -653,45 +722,40 @@ watch(conversationElement, (element) => {
   letter-spacing: -0.02em;
 }
 .agent-head p {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
-.session-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+.drawer-head {
   flex-shrink: 0;
-  padding: 8px 13px;
+}
+.drawer-new {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
 }
-.session-toggle:hover {
-  color: var(--text);
+.drawer-new:hover:not(:disabled) {
   background: var(--surface-hover);
 }
-.session-toggle[aria-pressed='true'] {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
+.drawer-new:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
-.session-toggle-count {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgba(110, 231, 210, 0.18);
+.drawer-label {
+  margin: 4px 4px 0;
+  color: var(--text-muted);
   font-size: 10px;
-}
-/* 左侧历史会话 + 右侧对话区：整体撑满剩余高度，滚动只发生在对话区内 */
-.agent-workspace {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  gap: 14px;
+  letter-spacing: 0.1em;
 }
 .agent-body {
   display: flex;
@@ -699,43 +763,6 @@ watch(conversationElement, (element) => {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-}
-.session-side {
-  display: flex;
-  width: 232px;
-  flex-shrink: 0;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 12px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.session-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.session-head strong {
-  color: var(--text-secondary);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-.session-new {
-  padding: 4px 9px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 11px;
-}
-.session-new:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }
 .session-state {
   margin: 4px 2px;
@@ -825,19 +852,21 @@ watch(conversationElement, (element) => {
 .session-remove:disabled {
   cursor: not-allowed;
 }
-/* 窄屏：默认收起历史侧栏（用户仍可用页头的开关展开），把宽度还给对话 */
+/* 窄屏：抽屉改成浮层，展开时盖在对话上，不挤压内容宽度 */
 @media (max-width: 1100px) {
-  .session-side {
+  .agent-shell {
+    position: relative;
+  }
+  .session-drawer {
     position: absolute;
-    z-index: 5;
+    z-index: 6;
     top: 0;
     bottom: 0;
     left: 0;
-    width: 260px;
     box-shadow: var(--shadow-soft);
   }
-  .agent-workspace {
-    position: relative;
+  .agent-shell.side-open .session-drawer {
+    width: 260px;
   }
 }
 /* 对话区撑满剩余高度；滚动在消息列表内部进行 */
@@ -861,8 +890,6 @@ watch(conversationElement, (element) => {
   max-width: var(--chat-width);
   flex-direction: column;
   margin: 0 auto;
-  /* 给底部吸底输入条留位置，最后一条消息不会被它压住 */
-  padding-bottom: 8px;
 }
 /* 运行状态条：吸顶，滚动时也能看到智能体当前在做什么 */
 .run-status {
@@ -1189,20 +1216,17 @@ watch(conversationElement, (element) => {
   font-size: 10px;
 }
 .composer {
-  position: sticky;
-  z-index: 3;
-  bottom: 0;
+  /* 固定在整列最底部：不是 sticky，而是 flex 布局里排在消息区之后的一层 */
+  position: relative;
   flex: 0 0 auto;
   width: min(100%, var(--chat-width));
-  /* 贴在对话卡片底部：负外边距抵消卡片内边距，让输入条横向占满 */
   align-self: center;
-  margin: 12px calc(-1 * clamp(16px, 2vw, 24px)) calc(-1 * 14px);
-  padding: 12px clamp(16px, 2vw, 24px);
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 14px 14px;
-  background: linear-gradient(180deg, rgba(24, 36, 58, 0.86), rgba(20, 31, 51, 0.98) 38%);
-  backdrop-filter: blur(6px);
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-solid);
+  box-shadow: 0 10px 30px rgba(8, 15, 30, 0.28);
 }
 /* 聚焦时给出明确反馈，和主流对话产品一致 */
 .composer:focus-within {
