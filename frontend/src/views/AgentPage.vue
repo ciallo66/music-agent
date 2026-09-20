@@ -745,8 +745,9 @@ watch(conversationElement, (element) => {
   cursor: pointer;
   font-size: 13px;
   line-height: 1;
-  /* 常态给一点透明度提示这里可删，hover 时完全显示 */
-  opacity: 0.35;
+  /* 常态隐藏：侧栏只有一两条会话时，常显的 × 会让面板显得杂乱；
+     悬停或键盘聚焦时再出现，仍然可发现。 */
+  opacity: 0;
   transition: opacity 0.15s ease;
 }
 .session-list li:hover .session-remove,
