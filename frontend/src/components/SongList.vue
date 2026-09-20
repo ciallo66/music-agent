@@ -15,15 +15,13 @@
       <span v-if="variant === 'favorites'"></span>
     </div>
     <div
-      v-for="(song, index) in songs"
+      v-for="song in songs"
       :key="song.id"
       class="song-row"
       :aria-label="`查看 ${song.title}，歌手 ${song.artist.name}`"
     >
       <router-link class="track-cell" :to="`/songs/${song.id}`">
-        <span class="cover" aria-hidden="true">
-          <span class="track-number">{{ String(index + 1).padStart(2, '0') }}</span>
-        </span>
+        <SongCover :song="song" size="sm" />
         <span class="track-copy">
           <strong>{{ song.title }}</strong>
           <small>{{ song.album || (song.music_key ? `${song.music_key} 调` : '特征数据') }}</small>
@@ -57,6 +55,7 @@
 <script setup lang="ts">
 import type { SongSummary } from '../types/music'
 import { danceabilityHint, danceabilityLabel } from '../types/music'
+import SongCover from './SongCover.vue'
 import { fusedGenre } from '../utils/genre'
 
 type SongListVariant = 'catalog' | 'search' | 'favorites' | 'playlist'

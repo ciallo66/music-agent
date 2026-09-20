@@ -2,7 +2,7 @@
 <template>
   <section v-if="song" class="detail-page">
     <div class="song-header">
-      <div class="cover-placeholder">{{ song.title.slice(0, 1) }}</div>
+      <SongCover :song="song" size="lg" show-source />
       <div class="info">
         <h2>{{ song.title }}</h2>
         <p class="artist">{{ song.artist.name }}</p>
@@ -152,6 +152,7 @@ import { fusedGenreLabel } from '../utils/genre'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { showError, showSuccess } from '../utils/feedback'
 import StatePanel from '../components/StatePanel.vue'
+import SongCover from '../components/SongCover.vue'
 
 use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 

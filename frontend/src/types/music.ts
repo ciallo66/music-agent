@@ -21,6 +21,8 @@ export interface SongSummary {
   energy: number | null
   valence: number | null
   danceability: number | null
+  /** 数据来源（acousticbrainz / jamendo），封面来源角标用。 */
+  source?: string | null
   /** 多体系流派标签（AcousticBrainz），用于投票判定展示流派；列表接口可能不返回。 */
   genre_labels?: Record<string, string> | null
 }

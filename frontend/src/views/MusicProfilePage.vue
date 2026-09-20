@@ -194,7 +194,7 @@
             :key="`${item.song.id}-${item.played_at}`"
             class="recent-item"
           >
-            <span class="song-cover">{{ item.song.title.slice(0, 1) }}</span>
+            <SongCover :song="item.song" size="sm" />
             <span class="song-info">
               <strong>{{ item.song.title }}</strong
               ><small>{{ item.song.artist.name }}</small>
@@ -218,6 +218,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import PageHeader from '../components/PageHeader.vue'
 import StatePanel from '../components/StatePanel.vue'
+import SongCover from '../components/SongCover.vue'
 import { useProfileStore } from '../stores/profile'
 import { useFeedbackStore } from '../stores/feedback'
 import { storeToRefs } from 'pinia'

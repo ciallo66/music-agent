@@ -18,9 +18,9 @@
     </div>
 
     <ul class="card-tracklist">
-      <li v-for="(item, index) in card.items" :key="item.id" class="track-row">
+      <li v-for="item in card.items" :key="item.id" class="track-row">
         <router-link :to="`/songs/${item.id}`" class="track-link">
-          <span class="track-number">{{ String(index + 1).padStart(2, '0') }}</span>
+          <SongCover :song="item" size="sm" />
           <div class="track-meta">
             <strong>{{ item.title }}</strong>
             <small>{{ item.artist.name }} · {{ item.genre || '未知风格' }}</small>
@@ -76,6 +76,7 @@
 import { computed } from 'vue'
 import type { StructuredRecommendationCard, FeedbackActionItem } from '../types/music'
 import { danceabilityHint, danceabilityLabel } from '../types/music'
+import SongCover from './SongCover.vue'
 import { useFeedbackStore } from '../stores/feedback'
 
 const props = defineProps<{

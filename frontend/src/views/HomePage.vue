@@ -79,15 +79,12 @@
     </div>
     <div v-else-if="hotSongs.length" class="hot-grid">
       <router-link
-        v-for="(song, index) in hotSongs"
+        v-for="song in hotSongs"
         :key="song.id"
         class="hot-card page-surface"
         :to="`/songs/${song.id}`"
       >
-        <div class="hot-cover" :class="`tone-${index % 4}`">
-          <span>{{ song.title.slice(0, 1) }}</span
-          ><small>{{ String(index + 1).padStart(2, '0') }}</small>
-        </div>
+        <SongCover :song="song" size="md" show-source />
         <div class="hot-info">
           <strong>{{ song.title }}</strong>
           <span>{{ song.artist.name }}</span>
@@ -136,6 +133,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listRecommendationCards, listRecommendations } from '../api/recommendations'
 import RecommendationCard from '../components/RecommendationCard.vue'
+import SongCover from '../components/SongCover.vue'
 import StatePanel from '../components/StatePanel.vue'
 import type { RecommendationItem, StructuredRecommendationCard } from '../types/music'
 import { useAuthStore } from '../stores/auth'

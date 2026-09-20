@@ -156,6 +156,9 @@ class SongSummary(BaseModel):
     energy: float | None
     valence: float | None
     danceability: float | None
+    # 数据来源（acousticbrainz / jamendo）：前端封面右下角的来源角标要用，
+    # 列表与详情都返回，保证同一条数据在任何页面显示一致
+    source: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
