@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_real_admin
+from app.api.dependencies import require_admin, require_real_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.import_job import ImportJobResponse, JamendoImportRequest
@@ -53,7 +53,8 @@ def create_jamendo_import(
 @router.get("", response_model=list[ImportJobResponse])
 def list_import_jobs(
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_real_admin)],
+    # 只读查询：演示账号也能看任务列表，只有「新建任务」才要求真实管理员
+    _admin: Annotated[User, Depends(require_admin)],
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[ImportJobResponse]:
     """查询最近的导入任务。"""
@@ -64,7 +65,8 @@ def list_import_jobs(
 def read_import_job(
     job_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _admin: Annotated[User, Depends(require_real_admin)],
+    # 同上：看进度是只读操作
+    _admin: Annotated[User, Depends(require_admin)],
 ) -> ImportJobResponse:
     """查询单个导入任务进度。"""
     try:
