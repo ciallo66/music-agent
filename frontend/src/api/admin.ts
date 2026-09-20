@@ -78,9 +78,12 @@ export function updateAdminUser(
 export function listAdminSongs(
   params: { q?: string; genre?: string; page?: number; page_size?: number } = {},
 ) {
+  // 空关键词不要发出去：后端对 q 有长度约束，发 q= 会 422，
+  // 后台「曲目管理」页就会一直是空表（这就是线上看不到 931 首歌的原因）。
+  const { q, genre, ...rest } = params
   return http.get<{ items: SongSummary[]; total: number; page: number; page_size: number }>(
     '/songs',
-    { params },
+    { params: { ...rest, ...(q ? { q } : {}), ...(genre ? { genre } : {}) } },
   )
 }
 
@@ -97,9 +100,11 @@ export function deleteAdminSong(songId: number) {
 }
 
 export function listAdminArtists(params: { q?: string; page?: number; page_size?: number } = {}) {
+  // 同上：空 q 不发，避免后端 422 导致歌手列表空白
+  const { q, ...rest } = params
   return http.get<{ items: AdminArtistItem[]; total: number; page: number; page_size: number }>(
     '/artists',
-    { params },
+    { params: { ...rest, ...(q ? { q } : {}) } },
   )
 }
 

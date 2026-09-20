@@ -49,20 +49,6 @@
             >🔒</span
           >
         </router-link>
-        <template v-if="auth.isAdmin">
-          <p class="nav-label">管理</p>
-          <!-- 前后台是两个独立入口：这里走整页跳转（全局替换），不是小范围路由切换 -->
-          <a
-            class="console-entry"
-            href="/admin"
-            :class="{ 'nav-link-loading': enteringConsole }"
-            @click="enterConsole"
-          >
-            <span class="nav-icon" aria-hidden="true">▣</span>
-            <span>管理控制台</span>
-            <span class="console-hint" aria-hidden="true">整页进入</span>
-          </a>
-        </template>
       </nav>
 
       <div class="sidebar-bottom">
@@ -74,18 +60,24 @@
             <strong>{{ auth.user.username }}</strong>
             <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
           </span>
-          <!-- 管理员多一个入口：整页切到独立的管理控制台 -->
-          <a
-            v-if="auth.isAdmin"
-            class="console-link"
-            href="/admin"
-            title="进入管理控制台（整页切换）"
-            :class="{ 'nav-link-loading': enteringConsole }"
-            @click="enterConsole"
-          >
-            管理
-          </a>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
+        </div>
+
+        <div class="console-slot">
+          <template v-if="auth.isAdmin">
+            <!-- 管理员入口只留这一处：位置固定，从控制台返回时也回到这里 -->
+            <a
+              class="console-entry"
+              href="/admin"
+              :class="{ 'nav-link-loading': enteringConsole }"
+              @click="enterConsole"
+            >
+              <span class="nav-icon" aria-hidden="true">▣</span>
+              <span>进入管理控制台</span>
+              <span class="console-arrow" aria-hidden="true">↗</span>
+            </a>
+          </template>
+          <p v-else class="console-slot-hint">仅管理员可进入管理控制台</p>
         </div>
       </div>
     </aside>
@@ -472,43 +464,46 @@ nav a.router-link-exact-active .nav-icon {
   font-size: 12px;
 }
 
-/* 管理员入口：与「退出」并排的小按钮，普通用户看不到 */
-.console-link {
-  padding: 5px 9px;
+/* 管理员入口固定在侧栏底部：与后台里的「返回前台工作区」同一位置，
+   来回切换时眼睛不用换地方找。 */
+.console-slot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.console-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
   border: 1px solid rgba(232, 172, 96, 0.45);
-  border-radius: 8px;
+  border-radius: 10px;
   color: #e8ac60;
-  font-size: 11px;
+  background: rgba(232, 172, 96, 0.08);
+  font-size: 12px;
   text-decoration: none;
 }
 
-.console-link:hover {
-  background: rgba(232, 172, 96, 0.14);
+.console-entry:hover {
+  background: rgba(232, 172, 96, 0.16);
 }
 
-.console-link.nav-link-loading {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-/* 侧边栏里的管理控制台入口：右侧标注「整页进入」，避免被当成普通站内跳转 */
-.console-entry {
-  align-items: center;
-}
-
-.console-hint {
+.console-entry .console-arrow {
   margin-left: auto;
-  padding: 1px 6px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
-  font-size: 9px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
 }
 
 .console-entry.nav-link-loading {
   cursor: wait;
   opacity: 0.72;
+}
+
+.console-slot-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
 }
 
 .toolbar-hint {

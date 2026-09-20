@@ -19,9 +19,11 @@ def list_songs(
     db: Annotated[Session, Depends(get_db)],
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
-    q: Annotated[str | None, Query(min_length=1, max_length=255)] = None,
-    genre: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
-    language: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
+    # 允许空字符串：前端清空搜索框时会把 q= 一起发出来，
+    # 用 min_length=1 会直接 422，后台「曲目管理」页就会一直空着。
+    q: Annotated[str | None, Query(max_length=255)] = None,
+    genre: Annotated[str | None, Query(max_length=100)] = None,
+    language: Annotated[str | None, Query(max_length=50)] = None,
     artist_id: Annotated[int | None, Query(gt=0)] = None,
 ) -> SongPage:
     """分页搜索和筛选公开歌曲。"""
@@ -51,7 +53,8 @@ def list_artists(
     db: Annotated[Session, Depends(get_db)],
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
-    q: Annotated[str | None, Query(min_length=1, max_length=255)] = None,
+    # 同上：清空搜索框时会发 q=，不能因为空字符串直接 422
+    q: Annotated[str | None, Query(max_length=255)] = None,
 ) -> ArtistPage:
     """分页搜索公开歌手。"""
     return CatalogService(db).list_artists(page, page_size, q)

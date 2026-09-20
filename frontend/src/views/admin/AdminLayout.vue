@@ -14,14 +14,6 @@
         <strong>{{ auth.user?.username ?? '' }}</strong>
         <small>{{ auth.canManageData ? '管理员' : '演示账号' }}</small>
       </span>
-      <a
-        class="admin-exit"
-        href="/"
-        :class="{ 'admin-link-loading': leavingConsole }"
-        @click="leaveConsole"
-      >
-        ← 返回前台工作区
-      </a>
     </header>
 
     <div class="admin-body">
@@ -32,6 +24,19 @@
             <span>{{ item.label }}</span>
           </router-link>
         </nav>
+
+        <div class="admin-side-bottom">
+          <!-- 与前台侧栏底部的「进入管理控制台」同一位置，来回切换不用换地方找 -->
+          <a
+            class="admin-link admin-back"
+            href="/"
+            :class="{ 'admin-link-loading': leavingConsole }"
+            @click="leaveConsole"
+          >
+            <span aria-hidden="true">←</span>
+            <span>返回前台工作区</span>
+          </a>
+        </div>
       </aside>
 
       <main class="admin-main">
@@ -181,6 +186,20 @@ const navItems = [
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+/* 返回入口固定在侧栏底部：与前台「进入管理控制台」同一位置 */
+.admin-side-bottom {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.admin-back {
+  color: #e8ac60;
+  background: rgba(232, 172, 96, 0.08);
+}
+.admin-back:hover {
+  color: #f3bd7d;
+  background: rgba(232, 172, 96, 0.16);
 }
 .admin-link {
   display: flex;
