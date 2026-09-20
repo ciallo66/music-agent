@@ -1,15 +1,27 @@
 <!-- Agent 对话页面：展示流式回复、工具状态和可复用的提问入口。 -->
 <template>
   <section class="agent-page">
-    <!-- 新建对话的入口只留侧栏里那一个，避免和页头按钮重复 -->
-    <PageHeader
-      eyebrow="智能协作"
-      title="智能体"
-      subtitle="调用已接入的数据工具，完成检索、分析和可解释的知识问答"
-    />
+    <!-- 一条紧凑的页内标题条：标题在左、能力说明跟着、右侧放历史对话的开关。
+        原来这里是「工具条 + 大标题区」两条，吃掉近 160px 纵向空间，把对话挤扁了。 -->
+    <header class="agent-head">
+      <div class="agent-head-copy">
+        <h1>智能体</h1>
+        <p>调用已接入的数据工具，完成检索、分析与知识问答</p>
+      </div>
+      <button
+        type="button"
+        class="session-toggle"
+        :aria-pressed="sessionsOpen"
+        @click="sessionsOpen = !sessionsOpen"
+      >
+        <span aria-hidden="true">☰</span>
+        历史对话
+        <span v-if="sessions.length" class="session-toggle-count">{{ sessions.length }}</span>
+      </button>
+    </header>
 
     <div class="agent-workspace">
-      <aside class="session-side page-surface" aria-label="历史对话">
+      <aside v-show="sessionsOpen" class="session-side page-surface" aria-label="历史对话">
         <div class="session-head">
           <strong>历史对话</strong>
           <button
@@ -211,7 +223,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ElInput } from 'element-plus'
 import { useRoute } from 'vue-router'
 import MarkdownContent from '../components/MarkdownContent.vue'
-import PageHeader from '../components/PageHeader.vue'
 import {
   deleteAgentSession,
   getAgentSession,
@@ -235,9 +246,10 @@ const draft = ref('')
 const loading = ref(false)
 const messages = ref<Message[]>([])
 const sessionId = ref<number | null>(null)
-// 历史会话列表：刷新页面后仍能找回之前的对话。
+// 历史会话列表：刷新页面后仍能找回之前的对话。窄屏默认收起，把宽度让给对话。
 const sessions = ref<AgentSessionSummary[]>([])
 const sessionsLoading = ref(false)
+const sessionsOpen = ref(true)
 const toolStatus = ref('')
 const pendingConfirmations = ref<PendingToolConfirmation[]>([])
 // 已作出的决定：确认后按钮要禁用、卡片转为「已确认」状态，不能还能再点一次。
@@ -622,6 +634,55 @@ watch(conversationElement, (element) => {
   flex-direction: column;
   padding: var(--page-gutter);
 }
+/* 紧凑页头：一行搞定，右侧是历史对话开关 */
+.agent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-bottom: 14px;
+}
+.agent-head h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.agent-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.session-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 8px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.session-toggle:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.session-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.session-toggle-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(110, 231, 210, 0.18);
+  font-size: 10px;
+}
 /* 左侧历史会话 + 右侧对话区：整体撑满剩余高度，滚动只发生在对话区内 */
 .agent-workspace {
   display: flex;
@@ -761,10 +822,19 @@ watch(conversationElement, (element) => {
 .session-remove:disabled {
   cursor: not-allowed;
 }
-/* 窄屏收起历史侧栏，把宽度还给对话 */
+/* 窄屏：默认收起历史侧栏（用户仍可用页头的开关展开），把宽度还给对话 */
 @media (max-width: 1100px) {
   .session-side {
-    display: none;
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 260px;
+    box-shadow: var(--shadow-soft);
+  }
+  .agent-workspace {
+    position: relative;
   }
 }
 /* 对话区撑满剩余高度；滚动在消息列表内部进行 */
@@ -776,7 +846,8 @@ watch(conversationElement, (element) => {
 .conversation {
   min-height: 0;
   flex: 1;
-  padding: clamp(18px, 2.4vw, 30px);
+  /* 上下内边距收紧：这块是消息的可视高度，padding 越大能看到的对话越少 */
+  padding: 14px clamp(16px, 2vw, 24px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }

@@ -250,6 +250,30 @@ a:focus-visible,
   }
 }
 
+/* ── 管理控制台：独立界面 ─────────────────────────────────────
+   后台与前台是两套壳子。路由本身是整页跳转（window.location.assign），
+   这里再把前台的外壳整体隐藏：侧边导航、顶部搜索条、演示横幅都不该出现在
+   控制台里，否则整页跳转也会被看成「同一页换了个路由」。
+   标记打在 body 上：前台的侧栏与内容区是兄弟节点，挂在内容区里管不到它。
+   后台自己的顶栏与侧栏由 AdminLayout 提供。 */
+body.admin-console .sidebar,
+body.admin-console .demo-banner,
+body.admin-console .workspace-toolbar,
+body.admin-console .site-footer {
+  display: none !important;
+}
+body.admin-console .main-content {
+  padding: 0;
+  overflow: hidden;
+}
+body.admin-console .content-frame {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
 /* ── 响应式断点约定 ──────────────────────────────────────────
    @media 查询不支持 CSS 变量，因此断点取值统一登记在这里，
    新增或调整断点前请先更新这份约定，避免各组件取值继续发散。

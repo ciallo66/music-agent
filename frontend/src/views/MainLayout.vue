@@ -412,18 +412,19 @@ nav a.router-link-exact-active .nav-icon {
   scrollbar-gutter: stable;
 }
 
-/* 演示账号横幅：只读提示，每页都可见 */
+/* 演示账号横幅：每页都在，压成一条细带，别抢对话页的纵向空间 */
 .demo-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: 10px 14px;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 6px 12px;
   border: 1px solid rgba(232, 172, 96, 0.4);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--text-secondary);
   background: rgba(232, 172, 96, 0.1);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .demo-banner strong {
@@ -440,17 +441,17 @@ nav a.router-link-exact-active .nav-icon {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px var(--page-gutter) 0;
+  padding: 10px var(--page-gutter) 0;
 }
 
 .quick-search {
   display: flex;
-  width: min(100%, 430px);
+  width: min(100%, 380px);
   align-items: center;
-  gap: 9px;
-  padding: 8px 11px;
+  gap: 8px;
+  padding: 6px 11px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.045);
   color: var(--text-muted);
 }
