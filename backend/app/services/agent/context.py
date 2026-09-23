@@ -35,6 +35,86 @@ def serialize_tool_result(result: dict[str, Any], max_chars: int) -> str:
     return json.dumps({"truncated": True}, ensure_ascii=False)
 
 
+def tool_notes_from_history(history: list[dict[str, Any]], limit: int) -> list[str]:
+    """从历史消息里提取"调用过哪些工具"的简短记录。
+
+    工具调用记录以 `tool:<名称>(<参数摘要>)` 的形式写在 assistant 消息上（见
+    `build_history_message`）。这里只取最近 limit 条，用来提醒模型别重复查同一件事；
+    不携带旧工具结果，避免旧数据挤占上下文并诱导模型复述旧答案。
+    """
+    if limit <= 0:
+        return []
+    notes: list[str] = []
+    for message in history:
+        if message.get("role") != "assistant":
+            continue
+        content = message.get("content")
+        if not isinstance(content, str):
+            continue
+        for line in content.splitlines():
+            if line.startswith("tool:"):
+                notes.append(line.strip()[len("tool:") :].strip())
+    return [note for note in notes if note][-limit:]
+
+
+TOOL_NOTE_PREFIX = "tool:"
+
+
+def strip_tool_notes(text: str) -> str:
+    """去掉助手正文末尾的工具痕迹行，得到用户可见的纯回答。
+
+    工具痕迹（`tool:名称(参数)`）只给模型看，不能出现在界面上：
+    它随助手消息落库，而会话读取与前端渲染都是原样展示，不做处理就会泄漏成气泡里的技术噪音。
+    """
+    kept = [line for line in text.splitlines() if not line.startswith(TOOL_NOTE_PREFIX)]
+    return "\n".join(kept).rstrip()
+
+
+def build_history_message(
+    role: str, content: str, tools: list[str] | None = None
+) -> dict[str, str]:
+    """把一条存储消息转换成交给模型的 history 消息。
+
+    助手消息若调用过工具，会在正文末尾追加 `tool:<名称>(<参数摘要>)` 记录：
+    模型因此知道"这件事已经查过了"，而不需要把旧工具结果原文带进上下文。
+    """
+    text = content
+    if role == "assistant" and tools:
+        text = f"{content}\n" + "\n".join(f"tool:{note}" for note in tools)
+    return {"role": role, "content": text}
+
+
+def window_history(messages: list[dict[str, Any]], max_messages: int) -> list[dict[str, Any]]:
+    """按条数对历史做滑动窗口，返回可直接拼进请求的历史。
+
+    依据：主流对话产品给模型的是"最近若干轮 + 更早内容的摘要"，而不是无限堆历史。
+    历史越长，模型越容易锚定在旧任务上（线上实测出现过复读上一轮答案、忽略当前提问）。
+    这里保留最近 max_messages 条，并在窗口开头插入一行折叠说明；
+    窗口首条若是 assistant，会一直丢弃到首条 user 为止，避免出现"没有问题的回答"。
+    """
+    if max_messages <= 0:
+        raise ValueError("历史窗口大小必须大于 0")
+    if not messages:
+        return []
+
+    kept = [dict(message) for message in messages[-max_messages:]]
+    omitted = len(messages) - len(kept)
+
+    while kept and kept[0].get("role") != "user":
+        kept.pop(0)
+        omitted += 1
+    if not kept:
+        return []
+
+    if omitted <= 0:
+        return kept
+    head = {
+        "role": "system",
+        "content": f"更早的 {omitted} 条对话已折叠，仅作背景参考；请以用户当前消息为准。",
+    }
+    return [head, *kept]
+
+
 def compact_messages(
     messages: list[dict[str, Any]], max_tokens: int, current_turn_index: int
 ) -> tuple[list[dict[str, Any]], int]:

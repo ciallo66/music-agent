@@ -7,12 +7,14 @@ from typing import Literal, cast
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.music_knowledge import MusicKnowledge
 from app.models.song import Song
 from app.repositories.catalog_repository import SongRepository
 from app.repositories.music_knowledge_repository import MusicKnowledgeRepository
 from app.services.embedding_provider import (
     EmbeddingProvider,
+    EmbeddingProviderError,
     EmbeddingProviderNotConfiguredError,
 )
 from app.services.song_embedding_text import build_song_text
@@ -63,6 +65,7 @@ class EmbeddingBatchService:
             if not items:
                 break
             vectors = self.provider.embed([self._text_for(target, item) for item in items])
+            self._ensure_dimension(vectors)
             for item, vector in zip(items, vectors, strict=True):
                 item.embedding = vector
             self.db.flush()
@@ -73,6 +76,22 @@ class EmbeddingBatchService:
 
         remaining = len(self._list_missing(target, 1))
         return EmbeddingReport(target=target, processed=processed, remaining=remaining)
+
+    @staticmethod
+    def _ensure_dimension(vectors: list[list[float]]) -> None:
+        """向量维度必须与数据库列声明的维度一致，否则早报错而不是写入后才发现。
+
+        数据库列已按 `EMBEDDING_DIMENSION` 声明（HNSW 索引要求固定维度），
+        换了维度的 Embedding 模型却没改配置时，pgvector 会在写入阶段报类型错误，
+        这里提前给出可读原因。
+        """
+        for vector in vectors:
+            if len(vector) != settings.embedding_dimension:
+                raise EmbeddingProviderError(
+                    f"Embedding 返回 {len(vector)} 维向量，与数据库列声明的 "
+                    f"{settings.embedding_dimension} 维不一致：换模型需同步改 "
+                    f"EMBEDDING_DIMENSION 并新写一条迁移"
+                )
 
     def _list_missing(self, target: EmbeddingTarget, limit: int) -> list[Song | MusicKnowledge]:
         """按目标类型读取未完成记录。"""

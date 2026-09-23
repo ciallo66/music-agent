@@ -56,17 +56,32 @@ class Settings(BaseSettings):
     agent_tool_retry_backoff_seconds: float = 0.5
     # 高风险工具调用的待确认有效期，超时后必须重新发起。
     agent_confirmation_ttl_seconds: int = 600
+    # 历史窗口：只把最近 N 条消息原文交给模型，更早的折叠成一行摘要。
+    # 依据：主流对话产品都用「滑动窗口 + 摘要」而不是无限堆历史——历史越长，
+    # 模型越容易锚定在旧任务上（实测出现过复读上一轮答案、忽略当前提问的情况）。
+    agent_history_max_messages: int = 20
+    # 提示词里回顾"最近用过哪些工具"的条数，防止模型重复查同一件事。
+    agent_history_tool_notes: int = 6
 
     web_search_enabled: bool = True
+    # 搜索源：bing_cn（抓取必应中国，境内可达）或 duckduckgo（境外，境内服务器不可达）。
+    # 生产服务器在境内，实测 DuckDuckGo 全线 Network is unreachable，因此默认用 bing_cn。
+    web_search_provider: Literal["bing_cn", "duckduckgo"] = "bing_cn"
     web_search_region: str = "cn-zh"
     web_search_max_results: int = 5
     web_search_timeout_seconds: int = 8
+    # 必应中国的搜索入口与市场参数（跟随 web_search_region 语言）。
+    web_search_bing_url: str = "https://cn.bing.com/search"
+    web_search_market: str = "zh-CN"
 
     embedding_api_key: str = ""
     embedding_base_url: str = ""
     embedding_model: str = ""
     embedding_timeout_seconds: float = 30.0
     embedding_similarity_threshold: float = 0.35
+    # 向量维度必须与 embedding_model 一致（BAAI/bge-m3 = 1024）。
+    # 数据库列已按该维度声明，换模型时必须同步改这里并新写一条迁移。
+    embedding_dimension: int = 1024
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",
@@ -113,6 +128,10 @@ class Settings(BaseSettings):
             raise ValueError("AGENT_TOOL_RETRY_BACKOFF_SECONDS 不能小于 0")
         if self.agent_confirmation_ttl_seconds <= 0:
             raise ValueError("AGENT_CONFIRMATION_TTL_SECONDS 必须大于 0")
+        if self.agent_history_max_messages < 2:
+            raise ValueError("AGENT_HISTORY_MAX_MESSAGES 至少为 2（一轮问答）")
+        if self.agent_history_tool_notes < 0:
+            raise ValueError("AGENT_HISTORY_TOOL_NOTES 不能小于 0")
         return self
 
     @model_validator(mode="after")
@@ -122,6 +141,8 @@ class Settings(BaseSettings):
             raise ValueError("WEB_SEARCH_MAX_RESULTS 必须大于 0")
         if self.web_search_timeout_seconds <= 0:
             raise ValueError("WEB_SEARCH_TIMEOUT_SECONDS 必须大于 0")
+        if not self.web_search_bing_url.startswith("http"):
+            raise ValueError("WEB_SEARCH_BING_URL 必须是 http(s) 地址")
         return self
 
 

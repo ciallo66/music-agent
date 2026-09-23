@@ -44,8 +44,8 @@ from app.services.song_embedding_text import (  # 歌曲向量化文本（与批
     build_song_text,
 )
 from app.services.web_search_service import (  # 联网搜索服务（查站外资料用）
-    DuckDuckGoWebSearchService,  # 搜索服务实现（真干活那个）
     WebSearchProvider,  # 搜索服务接口
+    build_web_search_provider,  # 按配置选择搜索源
 )
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class MusicAgentTools:
         self.recommendations = RecommendationRepository(db)
         self.embedding_provider = embedding_provider or OpenAICompatibleEmbeddingProvider()
         self.knowledge = MusicKnowledgeService(db, self.embedding_provider)
-        self.web_search = web_search or DuckDuckGoWebSearchService()
+        self.web_search = web_search or build_web_search_provider()
         self.library = LibraryService(db)
         self.user_id = user_id
 

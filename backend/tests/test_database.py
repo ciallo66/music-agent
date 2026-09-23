@@ -6,6 +6,7 @@ from pathlib import Path
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from app.core.config import settings
 from app.core.database import engine
 from sqlalchemy import inspect, text
 
@@ -42,6 +43,39 @@ def test_song_embedding_column_matches_model_schema() -> None:
     assert columns["embedding"]["nullable"] is True
     assert columns["source"]["nullable"] is True
     assert columns["source_id"]["nullable"] is True
+
+
+def test_embedding_columns_are_dimensioned() -> None:
+    """向量列必须声明固定维度，否则 HNSW 索引建不了。"""
+    with engine.connect() as connection:
+        for table in ("songs", "music_knowledge"):
+            column_type = connection.execute(
+                text(
+                    "select format_type(a.atttypid, a.atttypmod) "
+                    "from pg_attribute a join pg_class c on c.oid = a.attrelid "
+                    "where c.relname = :table and a.attname = 'embedding'"
+                ),
+                {"table": table},
+            ).scalar_one()
+            assert column_type == f"vector({settings.embedding_dimension})", column_type
+
+
+def test_hnsw_indexes_exist_on_vector_columns() -> None:
+    """两个向量列都应存在 HNSW 索引，保证相似度检索不退化成全表扫描。"""
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                "select i.indexname, i.indexdef, am.amname "
+                "from pg_indexes i "
+                "join pg_class c on c.relname = i.indexname "
+                "join pg_am am on am.oid = c.relam "
+                "where i.tablename in ('songs', 'music_knowledge') and am.amname = 'hnsw'"
+            )
+        ).fetchall()
+
+    indexed_tables = {row[0] for row in rows}
+    assert indexed_tables == {"ix_songs_embedding_hnsw", "ix_music_knowledge_embedding_hnsw"}
+    assert all("vector_cosine_ops" in row[1] for row in rows)
 
 
 def test_catalog_source_indexes_are_unique() -> None:

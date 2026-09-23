@@ -9,6 +9,7 @@ from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.core.database import Base
 
 if TYPE_CHECKING:
@@ -68,7 +69,7 @@ class Song(Base):
     loudness: Mapped[float | None]
     instruments: Mapped[str | None] = mapped_column(String(255))
     song_structure: Mapped[str | None] = mapped_column(Text)
-    embedding: Mapped[list[float] | None] = mapped_column(Vector())
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(settings.embedding_dimension))
 
     # AcousticBrainz 已分析特征。
     voice_instrumental: Mapped[str | None] = mapped_column(String(32))

@@ -10,14 +10,31 @@ from app.services.agent.music_tools import MusicAgentTools
 from app.services.agent.policy import ToolDecision, evaluate_tool_call
 from app.services.agent.registry import ToolOperation, ToolRegistry
 from app.services.web_search_service import (
+    BING_FRESHNESS_FILTER,
     FRESHNESS_TIMELIMIT,
     MAX_SNIPPET_CHARS,
+    BingCnWebSearchService,
     DuckDuckGoWebSearchService,
     WebSearchError,
     WebSearchNotConfiguredError,
     _normalize_results,
+    _parse_bing_results,
+    build_web_search_provider,
 )
 from sqlalchemy.orm import Session
+
+# 必应结果页的最小样本：两条结果 + 一条缺链接的噪音块。
+BING_SAMPLE_PAGE = """
+<html><body>
+<ol id="b_results">
+  <li class="b_algo"><h2><a href="https://example.com/jazz">Jazz &amp; History</a></h2>
+    <p>Jazz is a music genre that originated in the African-American communities.</p></li>
+  <li class="b_algo"><h2><a href="https://example.com/rock">Rock music</a></h2>
+    <p>1 day ago - Rock music is a broad genre of popular music.</p></li>
+  <li class="b_algo"><h2><a href="/relative/link">Relative link</a></h2><p>skip me</p></li>
+</ol>
+</body></html>
+"""
 
 
 class _FakeSearch:
@@ -85,11 +102,87 @@ def test_normalize_results_rejects_invalid_payload() -> None:
 
 
 def test_disabled_search_raises_deterministic_error(monkeypatch: Any) -> None:
-    """关闭联网搜索时抛确定性错误，且不导入第三方依赖。"""
+    """关闭联网搜索时抛确定性错误，且不发起任何请求。"""
     monkeypatch.setattr(settings, "web_search_enabled", False)
 
     with pytest.raises(WebSearchNotConfiguredError):
         DuckDuckGoWebSearchService().search("shoegaze", 3)
+
+    with pytest.raises(WebSearchNotConfiguredError):
+        BingCnWebSearchService().search("shoegaze", 3)
+
+
+def test_parse_bing_results_extracts_title_url_and_snippet() -> None:
+    """必应结果块应解析成标题、链接、摘要，并跳过缺链接的条目。"""
+    items = _parse_bing_results(BING_SAMPLE_PAGE, limit=5)
+
+    assert [item["title"] for item in items] == ["Jazz & History", "Rock music"]
+    assert items[0]["url"] == "https://example.com/jazz"
+    assert items[0]["snippet"].startswith("Jazz is a music genre")
+    # 日期前缀抽成 published，摘要里不再保留
+    assert items[1]["published"] == "1 day ago"
+    assert items[1]["snippet"] == "Rock music is a broad genre of popular music."
+
+
+def test_parse_bing_results_respects_limit() -> None:
+    """解析结果条数受 limit 约束。"""
+    items = _parse_bing_results(BING_SAMPLE_PAGE, limit=1)
+
+    assert len(items) == 1
+    assert items[0]["title"] == "Jazz & History"
+
+
+def test_bing_search_raises_readable_error_when_page_changes(monkeypatch: Any) -> None:
+    """结果页结构变化（解析不到结果）时给出可读错误，而不是静默返回空。"""
+
+    class _Response:
+        status_code = 200
+        text = "<html><body>没有结果块</body></html>"
+
+        def raise_for_status(self) -> None:
+            """模拟正常状态码。"""
+
+    monkeypatch.setattr(
+        "app.services.web_search_service.httpx.get",
+        lambda *args, **kwargs: _Response(),
+    )
+
+    with pytest.raises(WebSearchError, match="结构已变化"):
+        BingCnWebSearchService().search("shoegaze", 3)
+
+
+def test_bing_search_maps_freshness_to_filter(monkeypatch: Any) -> None:
+    """freshness 应映射成必应的时间筛选参数。"""
+    captured: dict[str, Any] = {}
+
+    class _Response:
+        status_code = 200
+        text = BING_SAMPLE_PAGE
+
+        def raise_for_status(self) -> None:
+            """模拟正常状态码。"""
+
+    def fake_get(url: str, **kwargs: Any) -> Any:
+        captured["url"] = url
+        captured.update(kwargs.get("params") or {})
+        return _Response()
+
+    monkeypatch.setattr("app.services.web_search_service.httpx.get", fake_get)
+
+    items = BingCnWebSearchService().search("shoegaze", 2, "week")
+
+    assert captured["filters"] == f'ex1:"{BING_FRESHNESS_FILTER["week"]}"'
+    assert captured["q"] == "shoegaze"
+    assert len(items) == 2
+
+
+def test_provider_factory_follows_config(monkeypatch: Any) -> None:
+    """搜索源按配置选择；默认是境内可达的必应中国。"""
+    monkeypatch.setattr(settings, "web_search_provider", "bing_cn")
+    assert isinstance(build_web_search_provider(), BingCnWebSearchService)
+
+    monkeypatch.setattr(settings, "web_search_provider", "duckduckgo")
+    assert isinstance(build_web_search_provider(), DuckDuckGoWebSearchService)
 
 
 def test_tool_returns_normalized_items(db_session: Session) -> None:

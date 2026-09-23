@@ -17,6 +17,9 @@ class ToolConfirmationStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     REJECTED = "rejected"
+    # 超过有效期未被处理：由服务端统一置为此终态，避免残留的 pending 记录
+    # 在之后的会话里被当成"等待用户确认"（线上实测出现过 2 条长期残留）。
+    EXPIRED = "expired"
 
 
 class ToolConfirmation(Base):
@@ -25,7 +28,7 @@ class ToolConfirmation(Base):
     __tablename__ = "tool_confirmations"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'confirmed', 'rejected')",
+            "status IN ('pending', 'confirmed', 'rejected', 'expired')",
             name="ck_tool_confirmations_status",
         ),
         Index("ix_tool_confirmations_user_status", "user_id", "status"),

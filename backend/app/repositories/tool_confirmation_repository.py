@@ -45,6 +45,30 @@ class ToolConfirmationRepository:
         self.db.flush()
         return record
 
+    def expire_outdated(self, session_id: int | None = None) -> int:
+        """把已过期但仍为 pending 的记录置为 expired，返回处理条数。
+
+        过期记录本来就会被 `list_pending` 过滤、不会被执行，这里做的是**状态收敛**：
+        让"还在等用户确认"与"早就过期了"在数据上区分开，
+        避免残留的 pending 在排查或会话恢复时被误读。
+        """
+        conditions = [
+            ToolConfirmation.status == ToolConfirmationStatus.PENDING.value,
+            ToolConfirmation.expires_at <= func.now(),
+        ]
+        if session_id is not None:
+            conditions.append(ToolConfirmation.session_id == session_id)
+        statement = (
+            update(ToolConfirmation)
+            .where(*conditions)
+            .values(status=ToolConfirmationStatus.EXPIRED.value)
+            .execution_options(synchronize_session=False)
+        )
+        result = self.db.execute(statement)
+        self.db.flush()
+        # CursorResult 才有 rowcount；类型标注里 Result 不声明该属性，这里做一次窄化。
+        return int(getattr(result, "rowcount", 0) or 0)
+
     def list_pending(self, session_id: int, user_id: int) -> list[ToolConfirmation]:
         """读取该会话中未过期且尚未处理的待确认记录。"""
         statement = (

@@ -108,8 +108,11 @@ def test_embedding_batch_service_processes_missing_songs_in_batches(db_session: 
         is_configured = True
 
         def embed(self, texts: Sequence[str]) -> list[list[float]]:
-            """为每条输入返回固定二维向量。"""
-            return [[float(index), 1.0] for index, _ in enumerate(texts)]
+            """为每条输入返回与数据库列维度一致的向量。"""
+            return [
+                [float(index)] + [0.0] * (settings.embedding_dimension - 1)
+                for index, _ in enumerate(texts)
+            ]
 
     service = EmbeddingBatchService(db_session, FakeProvider())
     first = service.embed_missing("songs", limit=2, batch_size=2)

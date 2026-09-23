@@ -5,12 +5,22 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from app.core.config import settings
 from app.models.artist import Artist
 from app.models.music_knowledge import MusicKnowledge
 from app.models.song import Song
 from app.services.agent.music_tools import MusicAgentTools
 from app.services.embedding_provider import EmbeddingProviderError
 from app.services.rag_service import MusicKnowledgeService
+
+
+def fake_vector(seed: float = 0.1) -> list[float]:
+    """生成与数据库列声明维度一致的假向量。
+
+    向量列已钉成固定维度（HNSW 需要），测试不能再塞 3 维短向量，
+    否则写入会因维度不符被数据库拒绝。
+    """
+    return [seed + index * 0.001 for index in range(settings.embedding_dimension)]
 
 
 class FakeEmbeddingProvider:
@@ -20,7 +30,7 @@ class FakeEmbeddingProvider:
 
     def embed(self, _texts: Sequence[str]) -> list[list[float]]:
         """返回固定维度向量。"""
-        return [[0.1, 0.2, 0.3]]
+        return [fake_vector()]
 
 
 def test_knowledge_search_uses_vector_matches(db_session: Any) -> None:
@@ -28,7 +38,7 @@ def test_knowledge_search_uses_vector_matches(db_session: Any) -> None:
     entry = MusicKnowledge(
         content="City Pop 使用明亮的和弦色彩。",
         source="test",
-        embedding=[0.1, 0.2, 0.3],
+        embedding=fake_vector(),
     )
     db_session.add(entry)
     db_session.flush()
@@ -78,14 +88,15 @@ def test_similar_song_tool_uses_vector_before_structured_fallback(db_session: An
         artist=artist,
         genre="Pop",
         popularity=10,
-        embedding=[0.1, 0.2, 0.3],
+        embedding=fake_vector(0.1),
     )
     second = Song(
         title="Vector Two",
         artist=artist,
         genre="Pop",
         popularity=5,
-        embedding=[0.1, 0.2, 0.29],
+        # 与 first 极接近，余弦相似度高于阈值，应被向量检索命中并排在前面。
+        embedding=fake_vector(0.1),
     )
     db_session.add_all([first, second])
     db_session.flush()

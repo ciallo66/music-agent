@@ -18,7 +18,12 @@ from app.schemas.agent import (
     AgentSessionSummary,
     ToolConfirmationDecision,
 )
-from app.services.agent.orchestrator import AgentOrchestrator, ToolResolution
+from app.services.agent.context import build_history_message, strip_tool_notes
+from app.services.agent.orchestrator import (
+    CONFIRMATION_ACK_MESSAGE,
+    AgentOrchestrator,
+    ToolResolution,
+)
 from app.services.agent.provider import ToolCall
 
 
@@ -61,9 +66,15 @@ class AgentService:
             if existing_session is None:
                 raise AgentSessionNotFoundError
             chat_session = existing_session
+        # 顺手收敛过期状态：过期记录不参与流程，但也不该一直挂在 pending 上。
+        self.confirmations.expire_outdated(chat_session.id)
+        # 只把用户与助手的文本带进历史：工具调用痕迹以 `tool:` 行附在助手消息里
+        # （由 orchestrator 写入），因此历史中不会残留过期的工具结果，
+        # 也不会破坏「assistant.tool_calls 必须紧跟 tool 消息」的协议约束。
         history = [
-            {"role": item.role, "content": item.content}
+            build_history_message(item.role, item.content)
             for item in self.chats.list_messages(chat_session.id)
+            if item.role in {"user", "assistant"}
         ]
         return AgentConversation(session_id=chat_session.id, history=history)
 
@@ -87,7 +98,11 @@ class AgentService:
         ]
 
     def read_session(self, session_id: int) -> AgentSessionDetail:
-        """读取当前用户某个会话的完整消息，用于刷新后恢复对话。"""
+        """读取当前用户某个会话的完整消息，用于刷新后恢复对话。
+
+        只返回用户与助手的可读正文：助手消息末尾的 `tool:` 痕迹行是给模型看的，
+        必须剥掉，否则刷新后会在气泡里露出 `tool:search_songs(...)` 这类技术噪音。
+        """
         chat_session = self.chats.get_session(session_id, self.user_id)
         if chat_session is None:
             raise AgentSessionNotFoundError
@@ -97,7 +112,9 @@ class AgentService:
             created_at=chat_session.created_at,
             messages=[
                 AgentSessionMessage(
-                    role=item.role, content=item.content, created_at=item.created_at
+                    role=item.role,
+                    content=strip_tool_notes(item.content),
+                    created_at=item.created_at,
                 )
                 for item in messages
                 if item.role in {"user", "assistant"}
@@ -157,7 +174,11 @@ class AgentService:
                 )
             )
         all_approved = all(item.approved for item in resolutions)
-        message = "用户已确认执行该操作。" if all_approved else "用户已对该操作作出决定。"
+        # 这条是系统生成的确认回执，不是用户说的话：显式标记为「系统消息」，
+        # 免得模型把"用户已确认执行"误当成用户又提了一个新要求。
+        message = (
+            CONFIRMATION_ACK_MESSAGE if all_approved else "（系统消息）用户已对该操作作出决定。"
+        )
         return AgentOrchestrator(
             self.db,
             self.user_id,

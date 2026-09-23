@@ -6,6 +6,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.config import settings
 from app.core.database import Base
 
 
@@ -17,4 +18,4 @@ class MusicKnowledge(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     content: Mapped[str] = mapped_column(Text)
     source: Mapped[str | None] = mapped_column(String(512))
-    embedding: Mapped[list[float] | None] = mapped_column(Vector())
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(settings.embedding_dimension))
