@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.chat import ChatMessage, ChatSession
+from app.models.chat import ChatMessage, ChatSession, encode_agent_notes
 
 
 class ChatRepository:
@@ -84,9 +84,16 @@ class ChatRepository:
         self.db.flush()
         return True
 
-    def add_message(self, session_id: int, role: str, content: str) -> ChatMessage:
-        """追加一条消息并刷新主键。"""
-        message = ChatMessage(session_id=session_id, role=role, content=content)
+    def add_message(
+        self, session_id: int, role: str, content: str, notes: list[str] | None = None
+    ) -> ChatMessage:
+        """追加一条消息并刷新主键；notes 为本轮工具痕迹与实体清单（只回灌给模型）。"""
+        message = ChatMessage(
+            session_id=session_id,
+            role=role,
+            content=content,
+            agent_notes=encode_agent_notes(notes or []),
+        )
         self.db.add(message)
         self.db.flush()
         return message

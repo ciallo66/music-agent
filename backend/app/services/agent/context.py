@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.models.chat import decode_agent_notes, encode_agent_notes
+
 
 def estimate_tokens(value: object) -> int:
     """使用无额外依赖的保守估算计算消息 token 数。"""
@@ -35,53 +37,122 @@ def serialize_tool_result(result: dict[str, Any], max_chars: int) -> str:
     return json.dumps({"truncated": True}, ensure_ascii=False)
 
 
-def tool_notes_from_history(history: list[dict[str, Any]], limit: int) -> list[str]:
-    """从历史消息里提取"调用过哪些工具"的简短记录。
+TOOL_NOTE_PREFIX = "tool:"
 
-    工具调用记录以 `tool:<名称>(<参数摘要>)` 的形式写在 assistant 消息上（见
-    `build_history_message`）。这里只取最近 limit 条，用来提醒模型别重复查同一件事；
-    不携带旧工具结果，避免旧数据挤占上下文并诱导模型复述旧答案。
+# 每次工具调用最多保留多少个实体（歌曲/歌单）进历史。
+# 依据：主流做法是「旧工具结果整体清理，只留最近少量实体」——留多了会挤占上下文，
+# 留少了"把第三首加进歌单"这类指代会断。3 个够覆盖常见的"第一/二/三首"。
+MAX_ENTITIES_PER_CALL = 3
+
+# 可能承载"列表型实体"的结果字段及其标题/歌手字段名。
+ENTITY_LIST_KEYS: tuple[tuple[str, str, str], ...] = (
+    ("items", "title", "artist"),
+    ("songs", "title", "artist"),
+    ("matches", "title", "artist"),
+)
+
+
+def _entity_line(item: dict[str, Any], title_key: str, artist_key: str) -> str | None:
+    """把一条结果渲染成 `id|标题|歌手`；没有标题时返回 None。"""
+    title = item.get(title_key) or item.get("name")
+    if not title:
+        return None
+    artist = item.get(artist_key)
+    if isinstance(artist, dict):
+        artist = artist.get("name")
+    parts = [str(item.get("id", "")), str(title)]
+    if artist:
+        parts.append(str(artist))
+    return "|".join(parts)
+
+
+def extract_entities(result: dict[str, Any]) -> list[str]:
+    """从工具结果里抽取"用户可能接着指代"的实体，格式 `id|标题|歌手`。
+
+    只抽歌曲与歌单：这两类是用户会接着说"就它/第三首/加到那个歌单"的对象。
+    其它字段（BPM、情绪标签等）不复述——它们不是指代目标，留多了只会误导模型复读。
+    """
+    for key, title_key, artist_key in ENTITY_LIST_KEYS:
+        raw_items = result.get(key)
+        if not isinstance(raw_items, list):
+            continue
+        lines = [
+            _entity_line(item, title_key, artist_key)
+            for item in raw_items[:MAX_ENTITIES_PER_CALL]
+            if isinstance(item, dict)
+        ]
+        found = [line for line in lines if line]
+        if found:
+            return found
+
+    # 歌单列表：用户会说"加到那个歌单"，所以同样要留 id 与名称
+    raw_playlists = result.get("playlists")
+    if isinstance(raw_playlists, list):
+        return [
+            f"{item.get('id', '')}|{item['name']}"
+            for item in raw_playlists[:MAX_ENTITIES_PER_CALL]
+            if isinstance(item, dict) and item.get("name")
+        ]
+    return []
+
+
+def tool_notes_from_history(history: list[dict[str, Any]], limit: int) -> list[str]:
+    """从历史的 `agent_notes` 字段里取最近的工具痕迹与实体清单。
+
+    每条形如 `tool:search_songs(query="摇滚") -> entities:[1|歌名|歌手]`。
+    这里只回灌这些痕迹，不回灌旧工具结果原文——既避免旧数据挤占上下文、
+    也避免诱导模型复述上一轮的答案。
     """
     if limit <= 0:
         return []
     notes: list[str] = []
     for message in history:
-        if message.get("role") != "assistant":
-            continue
-        content = message.get("content")
-        if not isinstance(content, str):
-            continue
-        for line in content.splitlines():
-            if line.startswith("tool:"):
-                notes.append(line.strip()[len("tool:") :].strip())
-    return [note for note in notes if note][-limit:]
+        notes.extend(decode_agent_notes(message.get("agent_notes")))
+    return notes[-limit:]
 
 
-TOOL_NOTE_PREFIX = "tool:"
+def build_history_message(role: str, content: str, notes: str | None = None) -> dict[str, Any]:
+    """把一条存储消息转换成交给模型的 history 消息。
+
+    `notes` 是本轮工具痕迹与实体清单（JSON 文本），作为独立字段随消息传给模型：
+    content 保持"给用户看的正文"不变，不会被内部标记污染。
+    """
+    message: dict[str, Any] = {"role": role, "content": content}
+    if role == "assistant" and notes:
+        message["agent_notes"] = notes
+    return message
+
+
+def format_tool_note(
+    name: str, arguments: dict[str, Any], result: dict[str, Any] | None = None
+) -> str:
+    """生成一行工具痕迹：名称 + 关键参数 +（可选）实体清单。"""
+    parts: list[str] = []
+    for key, value in list(arguments.items())[:4]:
+        rendered = json.dumps(value, ensure_ascii=False)
+        if len(rendered) > 40:
+            rendered = rendered[:40] + "…"
+        parts.append(f"{key}={rendered}")
+    note = f"{name}({', '.join(parts)})" if parts else f"{name}()"
+    entities = extract_entities(result) if result else []
+    if entities:
+        note += " -> entities:[" + "; ".join(entities) + "]"
+    return note
 
 
 def strip_tool_notes(text: str) -> str:
-    """去掉助手正文末尾的工具痕迹行，得到用户可见的纯回答。
+    """去掉正文里的工具痕迹行，得到用户可见的纯回答。
 
-    工具痕迹（`tool:名称(参数)`）只给模型看，不能出现在界面上：
-    它随助手消息落库，而会话读取与前端渲染都是原样展示，不做处理就会泄漏成气泡里的技术噪音。
+    痕迹现在单独存在 `agent_notes` 列里，正常不会再混进正文；
+    这个函数保留为兜底：老数据（修复前落库的消息）里可能已被写入 `tool:` 行。
     """
     kept = [line for line in text.splitlines() if not line.startswith(TOOL_NOTE_PREFIX)]
     return "\n".join(kept).rstrip()
 
 
-def build_history_message(
-    role: str, content: str, tools: list[str] | None = None
-) -> dict[str, str]:
-    """把一条存储消息转换成交给模型的 history 消息。
-
-    助手消息若调用过工具，会在正文末尾追加 `tool:<名称>(<参数摘要>)` 记录：
-    模型因此知道"这件事已经查过了"，而不需要把旧工具结果原文带进上下文。
-    """
-    text = content
-    if role == "assistant" and tools:
-        text = f"{content}\n" + "\n".join(f"tool:{note}" for note in tools)
-    return {"role": role, "content": text}
+def encode_notes(notes: list[str]) -> str | None:
+    """把工具痕迹列表编码成落库用的 JSON 文本；空列表返回 None。"""
+    return encode_agent_notes(notes)
 
 
 def window_history(messages: list[dict[str, Any]], max_messages: int) -> list[dict[str, Any]]:

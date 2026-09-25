@@ -10,12 +10,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.core.config import settings
-from app.models.chat import ChatSession
+from app.models.chat import ChatSession, decode_agent_notes, encode_agent_notes
 from app.models.tool_confirmation import ToolConfirmation, ToolConfirmationStatus
 from app.models.user import User
 from app.repositories.tool_confirmation_repository import ToolConfirmationRepository
 from app.services.agent.context import (
     build_history_message,
+    extract_entities,
+    format_tool_note,
     strip_tool_notes,
     tool_notes_from_history,
     window_history,
@@ -74,26 +76,88 @@ def test_window_history_short_history_is_untouched() -> None:
     assert window_history(history, max_messages=20) == history
 
 
-def test_history_message_appends_tool_notes_only_for_assistant() -> None:
-    """工具痕迹附在助手消息末尾，用户消息不受影响。"""
-    assistant = build_history_message("assistant", "查到了 931 首", ["search_songs(limit=20)"])
-    user = build_history_message("user", "库里有几首歌", ["search_songs(limit=20)"])
+def test_history_message_attaches_notes_as_separate_field() -> None:
+    """工具痕迹以独立字段回灌，绝不混进给用户看的正文。"""
+    notes = encode_agent_notes(["search_songs(limit=20)"])
+    assistant = build_history_message("assistant", "查到了 931 首", notes)
+    user = build_history_message("user", "库里有几首歌", notes)
 
-    assert assistant["content"].endswith("tool:search_songs(limit=20)")
-    assert "tool:" not in user["content"]
+    assert assistant["content"] == "查到了 931 首"
+    assert assistant["agent_notes"] == notes
+    assert "tool:" not in assistant["content"]
+    assert "agent_notes" not in user
 
 
 def test_tool_notes_from_history_returns_recent_notes() -> None:
     """只取最近若干条工具痕迹，且按出现顺序排列。"""
     history = [
-        build_history_message("assistant", "答1", ["search_songs()"]),
-        build_history_message("assistant", "答2", ["analyze_song(song_id=1)", "search_web()"]),
+        build_history_message("assistant", "答1", encode_agent_notes(["search_songs()"])),
+        build_history_message(
+            "assistant",
+            "答2",
+            encode_agent_notes(["analyze_song(song_id=1)", "search_web()"]),
+        ),
     ]
 
     notes = tool_notes_from_history(history, limit=2)
 
-    # 返回的是去掉 `tool:` 前缀后的记录，按出现顺序排列
     assert notes == ["analyze_song(song_id=1)", "search_web()"]
+
+
+def test_extract_entities_from_song_list() -> None:
+    """歌曲列表要抽出 `id|标题|歌手`，供下一轮"第三首/就它"指代使用。"""
+    result = {
+        "items": [
+            {"id": 1, "title": "All the Small Things", "artist": {"name": "blink-182"}},
+            {"id": 2, "title": "Patterns in the Ivy", "artist": {"name": "Opeth"}},
+            {"id": 3, "title": "Dry Hands", "artist": {"name": "C418"}},
+            {"id": 4, "title": "超出上限的歌", "artist": {"name": "X"}},
+        ]
+    }
+
+    entities = extract_entities(result)
+
+    assert entities == [
+        "1|All the Small Things|blink-182",
+        "2|Patterns in the Ivy|Opeth",
+        "3|Dry Hands|C418",
+    ]
+
+
+def test_extract_entities_from_playlists() -> None:
+    """歌单列表同样要留 id 与名称（用户会说"加到那个歌单"）。"""
+    entities = extract_entities({"playlists": [{"id": 7, "name": "夜晚通勤"}]})
+
+    assert entities == ["7|夜晚通勤"]
+
+
+def test_extract_entities_returns_empty_for_other_results() -> None:
+    """没有可指代实体的结果（如品味分析）不产生清单。"""
+    assert extract_entities({"genres": ["摇滚", "爵士"]}) == []
+    assert extract_entities({}) == []
+
+
+def test_format_tool_note_includes_arguments_and_entities() -> None:
+    """痕迹行 = 工具名 + 关键参数 + 实体清单。"""
+    note = format_tool_note(
+        "search_songs",
+        {"genre": "摇滚", "limit": 20},
+        {"items": [{"id": 1, "title": "歌名", "artist": {"name": "歌手"}}]},
+    )
+
+    assert note.startswith("search_songs(")
+    assert 'genre="摇滚"' in note
+    assert "entities:[1|歌名|歌手]" in note
+
+
+def test_agent_notes_encode_decode_roundtrip() -> None:
+    """落库编码与读回解码必须一致；异常格式不抛错。"""
+    assert encode_agent_notes([]) is None
+    assert decode_agent_notes(None) == []
+    assert decode_agent_notes("这不是 JSON") == []
+    assert decode_agent_notes('{"a":1}') == []
+    raw = encode_agent_notes(["tool:search_songs()", "tool:list_playlists()"])
+    assert decode_agent_notes(raw) == ["tool:search_songs()", "tool:list_playlists()"]
 
 
 def test_tool_notes_skip_non_string_content() -> None:

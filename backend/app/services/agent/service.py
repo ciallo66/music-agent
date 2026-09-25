@@ -19,6 +19,7 @@ from app.schemas.agent import (
     ToolConfirmationDecision,
 )
 from app.services.agent.context import build_history_message, strip_tool_notes
+from app.services.agent.conversation_summary import ConversationSummarizer
 from app.services.agent.orchestrator import (
     CONFIRMATION_ACK_MESSAGE,
     AgentOrchestrator,
@@ -40,10 +41,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class AgentConversation:
-    """Agent 对话所需的会话标识和历史消息。"""
+    """Agent 对话所需的会话标识、历史消息与滚动摘要。"""
 
     session_id: int
     history: list[dict[str, str]]
+    summary: str | None = None
 
 
 class AgentService:
@@ -55,6 +57,7 @@ class AgentService:
         self.user_id = user_id
         self.chats = ChatRepository(db)
         self.confirmations = ToolConfirmationRepository(db)
+        self.summarizer = ConversationSummarizer(db)
 
     def get_or_create_conversation(self, session_id: int | None) -> AgentConversation:
         """读取当前用户会话；未提供会话 ID 时创建新会话。"""
@@ -68,15 +71,18 @@ class AgentService:
             chat_session = existing_session
         # 顺手收敛过期状态：过期记录不参与流程，但也不该一直挂在 pending 上。
         self.confirmations.expire_outdated(chat_session.id)
-        # 只把用户与助手的文本带进历史：工具调用痕迹以 `tool:` 行附在助手消息里
-        # （由 orchestrator 写入），因此历史中不会残留过期的工具结果，
+
+        # 长对话才压缩：超过窗口的历史由摘要代表，其余逐字保留。
+        summary, recent = self.summarizer.prepare(chat_session)
+        # 只把用户与助手的文本带进历史；助手消息附带的 `agent_notes`（工具痕迹 +
+        # 实体清单）以独立字段回灌给模型——历史里因此不会残留过期的工具结果，
         # 也不会破坏「assistant.tool_calls 必须紧跟 tool 消息」的协议约束。
         history = [
-            build_history_message(item.role, item.content)
-            for item in self.chats.list_messages(chat_session.id)
+            build_history_message(item.role, item.content, item.agent_notes)
+            for item in recent
             if item.role in {"user", "assistant"}
         ]
-        return AgentConversation(session_id=chat_session.id, history=history)
+        return AgentConversation(session_id=chat_session.id, history=history, summary=summary)
 
     def list_sessions(self, limit: int = 30) -> list[AgentSessionSummary]:
         """列出当前用户的历史会话，附带消息条数与标题。
@@ -133,6 +139,7 @@ class AgentService:
             self.user_id,
             conversation.session_id,
             conversation.history,
+            summary=conversation.summary,
         ).stream(message)
 
     def confirm(
@@ -184,4 +191,5 @@ class AgentService:
             self.user_id,
             conversation.session_id,
             conversation.history,
+            summary=conversation.summary,
         ).stream(message, resolutions)

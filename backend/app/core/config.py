@@ -62,23 +62,38 @@ class Settings(BaseSettings):
     agent_history_max_messages: int = 20
     # 提示词里回顾"最近用过哪些工具"的条数，防止模型重复查同一件事。
     agent_history_tool_notes: int = 6
+    # 滚动摘要：历史超过窗口 + 这个阈值时才压缩，避免每轮都调用模型。
+    # 只在触发时多花一次模型调用（实测约 1.7-2.2s），前若干轮零开销。
+    agent_summary_fold_batch: int = 10
 
     web_search_enabled: bool = True
-    # 搜索源：bing_cn（抓取必应中国，境内可达）或 duckduckgo（境外，境内服务器不可达）。
-    # 生产服务器在境内，实测 DuckDuckGo 全线 Network is unreachable，因此默认用 bing_cn。
-    web_search_provider: Literal["bing_cn", "duckduckgo"] = "bing_cn"
+    # 搜索源：tavily（官方 API，返回已抽取正文，需 key）/ bing_cn（抓取必应中国，境内可达）
+    # / duckduckgo（境外，境内服务器实测全线不可达）。
+    web_search_provider: Literal["tavily", "bing_cn", "duckduckgo"] = "bing_cn"
     web_search_region: str = "cn-zh"
     web_search_max_results: int = 5
     web_search_timeout_seconds: int = 8
     # 必应中国的搜索入口与市场参数（跟随 web_search_region 语言）。
     web_search_bing_url: str = "https://cn.bing.com/search"
     web_search_market: str = "zh-CN"
+    # Tavily 搜索 API。key 只能来自环境变量（.env / .env.production），绝不写进源码或 Git。
+    web_search_api_key: str = ""
+    web_search_tavily_url: str = "https://api.tavily.com/search"
+    # basic 更快更省额度；advanced 抓取更深但更慢。
+    web_search_tavily_depth: Literal["basic", "advanced"] = "basic"
 
     embedding_api_key: str = ""
     embedding_base_url: str = ""
     embedding_model: str = ""
     embedding_timeout_seconds: float = 30.0
+    # 歌曲相似度阈值：用于「找相似歌曲」，口径较松（结构化兜底会再筛）。
     embedding_similarity_threshold: float = 0.35
+    # 知识库检索阈值：必须比歌曲那条严。线上定标数据（bge-m3 + 48 条知识）：
+    #   该命中的问题首条相似度 0.5962~0.7609（均值 0.7005）
+    #   不该命中的问题      0.3354~0.4618（均值 0.3993）
+    # 中间有 0.13 的空档，取 0.50 可以 20/20 保留命中、10/10 挡住无关问题；
+    # 取 0.35 时"今天天气怎么样""1+1 等于几"都会返回 5 条无关知识。
+    embedding_knowledge_threshold: float = 0.50
     # 向量维度必须与 embedding_model 一致（BAAI/bge-m3 = 1024）。
     # 数据库列已按该维度声明，换模型时必须同步改这里并新写一条迁移。
     embedding_dimension: int = 1024
@@ -109,10 +124,17 @@ class Settings(BaseSettings):
             raise ValueError("AGENT_TOOL_TIMEOUT_SECONDS 必须大于 0")
         if self.agent_max_tool_rounds <= 0:
             raise ValueError("AGENT_MAX_TOOL_ROUNDS 必须大于 0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_embedding_limits(self) -> Settings:
+        """确保 Embedding 相关配置有效（两条阈值分别校验）。"""
         if self.embedding_timeout_seconds <= 0:
             raise ValueError("EMBEDDING_TIMEOUT_SECONDS 必须大于 0")
         if not 0 <= self.embedding_similarity_threshold <= 1:
             raise ValueError("EMBEDDING_SIMILARITY_THRESHOLD 必须在 0 到 1 之间")
+        if not 0 <= self.embedding_knowledge_threshold <= 1:
+            raise ValueError("EMBEDDING_KNOWLEDGE_THRESHOLD 必须在 0 到 1 之间")
         return self
 
     @model_validator(mode="after")
@@ -132,6 +154,8 @@ class Settings(BaseSettings):
             raise ValueError("AGENT_HISTORY_MAX_MESSAGES 至少为 2（一轮问答）")
         if self.agent_history_tool_notes < 0:
             raise ValueError("AGENT_HISTORY_TOOL_NOTES 不能小于 0")
+        if self.agent_summary_fold_batch <= 0:
+            raise ValueError("AGENT_SUMMARY_FOLD_BATCH 必须大于 0")
         return self
 
     @model_validator(mode="after")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 
@@ -41,13 +41,43 @@ class ModelStreamUpdate:
     response: ModelResponse | None = None
 
 
+class ChatProvider(Protocol):
+    """非流式对话补全的最小接口，便于替换供应商和注入测试替身。
+
+    只声明编排层实际依赖的 `complete`：会话摘要这类调用方需要的是「给消息拿回答」，
+    而不是具体的 DeepSeek 客户端。测试用假 provider 只需实现同一签名即可通过类型检查，
+    不必继承 `DeepSeekProvider`，也不会因此发出真实请求。
+    """
+
+    def complete(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        max_tokens: int | None = None,
+        disable_reasoning: bool = False,
+    ) -> ModelResponse:
+        """发送一次模型请求并返回文本与工具调用。"""
+        ...
+
+
 class DeepSeekProvider:
     """通过 Chat Completions 调用 DeepSeek，并解析 Tool Calls。"""
 
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        max_tokens: int | None = None,
+        disable_reasoning: bool = False,
     ) -> ModelResponse:
-        """发送一次模型请求；API Key 未配置时明确失败。"""
+        """发送一次模型请求；API Key 未配置时明确失败。
+
+        参数说明：
+        - max_tokens：默认取回答预算；
+        - disable_reasoning：供会话摘要这类**机械任务**关闭思考链。deepseek-flash 是推理模型，
+          思考内容同样吃掉 max_tokens，摘要这种"搬运信息"的活不需要推理，
+          实测开启思考时会把额度耗尽、正文返回空。
+        """
         if not settings.deepseek_api_key:
             raise LLMProviderError("AI 服务尚未配置，请联系管理员")
         payload: dict[str, Any] = {
@@ -55,9 +85,11 @@ class DeepSeekProvider:
             "messages": messages,
             "tools": tools,
             "tool_choice": "auto",
-            "max_tokens": settings.agent_response_token_budget,
+            "max_tokens": max_tokens or settings.agent_response_token_budget,
             "stream": False,
         }
+        if disable_reasoning:
+            payload["reasoning"] = {"enabled": False}
         try:
             response = httpx.post(
                 f"{settings.deepseek_base_url.rstrip('/')}/chat/completions",

@@ -21,8 +21,14 @@ from app.core.config import settings
 # 单条搜索结果摘要的字符上限，避免把大段网页正文灌进上下文。
 MAX_SNIPPET_CHARS = 500
 
+# Tavily 返回的是已抽取正文，单条可以给到更大的上限（整体仍由工具结果截断兜底）。
+TAVILY_SNIPPET_CHARS = 2000
+
 # 工具层的 freshness 取值到搜索引擎时间范围的映射。
 FRESHNESS_TIMELIMIT = {"day": "d", "week": "w", "month": "m", "year": "y"}
+
+# Tavily 的时间范围取值。
+TAVILY_TIME_RANGE = {"day": "day", "week": "week", "month": "month", "year": "year"}
 
 # 必应时间过滤参数的取值（默认按天往前推）。
 BING_FRESHNESS_FILTER = {"day": "ez1", "week": "ez2", "month": "ez3"}
@@ -143,8 +149,97 @@ class DuckDuckGoWebSearchService:
         return _normalize_results(raw_results, limit)
 
 
+class TavilyWebSearchService:
+    """调用 Tavily 搜索 API（专为 AI 设计的搜索服务）。
+
+    相对抓取必应结果页的优势：**直接返回已抽取的网页正文**（单条上千字），
+    而不只是几十字的摘要——这决定了模型能不能真的"读懂"外部资料。
+    代价：需要 API key，且有月度额度。
+    """
+
+    def search(self, query: str, limit: int, freshness: str | None = None) -> list[dict[str, str]]:
+        """执行一次搜索，返回标题、链接和正文片段；freshness 限定时间范围。"""
+        if not settings.web_search_enabled:
+            raise WebSearchNotConfiguredError("联网搜索未启用")
+        if not settings.web_search_api_key:
+            raise WebSearchNotConfiguredError("未配置 WEB_SEARCH_API_KEY")
+        body = self._request(query, limit, freshness)
+        raw_results = body.get("results") if isinstance(body, dict) else None
+        if not isinstance(raw_results, list):
+            raise WebSearchError("联网搜索返回格式无效")
+        items = _normalize_tavily_results(raw_results, limit)
+        if not items:
+            raise WebSearchError("联网搜索没有返回可用结果")
+        return items
+
+    @staticmethod
+    def _request(query: str, limit: int, freshness: str | None) -> dict[str, Any]:
+        """发一次 Tavily 请求；把 HTTP 层面的失败翻译成可读的搜索错误。"""
+        payload: dict[str, Any] = {
+            "api_key": settings.web_search_api_key,
+            "query": query,
+            "max_results": limit,
+            "search_depth": settings.web_search_tavily_depth,
+            # 让 Tavily 返回原始正文片段，而不是它自己润色过的答案
+            "include_answer": False,
+        }
+        if freshness in TAVILY_TIME_RANGE:
+            payload["time_range"] = TAVILY_TIME_RANGE[freshness]
+        try:
+            response = httpx.post(
+                settings.web_search_tavily_url,
+                json=payload,
+                timeout=settings.web_search_timeout_seconds,
+            )
+            response.raise_for_status()
+            body = response.json()
+        except httpx.TimeoutException as error:
+            raise WebSearchError("联网搜索超时") from error
+        except httpx.HTTPStatusError as error:
+            raise _tavily_status_error(error.response.status_code) from error
+        except (httpx.HTTPError, ValueError) as error:
+            raise WebSearchError("联网搜索请求失败") from error
+        if not isinstance(body, dict):
+            raise WebSearchError("联网搜索返回格式无效")
+        return body
+
+
+def _tavily_status_error(status: int) -> WebSearchError:
+    """把 Tavily 的 HTTP 状态码翻译成确定的错误类型。"""
+    if status in {401, 403}:
+        return WebSearchNotConfiguredError("联网搜索凭证无效")
+    if status == 429:
+        return WebSearchError("联网搜索额度已用尽或触发限流")
+    return WebSearchError(f"联网搜索返回异常状态：{status}")
+
+
+def _normalize_tavily_results(raw_results: list[Any], limit: int) -> list[dict[str, str]]:
+    """把 Tavily 的结果裁剪为标题、链接、正文片段三字段。"""
+    items: list[dict[str, str]] = []
+    for raw in raw_results[:limit]:
+        if not isinstance(raw, dict):
+            continue
+        url = str(raw.get("url") or "").strip()
+        if not url:
+            continue
+        body_text = str(raw.get("content") or "").strip()
+        item = {
+            "title": str(raw.get("title") or "").strip(),
+            "url": url,
+            # Tavily 的 content 本身就是正文抽取结果，可以放宽截断上限
+            "snippet": body_text[:TAVILY_SNIPPET_CHARS],
+        }
+        if match := PUBLISHED_PREFIX.match(body_text):
+            item["published"] = match.group("published")
+            item["snippet"] = body_text[match.end() :][:TAVILY_SNIPPET_CHARS]
+        items.append(item)
+    return items
+
+
 def build_web_search_provider() -> WebSearchProvider:
     """按配置构造搜索源；未知取值按默认的必应中国处理。"""
+    if settings.web_search_provider == "tavily":
+        return TavilyWebSearchService()
     if settings.web_search_provider == "duckduckgo":
         return DuckDuckGoWebSearchService()
     return BingCnWebSearchService()

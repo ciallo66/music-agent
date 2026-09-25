@@ -56,7 +56,7 @@ class MusicKnowledgeService:
                 matches = self.repository.search_vector(
                     embedding,
                     limit,
-                    settings.embedding_similarity_threshold,
+                    settings.embedding_knowledge_threshold,
                 )
         except SQLAlchemyError:
             logger.exception("知识库向量查询失败，回退文本检索")
@@ -76,10 +76,18 @@ class MusicKnowledgeService:
         }
 
     def _search_lexical(self, query: str, limit: int) -> dict[str, Any]:
-        """执行无额外模型依赖的关键词检索。"""
-        entries = self.repository.search(query, limit)
+        """执行无额外模型依赖的关键词检索（向量服务不可用时的兜底）。
+
+        `matched` 给出实际用于匹配的片段，方便排查"为什么命中/没命中"。
+        """
+        entries, anchors = self.repository.search(query, limit)
+        items: list[dict[str, Any]] = [
+            {"content": entry.content, "source": entry.source} for entry in entries
+        ]
+        if items:
+            items[0]["matched"] = anchors
         return {
-            "items": [{"content": entry.content, "source": entry.source} for entry in entries],
+            "items": items,
             "count": len(entries),
             "relevant": bool(entries),
             "mode": "lexical",

@@ -45,6 +45,20 @@ def test_song_embedding_column_matches_model_schema() -> None:
     assert columns["source_id"]["nullable"] is True
 
 
+def test_chat_agent_note_columns_exist() -> None:
+    """迁移 17/18 新增的会话列必须真的落在库里。
+
+    只断言 alembic 版本号是不够的：版本号会被 `stamp` 单独改掉，
+    而代码一旦写这些列、库里却没有，运行时会直接报 column does not exist。
+    """
+    inspector = inspect(engine)
+    message_columns = {column["name"] for column in inspector.get_columns("chat_messages")}
+    session_columns = {column["name"] for column in inspector.get_columns("chat_sessions")}
+
+    assert "agent_notes" in message_columns
+    assert {"chat_summary", "summarized_through_id"} <= session_columns
+
+
 def test_embedding_columns_are_dimensioned() -> None:
     """向量列必须声明固定维度，否则 HNSW 索引建不了。"""
     with engine.connect() as connection:

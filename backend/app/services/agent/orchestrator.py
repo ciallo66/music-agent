@@ -20,6 +20,7 @@ from app.repositories.tool_confirmation_repository import ToolConfirmationReposi
 from app.schemas.agent import AgentEvent
 from app.services.agent.context import (
     compact_messages,
+    format_tool_note,
     serialize_tool_result,
     tool_notes_from_history,
     window_history,
@@ -188,6 +189,7 @@ class AgentOrchestrator:
         session_id: int,
         history: list[dict[str, str]],
         provider: DeepSeekProvider | None = None,
+        summary: str | None = None,
     ) -> None:
         """装配会话历史、模型供应商和工具注册表，准备一次流式 Agent 对话。"""
         self.db = db
@@ -196,8 +198,12 @@ class AgentOrchestrator:
         self.confirmations = ToolConfirmationRepository(db)
         self.session_id = session_id
         self.history = history
-        # 本轮实际调用过的工具（用于在两轮之间传递"这件事已经查过"的痕迹）
-        self.used_tools: list[ToolCall] = []
+        # 长对话的滚动摘要：代表已经滑出窗口的更早内容（由 ConversationSummarizer 生成）
+        self.summary = summary
+        # 本轮调用过的工具痕迹与实体清单（用于在两轮之间传递"查过什么、结果里有哪些对象"）
+        self.used_tools: list[str] = []
+        # 最近一次工具结果（仅用于抽取实体清单，不进历史）
+        self._last_tool_result: dict[str, Any] | None = None
         # 本次请求是否由"用户确认高风险操作"触发（决定历史如何降级）
         self._is_confirmation_follow_up = False
         self.provider = provider or DeepSeekProvider()
@@ -239,17 +245,30 @@ class AgentOrchestrator:
     def _history_window(self) -> list[dict[str, Any]]:
         """取用于本次请求的历史片段。
 
-        正常的用户新一轮：历史在窗口内原样保留，由 `compact_messages` 按 token 预算再压缩。
+        正常的用户新一轮：先放滚动摘要（代表更早的对话），再放窗口内的逐字历史，
+        最后由 `compact_messages` 按 token 预算再压缩。
         确认后续跑（用户点了确认/拒绝）：历史整体降级为「背景参考」，
         因为此刻的任务是"按用户决定把这次操作做完"，旧历史不应再影响当前回答。
         """
         window = window_history(self.history, settings.agent_history_max_messages)
+        prefix: list[dict[str, Any]] = []
+        if self.summary:
+            prefix.append(
+                {
+                    "role": "system",
+                    "content": (
+                        "以下是更早对话的摘要，供理解上下文；当前问题仍以用户最后一条消息为准。\n"
+                        f"{self.summary}"
+                    ),
+                }
+            )
         if not self._is_confirmation_follow_up:
-            return window
+            return [*prefix, *window]
         return [
+            *prefix,
             {
                 "role": "system",
-                "content": "以下是更早的对话，仅作背景参考；当前任务以紧随其后的确认结果为输入。",
+                "content": "后续内容是更早的对话与本次确认结果，仅作背景参考。",
             },
             *window,
         ]
@@ -308,7 +327,7 @@ class AgentOrchestrator:
     def _finish(self, content: str | None) -> Iterator[str]:
         """模型已给出最终回答时的正常收尾，并记录本轮用过哪些工具。"""
         text = content or "模型没有返回文本。"
-        self.chat.add_message(self.session_id, "assistant", self._with_tool_notes(text))
+        self.chat.add_message(self.session_id, "assistant", text, notes=self.used_tools)
         if not self._streamed_content:
             yield self._event(AgentEvent(type="content", content=text))
         yield self._event(AgentEvent(type="end", content="分析完成"))
@@ -324,36 +343,12 @@ class AgentOrchestrator:
         response = self._last_response
         content = response.content if response is not None else None
         if content:
-            self.chat.add_message(self.session_id, "assistant", self._with_tool_notes(content))
+            self.chat.add_message(self.session_id, "assistant", content, notes=self.used_tools)
             if not self._streamed_content:
                 yield self._event(AgentEvent(type="content", content=content))
         elif not self._turn_streamed_content:
             yield self._event(AgentEvent(type="content", content=WRAP_UP_FALLBACK))
         yield self._event(AgentEvent(type="end", content="分析完成"))
-
-    def _with_tool_notes(self, text: str) -> str:
-        """把本轮工具调用痕迹附在助手消息末尾，供后续轮次提醒"这件事查过了"。
-
-        只记工具名与关键参数，不记结果：历史里因此不会残留过期数据，
-        也就不会诱导模型复述上一轮的答案（这是线上"答非所问"的根因之一）。
-        """
-        notes = [self._tool_note(call) for call in self.used_tools]
-        if not notes:
-            return text
-        return text + "\n" + "\n".join(f"tool:{note}" for note in notes)
-
-    @staticmethod
-    def _tool_note(call: ToolCall) -> str:
-        """生成一行工具调用摘要：名称 + 关键参数（截断，避免过长）。"""
-        if not call.arguments:
-            return f"{call.name}()"
-        parts: list[str] = []
-        for key, value in list(call.arguments.items())[:4]:
-            rendered = json.dumps(value, ensure_ascii=False)
-            if len(rendered) > 40:
-                rendered = rendered[:40] + "…"
-            parts.append(f"{key}={rendered}")
-        return f"{call.name}({', '.join(parts)})"
 
     def _stream_model(self, messages: list[dict[str, Any]]) -> Iterator[str]:
         """读取一轮模型响应并转成增量 SSE。"""
@@ -408,13 +403,20 @@ class AgentOrchestrator:
     ) -> Iterator[str]:
         """执行单个工具并把结果写回上下文；这里是执行前的最后一道校验。"""
         yield self._event(AgentEvent(type="tool", content=f"正在调用 {call.name}"))
-        self.used_tools.append(call)
         yield from self._execute_tool_inner(messages, call, confirmed=confirmed)
+        # 记录痕迹与实体清单：下一轮靠它知道"查过什么、上一轮结果里有哪些对象"。
+        # 工具结果原文仍然不进历史（见 _history_window），只留这份精简清单。
+        result = self._last_tool_result
+        self.used_tools.append(format_tool_note(call.name, call.arguments, result))
 
     def _execute_tool_inner(
         self, messages: list[dict[str, Any]], call: ToolCall, *, confirmed: bool = False
     ) -> Iterator[str]:
         """执行工具的实际逻辑；调用痕迹由 `_execute_tool` 统一记录。"""
+        # 每个调用先清空上一次结果：被拒绝/未知工具会提前返回，
+        # 那种情况下 `used_tools` 不能把**上一次**调用的实体清单挂到本次痕迹上，
+        # 否则模型会误以为这次也查回了那些歌曲。
+        self._last_tool_result = None
         tool = self.registry.get(call.name)
         if tool is None:
             message = f"未知工具：{call.name}"
@@ -433,6 +435,7 @@ class AgentOrchestrator:
             yield self._event(AgentEvent(type="tool_error", content=TOOL_UNCONFIRMED_MESSAGE))
             return
         result, failed = self._run_tool(call, allow_retry=tool.operation is ToolOperation.READ)
+        self._last_tool_result = result if not failed else None
         if failed:
             yield self._event(AgentEvent(type="tool_error", content=str(result["error"])))
         self._append_tool_message(messages, call, result)

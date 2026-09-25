@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
 import pytest
 from app.core.config import settings
 from app.services.agent.music_tools import MusicAgentTools
@@ -13,8 +14,10 @@ from app.services.web_search_service import (
     BING_FRESHNESS_FILTER,
     FRESHNESS_TIMELIMIT,
     MAX_SNIPPET_CHARS,
+    TAVILY_SNIPPET_CHARS,
     BingCnWebSearchService,
     DuckDuckGoWebSearchService,
+    TavilyWebSearchService,
     WebSearchError,
     WebSearchNotConfiguredError,
     _normalize_results,
@@ -183,6 +186,109 @@ def test_provider_factory_follows_config(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(settings, "web_search_provider", "duckduckgo")
     assert isinstance(build_web_search_provider(), DuckDuckGoWebSearchService)
+
+    monkeypatch.setattr(settings, "web_search_provider", "tavily")
+    assert isinstance(build_web_search_provider(), TavilyWebSearchService)
+
+
+class _TavilyResponse:
+    """模拟 Tavily 的 HTTP 响应。"""
+
+    def __init__(self, payload: dict[str, Any], status_code: int = 200) -> None:
+        """保存待返回的负载与状态码。"""
+        self._payload = payload
+        self.status_code = status_code
+
+    def raise_for_status(self) -> None:
+        """状态码非 2xx 时抛出 httpx 的 HTTPStatusError（与真实调用一致）。"""
+        if self.status_code >= 400:
+            request = httpx.Request("POST", "https://api.tavily.com/search")
+            response = httpx.Response(self.status_code, request=request)
+            raise httpx.HTTPStatusError("boom", request=request, response=response)
+
+    def json(self) -> dict[str, Any]:
+        """返回预设负载。"""
+        return self._payload
+
+
+def test_tavily_search_returns_full_content(monkeypatch: Any) -> None:
+    """Tavily 返回的是已抽取正文，应保留到更大上限（而不是几十字摘要）。"""
+    captured: dict[str, Any] = {}
+    payload = {
+        "results": [
+            {
+                "title": "City Pop - 维基百科",
+                "url": "https://zh.wikipedia.org/wiki/City_pop",
+                "content": "正" * 5000,
+            }
+        ]
+    }
+
+    def fake_post(url: str, **kwargs: Any) -> Any:
+        captured["url"] = url
+        captured.update(kwargs.get("json") or {})
+        return _TavilyResponse(payload)
+
+    monkeypatch.setattr(settings, "web_search_provider", "tavily")
+    monkeypatch.setattr(settings, "web_search_api_key", "test-key")
+    monkeypatch.setattr("app.services.web_search_service.httpx.post", fake_post)
+
+    items = TavilyWebSearchService().search("City Pop 是什么", 3)
+
+    assert captured["url"] == settings.web_search_tavily_url
+    assert captured["api_key"] == "test-key"
+    assert captured["include_answer"] is False
+    assert len(items) == 1
+    assert len(items[0]["snippet"]) == TAVILY_SNIPPET_CHARS
+
+
+def test_tavily_requires_api_key(monkeypatch: Any) -> None:
+    """没有 key 时给确定性错误，不去发请求。"""
+    monkeypatch.setattr(settings, "web_search_enabled", True)
+    monkeypatch.setattr(settings, "web_search_api_key", "")
+
+    with pytest.raises(WebSearchNotConfiguredError):
+        TavilyWebSearchService().search("anything", 3)
+
+
+def test_tavily_maps_freshness_to_time_range(monkeypatch: Any) -> None:
+    """freshness 应映射成 Tavily 的 time_range 参数。"""
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, **kwargs: Any) -> Any:
+        captured.update(kwargs.get("json") or {})
+        return _TavilyResponse({"results": [{"title": "t", "url": "https://a", "content": "正文"}]})
+
+    monkeypatch.setattr(settings, "web_search_api_key", "test-key")
+    monkeypatch.setattr("app.services.web_search_service.httpx.post", fake_post)
+
+    TavilyWebSearchService().search("music festival", 2, "week")
+
+    assert captured["time_range"] == "week"
+
+
+def test_tavily_reports_invalid_credentials(monkeypatch: Any) -> None:
+    """凭证无效属于确定性失败，不能被当成可重试的网络错误。"""
+    monkeypatch.setattr(settings, "web_search_api_key", "bad-key")
+    monkeypatch.setattr(
+        "app.services.web_search_service.httpx.post",
+        lambda *args, **kwargs: _TavilyResponse({}, status_code=401),
+    )
+
+    with pytest.raises(WebSearchNotConfiguredError):
+        TavilyWebSearchService().search("anything", 3)
+
+
+def test_tavily_reports_rate_limit_as_retryable(monkeypatch: Any) -> None:
+    """额度用尽/限流应归入可重试错误，而不是凭证错误。"""
+    monkeypatch.setattr(settings, "web_search_api_key", "test-key")
+    monkeypatch.setattr(
+        "app.services.web_search_service.httpx.post",
+        lambda *args, **kwargs: _TavilyResponse({}, status_code=429),
+    )
+
+    with pytest.raises(WebSearchError, match="额度"):
+        TavilyWebSearchService().search("anything", 3)
 
 
 def test_tool_returns_normalized_items(db_session: Session) -> None:
