@@ -37,3 +37,10 @@ data/
 .vscode/
 .idea/
 .DS_Store
+
+# 过程/规划/求职类文档（只在本地保留，不进仓库）
+/PROJECT_DEVELOPMENT.md
+docs/demo-script.md
+docs/frontend_business_api.md
+docs/interview-narrative.md
+docs/resume-update.md

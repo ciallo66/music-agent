@@ -19,15 +19,15 @@
 | 能力 | 需要的配置 | 官方入口 | 是否现在必须 |
 |---|---|---|---|
 | Agent 对话 | `DEEPSEEK_API_KEY` | [DeepSeek API Keys](https://platform.deepseek.com/api_keys) / [官方接入文档](https://api-docs.deepseek.com/) | 真实 AI 联调必须 |
-| Jamendo 导入 | `JAMENDO_CLIENT_ID` | [Jamendo Developer Portal](https://devportal.jamendo.com/) / [认证文档](https://developer.jamendo.com/v3.0/authentication) | 真实 100 条导入必须 |
+| 联网搜索 | `WEB_SEARCH_API_KEY` | [Tavily](https://tavily.com/) | 非必须；默认搜索源是抓取必应中国，不需要 key |
 | RAG 向量化 | `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL`、`EMBEDDING_MODEL` | 可选使用 [OpenAI API Keys](https://platform.openai.com/api-keys) / [Embedding 文档](https://developers.openai.com/api/docs/guides/embeddings) | 非必须；未配置时走文本检索兜底 |
 
 密钥填写位置：
 
-- 本地 Docker：`C:\Users\28265\Desktop\music-agent\.env.production`
-- 本地直接运行 FastAPI：`C:\Users\28265\Desktop\music-agent\backend\.env`
-- 服务器 Docker：计划放在 `/opt/music-agent/.env.production`
-- GitHub Actions（CI/CD 开发完成后）：[仓库 Actions Secrets](https://github.com/ciallo66/music-agent/settings/secrets/actions)
+- 本地 Docker：仓库根目录的 `.env.production`
+- 本地直接运行 FastAPI：`backend/.env`
+- 服务器 Docker：`/opt/music-agent/.env.production`
+- GitHub Actions：[仓库 Actions Secrets](https://github.com/ciallo66/music-agent/settings/secrets/actions)
 
 不要把任何 API Key、数据库密码或 SSH 私钥发到聊天中，也不要提交到 Git；只需要告诉开发者“已配置”即可。
 
@@ -68,11 +68,13 @@ docker compose logs -f backend
 
 ## 更新版本
 
-### GitHub Actions + GHCR
+### GitHub Actions 自动部署（`.github/workflows/publish-images.yml`）
 
-仓库中的 GitHub Actions 会在推送 `master` 后构建并推送两个镜像到 GHCR；服务器配置 `BACKEND_IMAGE`、`FRONTEND_IMAGE` 和 `FRONTEND_PORT=8080` 后执行 `docker compose pull` 与 `docker compose up -d`，由现有 Nginx 反向代理到 8080。
+推送 `master` 后自动执行：质量门禁（后端 ruff / mypy / pytest，前端 ESLint / Prettier / vue-tsc，任一步失败就不构建镜像、不部署）→ 构建后端、前端与 pgvector 三个镜像并推送到私有仓库 `docker.cnb.cool`（凭证用仓库 Secret）→ 通过 SSH 把 `docker-compose.yml` 同步到服务器 `/opt/music-agent` → 拉取新镜像 `up -d`，最后显式执行 `alembic upgrade head`。
 
-服务器使用镜像更新：
+> 后端容器启动时自身也会执行一次 `alembic upgrade head`（见 `backend/Dockerfile` 的 CMD），与部署步骤里的显式迁移互为兜底：数据库在独立 Docker volume 中，换镜像不会自动改表结构。
+
+服务器上手动使用镜像更新：
 
 ```bash
 docker compose --env-file .env.production pull

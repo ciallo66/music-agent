@@ -50,10 +50,11 @@ freshness=week              221 ms  返回 5 条
 
 | 配置 | 实现 | 适用 |
 |---|---|---|
+| `tavily` | `TavilyWebSearchService` | 官方 API：直接返回抽取好的网页正文（截断上限比抓取方案宽），需 `WEB_SEARCH_API_KEY` |
 | `bing_cn`（默认） | `BingCnWebSearchService` | 境内服务器：抓取 `cn.bing.com` 结果页 |
 | `duckduckgo` | `DuckDuckGoWebSearchService` | 境外服务器：走 `ddgs`（需自行安装该依赖） |
 
-换 Tavily / 博查只需新增一个实现类 + 在工厂里加一个分支，不动编排逻辑。
+再接新的搜索源只需新增一个实现类 + 在工厂 `build_web_search_provider()` 里加一个分支，不动编排逻辑。
 
 ## 数据流
 
@@ -62,7 +63,7 @@ freshness=week              221 ms  返回 5 条
    `WEB_SEARCH_MAX_RESULTS` 上限；
 3. `WebSearchProvider.search()` 执行搜索（默认必应中国）；
 4. 结果归一化成 `{"title", "url", "snippet"}`（识别到日期时额外带 `published`），
-   单条摘要截断到 `MAX_SNIPPET_CHARS`；
+   单条摘要截断到 `MAX_SNIPPET_CHARS`（Tavily 的正文更完整，用更宽的 `TAVILY_SNIPPET_CHARS`）；
 5. 整包结果仍由 `serialize_tool_result` 做整体截断；
 6. 结果作为 `tool` 消息写回上下文，模型据此作答。
 
@@ -73,6 +74,7 @@ freshness=week              221 ms  返回 5 条
 - **必应中国**：`day` / `week` / `month` 映射成结果页筛选参数 `filters=ex1:"ez1|ez2|ez3"`
   （`BING_FRESHNESS_FILTER`）；`year` 必应没有对应筛选值，因此不传参数。
 - **DuckDuckGo**：映射成 `timelimit=d|w|m|y`（`FRESHNESS_TIMELIMIT`）。
+- **Tavily**：映射成请求体的 `time_range`，四个取值一一对应（`TAVILY_TIME_RANGE`）。
 
 摘要开头的日期前缀（`December 12, 2025 - `、`1 day ago - `）会被抽到 `published` 字段，
 正文里不再保留这段噪音；`SYSTEM_PROMPT` 要求模型引用搜索时说明来源、日期只取 `published`，
@@ -99,16 +101,19 @@ freshness=week              221 ms  返回 5 条
 | 配置 | 默认 | 说明 |
 |---|---|---|
 | `WEB_SEARCH_ENABLED` | `true` | 关掉后工具仍可见，但调用会得到"未启用"的确定性错误 |
-| `WEB_SEARCH_PROVIDER` | `bing_cn` | `bing_cn` 或 `duckduckgo` |
+| `WEB_SEARCH_PROVIDER` | `bing_cn` | `tavily` / `bing_cn` / `duckduckgo` |
 | `WEB_SEARCH_BING_URL` | `https://cn.bing.com/search` | 必应搜索入口 |
 | `WEB_SEARCH_MARKET` | `zh-CN` | 必应 `mkt` / `setlang` |
 | `WEB_SEARCH_REGION` | `cn-zh` | DuckDuckGo 的地区参数 |
 | `WEB_SEARCH_MAX_RESULTS` | `5` | 单次搜索条数上限，同时约束模型传入的 `limit` |
 | `WEB_SEARCH_TIMEOUT_SECONDS` | `8` | 单次搜索超时 |
+| `WEB_SEARCH_API_KEY` | 空 | Tavily 必填；缺失或凭证无效时抛确定性错误，不重试 |
+| `WEB_SEARCH_TAVILY_URL` | `https://api.tavily.com/search` | Tavily 搜索入口 |
+| `WEB_SEARCH_TAVILY_DEPTH` | `basic` | `basic` 更快更省额度，`advanced` 抓取更深但更慢 |
 
 ## 依赖
 
-**不需要额外依赖**：抓取实现只用项目已有的 `httpx`。
+**不需要额外依赖**：必应抓取和 Tavily 调用都只用项目已有的 `httpx`。
 原先的 `ddgs==9.16.0` 已从 `pyproject.toml` 移除（连同它带入的 `click`、`primp`、`lxml`）；
 若要切回 DuckDuckGo，需自行 `pip install ddgs`。
 
@@ -118,6 +123,7 @@ freshness=week              221 ms  返回 5 条
 - **必应结果页解析**：标题/链接/摘要抽取、日期抽成 `published`、`limit` 生效、相对链接被跳过；
 - **结构变化可读报错**：解析不到结果时抛 `WebSearchError`（提示结构已变化），不静默返回空；
 - **freshness 映射**：验证 `filters=ex1:"ez2"` 这类参数真的透传到请求上；
+- **Tavily**：正文保留到更宽上限、缺 `WEB_SEARCH_API_KEY` 抛确定性错误、`freshness` 映射到 `time_range`、401 视为凭证无效、429 视为可重试；
 - **工厂选择**：配置切换后产出的实现类正确；
 - 未启用时抛确定性错误（不触发网络）；
 - 工具层：注入假搜索实现，验证参数透传、`limit` 被配置上限收敛、返回结构正确；
