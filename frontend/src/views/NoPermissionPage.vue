@@ -1,15 +1,14 @@
 <!-- 无权限页：普通账号访问 /admin 时给出明确说明与出路，而不是静默跳回首页。 -->
 <template>
   <section class="no-permission-page">
-    <div class="no-permission-card page-surface">
-      <span class="no-permission-icon" aria-hidden="true">⛨</span>
+    <div class="no-permission-card">
       <p class="eyebrow">管理后台</p>
       <h1>这个页面需要管理员账号</h1>
       <p class="description">
         内容库、收藏、歌单、个人分析与智能体对本账号全部开放； 数据维护入口只对内网管理员账号开放。
       </p>
       <div class="actions">
-        <router-link class="primary-link" to="/songs">返回内容库 <span>→</span></router-link>
+        <router-link class="primary-link" to="/songs">返回内容库</router-link>
         <button type="button" class="secondary-link" @click="switchAccount">切换账号</button>
       </div>
     </div>
@@ -39,89 +38,73 @@ async function switchAccount(): Promise<void> {
 }
 
 .no-permission-card {
-  width: min(100%, 620px);
-  padding: clamp(30px, 6vw, 60px);
-  text-align: center;
-}
-
-.no-permission-icon {
-  display: grid;
-  width: 62px;
-  height: 62px;
-  place-items: center;
-  margin: 0 auto 22px;
-  border: 1px solid rgba(169, 162, 255, 0.32);
-  border-radius: 20px;
-  color: var(--accent-purple, #a9a2ff);
-  background: rgba(169, 162, 255, 0.14);
-  font-size: 26px;
+  width: min(100%, 520px);
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .eyebrow {
-  margin: 0 0 12px;
-  color: var(--accent-purple, #a9a2ff);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 
 h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(24px, 4vw, 34px);
-  letter-spacing: -0.04em;
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
 }
 
 .description {
-  max-width: 440px;
-  margin: 16px auto 0;
+  max-width: 420px;
+  margin: 12px 0 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 26px;
+  gap: 8px;
+  margin-top: 24px;
 }
 
 .actions a,
 .actions button {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 32px;
   align-items: center;
   justify-content: center;
-  padding: 0 17px;
-  border-radius: 11px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
+  font-family: inherit;
+  font-size: var(--fs-xs);
   text-decoration: none;
 }
 
 .primary-link {
-  gap: 14px;
   color: var(--text-on-accent);
   background: var(--accent);
+}
+
+.primary-link:hover {
+  background: var(--accent-strong);
 }
 
 .secondary-link {
   border: 1px solid var(--border-strong);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  font-family: inherit;
 }
 
 .secondary-link:hover {
   color: var(--text);
-}
-
-.hint-note {
-  margin: 22px 0 0;
-  color: var(--text-muted);
-  font-size: 10px;
+  background: var(--surface-hover);
 }
 </style>

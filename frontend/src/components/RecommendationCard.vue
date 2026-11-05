@@ -1,73 +1,70 @@
-<!-- 结构化推荐结果卡片：展示推荐理由、标签、适用场景和可执行操作。 -->
+<!-- 结构化推荐结果：一块标题 + 理由 + 一组内容行。
+     不再用「卡片里再套卡片」，行与行之间靠分隔线区分。 -->
 <template>
-  <article class="recommendation-card page-surface">
-    <header class="card-header">
-      <div>
-        <p class="card-eyebrow">为你推荐</p>
+  <article class="recommendation">
+    <header class="rec-header">
+      <div class="rec-heading">
         <h3>{{ card.title }}</h3>
-      </div>
-      <div class="card-tags" v-if="card.tags && card.tags.length">
-        <span v-for="tag in card.tags" :key="tag" class="card-tag">{{ tag }}</span>
+        <p v-if="card.tags.length" class="rec-tags">{{ card.tags.join(' · ') }}</p>
       </div>
     </header>
 
-    <p class="card-reason">{{ card.reason }}</p>
-    <div v-if="card.scenario" class="card-scenario">
-      <span class="scenario-icon">🎯</span>
-      <span>适用场景：{{ card.scenario }}</span>
-    </div>
+    <p class="rec-reason">{{ card.reason }}</p>
+    <p v-if="card.scenario" class="rec-scenario">适用场景：{{ card.scenario }}</p>
 
-    <ul class="card-tracklist">
-      <li v-for="item in card.items" :key="item.id" class="track-row">
-        <router-link :to="`/songs/${item.id}`" class="track-link">
-          <SongCover :song="item" size="sm" />
-          <div class="track-meta">
-            <strong>{{ item.title }}</strong>
-            <small>{{ item.artist.name }} · {{ item.genre || '未知风格' }}</small>
-          </div>
-          <div class="track-meta-right">
-            <span class="track-score" v-if="item.match_score !== null"
-              >{{ Math.round(item.match_score * 100) }}%</span
+    <ul class="rec-list">
+      <li v-for="item in card.items" :key="item.id" class="rec-row">
+        <div class="rec-main">
+          <router-link class="rec-link" :to="`/songs/${item.id}`">
+            <SongCover :song="item" size="sm" />
+            <span class="rec-copy">
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.artist.name }} · {{ item.genre || '未知风格' }}</small>
+            </span>
+            <span v-if="item.match_score !== null" class="rec-score numeric">
+              {{ Math.round(item.match_score * 100) }}<i>%</i>
+            </span>
+          </router-link>
+          <p class="rec-item-reason">{{ item.reason }}</p>
+          <p class="rec-features">
+            <span v-if="item.bpm">{{ Math.round(item.bpm) }} BPM</span>
+            <span v-if="item.energy !== null">能量 {{ formatPercent(item.energy) }}</span>
+            <span v-if="item.valence !== null">明亮度 {{ formatPercent(item.valence) }}</span>
+            <span v-if="item.danceability !== null" :title="danceabilityHint(item.danceability)"
+              >律动 {{ danceabilityLabel(item.danceability) }}</span
             >
-            <span class="track-reason-mini">{{ item.reason }}</span>
-          </div>
-        </router-link>
-        <div class="feature-list" aria-label="内容特征">
-          <span v-if="item.bpm">节奏 {{ Math.round(item.bpm) }} BPM</span>
-          <span v-if="item.energy !== null">能量 {{ formatPercent(item.energy) }}</span>
-          <span v-if="item.valence !== null">情绪明亮度 {{ formatPercent(item.valence) }}</span>
-          <span v-if="item.danceability !== null" :title="danceabilityHint(item.danceability)"
-            >律动 {{ danceabilityLabel(item.danceability) }}</span
-          >
+          </p>
         </div>
-        <div class="track-actions">
+        <div class="rec-actions">
           <button
             v-for="action in feedbackActions"
             :key="action.action"
             type="button"
-            class="track-action"
-            :class="`track-action-${action.action}`"
+            class="text-button"
+            :class="{ 'is-active': feedbackStore.mine[item.id] === action.action }"
             :title="action.label"
+            :aria-pressed="feedbackStore.mine[item.id] === action.action"
             @click="onFeedback(item.id, action.action)"
           >
-            {{ action.action === 'like' ? '喜欢' : '不合适' }}
+            {{ action.label }}
           </button>
-          <router-link class="detail-link" :to="`/songs/${item.id}`">查看分析</router-link>
-          <el-button size="small" type="primary" @click="onAddToCollection(item.id)"
-            >加入集合</el-button
-          >
+          <router-link class="text-button" :to="`/songs/${item.id}`">查看分析</router-link>
+          <button type="button" class="text-button" @click="onAddToCollection(item.id)">
+            加入集合
+          </button>
         </div>
       </li>
     </ul>
 
-    <footer class="card-footer">
-      <el-button size="small" @click="$emit('refresh')">换一批</el-button>
-      <el-button
-        size="small"
-        type="primary"
+    <footer class="rec-footer">
+      <span>匹配度来自内容特征与你的历史反馈，不是随机结果。</span>
+      <button
+        type="button"
+        class="text-button text-button--accent"
         @click="$emit('openAgent', { type: 'recommendation', query: card.title })"
-        >在智能体中继续</el-button
       >
+        在智能体中继续
+      </button>
     </footer>
   </article>
 </template>
@@ -85,7 +82,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  refresh: []
   feedback: [payload: { songId: number; action: string }]
   openAgent: [payload: { type: string; query: string }]
 }>()
@@ -116,235 +112,190 @@ function onAddToCollection(songId: number) {
 </script>
 
 <style scoped>
-.recommendation-card {
-  padding: 22px;
-  margin-bottom: 22px;
+.recommendation {
+  padding-top: 2px;
 }
 
-.card-header {
+.rec-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.card-eyebrow {
+.rec-heading h3 {
   margin: 0;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.rec-tags {
+  margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: var(--fs-xs);
 }
 
-.card-header h3 {
-  margin: 6px 0 0;
-  font-size: 18px;
-}
-
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.card-tag {
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--accent-strong);
-  font-size: 11px;
-}
-
-.card-reason {
-  margin: 0 0 12px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.card-scenario {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  background: rgba(110, 231, 210, 0.06);
-}
-
-.card-tracklist {
-  list-style: none;
-  margin: 18px 0;
+.text-button {
+  flex: 0 0 auto;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border: 0;
+  color: var(--text-muted);
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
 }
 
-.track-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(17, 28, 47, 0.48);
+.text-button:hover {
+  color: var(--text);
 }
 
-.track-link {
+.text-button--accent:hover {
+  color: var(--accent-strong);
+}
+
+/* 已提交的反馈保持高亮，用户不用回忆自己点过什么 */
+.text-button.is-active {
+  color: var(--accent-strong);
+}
+
+.rec-reason {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+
+.rec-scenario {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.rec-list {
+  margin: 14px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.rec-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rec-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.rec-link {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: inherit;
   text-decoration: none;
 }
 
-.track-number {
-  width: 34px;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.track-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
+.rec-copy {
   min-width: 0;
+  flex: 1;
 }
 
-.track-meta strong {
-  font-size: 13px;
+.rec-copy strong,
+.rec-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rec-copy strong {
   color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 500;
 }
 
-.track-meta small {
+.rec-copy small {
+  margin-top: 2px;
   color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.rec-score {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+}
+
+.rec-score i {
+  color: var(--text-muted);
+  font-style: normal;
   font-size: 11px;
 }
 
-.track-meta-right {
+.rec-item-reason {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.rec-features {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.track-score {
-  color: var(--accent-strong);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.track-reason-mini {
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
-.track-actions {
+.rec-actions {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 2px;
 }
 
-.feature-list {
+.rec-footer {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-left: 46px;
-}
-
-.feature-list span {
-  padding: 4px 8px;
-  border-radius: 7px;
-  color: var(--text-secondary);
-  background: rgba(110, 231, 210, 0.08);
-  font-size: 10px;
-}
-
-.track-action {
-  height: 32px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.detail-link {
-  display: inline-flex;
-  height: 32px;
   align-items: center;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.detail-link:hover {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.track-action:hover {
-  background: var(--surface-hover);
-}
-
-.track-action-like:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
-}
-
-.track-action-dislike:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.track-action-seen:hover {
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-}
-
-.track-action-similar:hover {
-  border-color: var(--accent-purple);
-  color: var(--accent-purple);
-}
-
-.track-action-less:hover {
-  border-color: var(--warning);
-  color: var(--warning);
-}
-
-.card-footer {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 
-@media (max-width: 640px) {
-  .card-header {
+@media (max-width: 760px) {
+  .rec-row {
     flex-direction: column;
+    gap: 8px;
   }
 
-  .track-meta-right {
+  .rec-actions {
+    justify-content: flex-start;
+    gap: 16px;
+  }
+
+  /* 触屏上文字按钮也要有 32px 的点击高度 */
+  .rec-actions .text-button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+  }
+
+  .rec-footer span {
     display: none;
-  }
-
-  .card-footer {
-    flex-direction: column;
-    align-items: stretch;
   }
 }
 </style>

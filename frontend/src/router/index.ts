@@ -85,6 +85,11 @@ const router = createRouter({
               name: 'admin-users',
               component: () => import('../views/admin/AdminUsersPage.vue'),
             },
+            {
+              // 后台内部的未知路径回到概览，避免只剩一个空壳
+              path: ':pathMatch(.*)*',
+              redirect: '/admin',
+            },
           ],
         },
         {
@@ -96,6 +101,12 @@ const router = createRouter({
           path: 'no-permission',
           name: 'no-permission',
           component: () => import('../views/NoPermissionPage.vue'),
+        },
+        {
+          // 兜底：未知路径给出 404 说明，避免外壳里一片空白
+          path: ':pathMatch(.*)*',
+          name: 'not-found',
+          component: () => import('../views/NotFoundPage.vue'),
         },
       ],
     },

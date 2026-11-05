@@ -118,30 +118,31 @@ onMounted(load)
 <style scoped>
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
 .metric-card {
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 .metric-card p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .metric-card strong {
   display: block;
-  margin: 6px 0 2px;
+  margin: 4px 0 2px;
   color: var(--text);
-  font-size: 22px;
+  font-size: var(--fs-xl);
+  font-weight: 600;
 }
 .metric-card small {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 .panel-grid {
   display: grid;
@@ -151,13 +152,14 @@ onMounted(load)
 .panel {
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 .panel h3 {
   margin: 0 0 12px;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 .dist-list,
 .health-list {
@@ -173,18 +175,18 @@ onMounted(load)
   align-items: center;
   gap: 10px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .dist-track {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-hover);
   overflow: hidden;
 }
 .dist-track span {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--accent);
 }
 .dist-list strong {
@@ -195,7 +197,7 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .health-list strong {
   color: var(--text);
@@ -203,16 +205,22 @@ onMounted(load)
 .muted {
   margin: 12px 0 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .retry-button {
   padding: 6px 12px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   background: transparent;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

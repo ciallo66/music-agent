@@ -1,11 +1,7 @@
 <!-- 收藏页面：加载用户收藏并复用信息列表进行查看或取消收藏。 -->
 <template>
   <section class="fav-page">
-    <PageHeader
-      eyebrow="我的收藏"
-      title="我的收藏"
-      subtitle="把打动你的声音留在这里，随时回来重温"
-    />
+    <PageHeader title="我的收藏" subtitle="把打动你的声音留在这里，随时回来重温" />
     <!-- 加载慢（>150ms）才显示骨架，避免骨架一闪就被真实内容替换 -->
     <SkeletonList v-if="showSkeleton" :rows="5" status="正在加载收藏" />
     <div v-else-if="loadFailed" class="state-surface page-surface">
@@ -81,14 +77,16 @@ onMounted(load)
 }
 .browse-link {
   display: inline-flex;
-  min-height: 38px;
+  min-height: 32px;
   align-items: center;
-  padding: 0 16px;
-  border-radius: 10px;
-  color: var(--text-on-accent);
-  background: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-xs);
   text-decoration: none;
+}
+.browse-link:hover {
+  background: var(--surface-hover);
 }
 </style>

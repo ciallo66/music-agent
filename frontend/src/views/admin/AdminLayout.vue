@@ -4,7 +4,7 @@
 <template>
   <div class="admin-shell">
     <header class="admin-top">
-      <span class="admin-mark" aria-hidden="true">▣</span>
+      <AppIcon name="shield" :size="16" class="admin-mark" />
       <div class="admin-title">
         <strong>管理控制台</strong>
         <small>数据维护 · 账号管理 · 导入任务</small>
@@ -20,7 +20,7 @@
       <aside class="admin-side">
         <nav class="admin-nav">
           <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="admin-link">
-            <span aria-hidden="true">{{ item.icon }}</span>
+            <AppIcon :name="item.icon" :size="15" class="admin-link-icon" />
             <span>{{ item.label }}</span>
           </router-link>
         </nav>
@@ -30,10 +30,11 @@
           <a
             class="admin-link admin-back"
             href="/"
+            aria-label="返回前台工作区"
             :class="{ 'admin-link-loading': leavingConsole }"
             @click="leaveConsole"
           >
-            <span aria-hidden="true">←</span>
+            <AppIcon name="arrow-left" :size="14" />
             <span>返回前台工作区</span>
           </a>
         </div>
@@ -53,6 +54,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
+import AppIcon from '../../components/AppIcon.vue'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
@@ -81,10 +83,10 @@ function leaveConsole(event: MouseEvent): void {
 }
 
 const navItems = [
-  { to: '/admin', label: '概览', icon: '◧' },
-  { to: '/admin/catalog', label: '曲目管理', icon: '♫' },
-  { to: '/admin/artists', label: '歌手管理', icon: '☻' },
-  { to: '/admin/users', label: '账号管理', icon: '⚇' },
+  { to: '/admin', label: '概览', icon: 'chart' },
+  { to: '/admin/catalog', label: '曲目管理', icon: 'library' },
+  { to: '/admin/artists', label: '歌手管理', icon: 'user' },
+  { to: '/admin/users', label: '账号管理', icon: 'shield' },
 ]
 </script>
 
@@ -104,18 +106,15 @@ const navItems = [
   flex-shrink: 0;
   padding: 12px clamp(16px, 2.4vw, 26px);
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(30, 45, 70, 0.9), rgba(19, 29, 47, 0.9));
+  background: var(--bg-elevated);
 }
 .admin-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
   flex-shrink: 0;
-  place-items: center;
-  border-radius: 10px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  font-size: 15px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface);
 }
 .admin-title strong,
 .admin-title small {
@@ -131,13 +130,12 @@ const navItems = [
   font-size: 11px;
 }
 .admin-mode {
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 209, 128, 0.4);
-  border-radius: 999px;
-  color: #ffd180;
-  background: rgba(255, 209, 128, 0.12);
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border: 1px solid rgba(201, 162, 95, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  background: rgba(201, 162, 95, 0.1);
+  font-size: var(--fs-xs);
 }
 .admin-user {
   display: flex;
@@ -154,12 +152,12 @@ const navItems = [
   font-size: 11px;
 }
 .admin-exit {
-  padding: 7px 13px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 12px;
+  background: transparent;
+  font-size: var(--fs-xs);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -174,12 +172,12 @@ const navItems = [
 }
 .admin-side {
   display: flex;
-  width: 220px;
+  width: 208px;
   flex-shrink: 0;
   flex-direction: column;
-  padding: 14px 12px;
+  padding: 12px 10px;
   border-right: 1px solid var(--border);
-  background: rgba(12, 20, 34, 0.72);
+  background: var(--bg-elevated);
 }
 .admin-nav {
   display: flex;
@@ -193,30 +191,36 @@ const navItems = [
   border-top: 1px solid var(--border);
 }
 .admin-back {
-  color: #e8ac60;
-  background: rgba(232, 172, 96, 0.08);
+  color: var(--text-secondary);
+  background: var(--surface);
 }
 .admin-back:hover {
-  color: #f3bd7d;
-  background: rgba(232, 172, 96, 0.16);
+  color: var(--text);
+  background: var(--surface-hover);
 }
 .admin-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 11px;
-  border-radius: 10px;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   text-decoration: none;
+}
+.admin-link-icon {
+  color: var(--text-muted);
 }
 .admin-link:hover {
   color: var(--text);
   background: var(--surface-hover);
 }
 .admin-link.router-link-exact-active {
+  color: var(--text);
+  background: var(--surface-raised);
+}
+.admin-link.router-link-exact-active .admin-link-icon {
   color: var(--accent);
-  background: var(--accent-soft);
 }
 .admin-link-loading {
   cursor: wait;
@@ -234,17 +238,69 @@ const navItems = [
   align-items: baseline;
   gap: 8px;
   margin: 0 0 18px;
-  padding: 11px 14px;
-  border: 1px solid rgba(255, 209, 128, 0.32);
-  border-radius: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--warning);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: rgba(255, 209, 128, 0.1);
-  font-size: 12px;
+  background: var(--surface);
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .admin-readonly strong {
-  color: #ffd180;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  color: var(--warning);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+/* 窄屏：侧栏折成顶部一行，把整个宽度让给表格 */
+@media (max-width: 800px) {
+  .admin-body {
+    flex-direction: column;
+  }
+
+  .admin-side {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .admin-link {
+    flex-shrink: 0;
+    padding: 6px;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .admin-side-bottom {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .admin-back {
+    white-space: nowrap;
+  }
+
+  /* 窄屏只保留返回图标，给导航腾出宽度 */
+  .admin-back span:last-child {
+    display: none;
+  }
+
+  .admin-main {
+    overflow-x: auto;
+    padding: 16px 14px 32px;
+  }
 }
 </style>

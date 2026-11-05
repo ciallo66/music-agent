@@ -1,4 +1,4 @@
-<!-- 页面内返回入口：详情/子页面左上角一个胶囊按钮，和搜索框同一套造型。
+<!-- 页面内返回入口：详情/子页面左上角一个轻量按钮，和顶部搜索框同一套造型。
      优先回退到上一页（保留了从内容库点进来的来路），没有历史时退回语义父级页面，
      直接贴链接打开也不会变成死按钮。 -->
 <template>
@@ -9,7 +9,7 @@
     :aria-label="`返回${label}`"
     @click="goBack"
   >
-    <span class="back-arrow" aria-hidden="true">←</span>
+    <AppIcon name="arrow-left" :size="14" />
     <span>{{ label }}</span>
   </button>
 </template>
@@ -17,6 +17,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{
   /** 按钮上显示的目标名，例如「内容库」 */
@@ -41,38 +42,28 @@ function goBack(): void {
 </script>
 
 <style scoped>
-/* 与顶栏搜索框同款造型：深底、细边框、悬停高亮，尺寸略小一档 */
 .back-link {
   display: inline-flex;
+  height: 30px;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   margin-bottom: 14px;
-  padding: 7px 13px 7px 10px;
+  padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--surface);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   cursor: pointer;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
 }
 .back-link:hover {
-  border-color: rgba(110, 231, 210, 0.55);
+  border-color: var(--border-strong);
   color: var(--text);
   background: var(--surface-hover);
-  transform: translateX(-2px);
 }
 .back-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-.back-arrow {
-  font-size: 14px;
-  line-height: 1;
 }
 </style>

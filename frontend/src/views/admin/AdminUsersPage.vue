@@ -44,7 +44,7 @@
         <el-table-column label="注册时间" min-width="150">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="220">
           <template #default="{ row }">
             <el-button
               size="small"
@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import PageHeader from '../../components/PageHeader.vue'
 import StatePanel from '../../components/StatePanel.vue'
 import { listAdminUsers, updateAdminUser, type AdminUserItem } from '../../api/admin'
@@ -155,8 +156,21 @@ function toggleRole(user: AdminUserItem): void {
   void patch(user, { role: user.role === 'admin' ? 'user' : 'admin' })
 }
 
-function toggleStatus(user: AdminUserItem): void {
-  void patch(user, { status: user.status === 'active' ? 'disabled' : 'active' })
+// 禁用账号会直接影响登录，先确认再提交；启用是恢复性操作，不打断。
+async function toggleStatus(user: AdminUserItem): Promise<void> {
+  if (user.status === 'active') {
+    try {
+      await ElMessageBox.confirm(`禁用后「${user.username}」将无法登录。`, '禁用账号', {
+        type: 'warning',
+        confirmButtonText: '禁用',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger',
+      })
+    } catch {
+      return
+    }
+  }
+  await patch(user, { status: user.status === 'active' ? 'disabled' : 'active' })
 }
 
 function formatTime(value: string): string {

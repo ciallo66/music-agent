@@ -1,34 +1,41 @@
-<!-- 登录 / 注册：左侧品牌区只做背景氛围，右侧表单卡片固定宽度并垂直居中。
+<!-- 登录 / 注册：左侧说明产品能做什么，右侧是固定宽度的表单。
      布局要点：表单区宽度恒定、演示入口常驻，切换登录/注册时卡片高度不跳动。 -->
 <template>
   <main class="login-page">
-    <section class="brand-panel" aria-hidden="true">
-      <div class="brand-lockup">
-        <span class="brand-wave"><i></i><i></i><i></i><i></i></span>
-        <span><strong>智能数据平台</strong><small>数据检索与智能分析</small></span>
-      </div>
-      <div class="brand-halo"></div>
-      <div class="brand-copy">
-        <p>智能协作平台</p>
-        <h1>让数据进入对话<br />让智能体真正工作</h1>
-        <span>结构化检索、可解释分析、对话式取数——示例数据均可在线体验。</span>
-        <ul class="brand-points">
-          <li><i>✦</i>智能体可直接调用数据工具</li>
-          <li><i>▦</i>音频特征与推荐理由可追溯</li>
-          <li><i>◫</i>个人分析由真实行为数据生成</li>
-        </ul>
+    <section class="brand-panel">
+      <div class="brand-inner">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="brand-name">
+            <strong>智能数据平台</strong>
+            <small>数据检索与智能分析</small>
+          </span>
+        </div>
+
+        <div class="brand-copy">
+          <h1>检索、分析、问答，<br />在同一处完成</h1>
+          <p class="brand-lead">
+            以音乐数据为示例：结构化特征、可解释推荐和对话式取数，所有结果都能回到原始字段核对。
+          </p>
+          <ul class="brand-points">
+            <li><AppIcon name="check" :size="14" />智能体调用数据工具，调用过程可见</li>
+            <li><AppIcon name="check" :size="14" />推荐理由与音频特征可追溯到数据源</li>
+            <li><AppIcon name="check" :size="14" />个人分析只使用你自己的行为记录</li>
+          </ul>
+        </div>
+
+        <p class="brand-source">数据来源：AcousticBrainz · MusicBrainz · 不托管音频</p>
       </div>
     </section>
 
     <section class="auth-panel">
       <div class="auth-inner">
         <header class="auth-copy">
-          <p>欢迎使用</p>
           <h2>{{ panelTitle }}</h2>
           <span>{{ panelDescription }}</span>
         </header>
 
-        <div class="auth-card page-surface">
+        <div class="auth-card">
           <div class="mode-switch" role="tablist" aria-label="登录或注册">
             <button
               v-for="item in modes"
@@ -56,7 +63,6 @@
                 maxlength="18"
                 autocomplete="username"
                 placeholder="4–18 位，支持字母数字下划线"
-                size="large"
               />
             </el-form-item>
             <el-form-item label="密码" prop="password">
@@ -66,7 +72,6 @@
                 :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
                 placeholder="4–18 位"
                 show-password
-                size="large"
                 type="password"
                 @keyup.enter="submit"
               />
@@ -90,9 +95,9 @@
             native-type="button"
             @click="enterDemo"
           >
-            一键进入演示账号
+            进入演示账号
           </el-button>
-          <p class="demo-hint">无需注册即可体验完整功能：收藏、歌单、反馈与智能体对话。</p>
+          <p class="demo-hint">无需注册即可体验收藏、歌单、反馈与智能体对话。</p>
         </div>
 
         <p class="security-note">登录状态通过安全令牌维护，请勿在公共设备保存密码。</p>
@@ -105,6 +110,7 @@
 import { computed, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '../components/AppIcon.vue'
 import { useAuthStore } from '../stores/auth'
 import { showError, showSuccess } from '../utils/feedback'
 
@@ -205,271 +211,242 @@ async function submit(): Promise<void> {
   display: grid;
   min-height: 100vh;
   /* 品牌区弹性、表单区固定：表单卡片不会因为屏宽变化而拉出一片空白 */
-  grid-template-columns: minmax(0, 1fr) clamp(460px, 44vw, 620px);
+  grid-template-columns: minmax(0, 1fr) clamp(400px, 40vw, 520px);
   background: var(--bg);
 }
+
+/* 左侧：纯文字说明，没有光晕、插画和大标题字效 */
 .brand-panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
-  padding: clamp(32px, 4.4vw, 64px);
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-  background: linear-gradient(150deg, rgba(31, 50, 78, 0.92), rgba(17, 26, 45, 0.94));
-}
-.brand-lockup {
-  position: relative;
-  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 12px;
+  padding: clamp(32px, 6vw, 80px);
+  border-right: 1px solid var(--border);
+  background: var(--bg-elevated);
 }
-.brand-lockup > span:last-child strong,
-.brand-lockup > span:last-child small {
-  display: block;
-}
-.brand-lockup strong {
-  color: var(--text);
-  font-size: 15px;
-}
-.brand-lockup small {
-  margin-top: 3px;
-  color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
-.brand-wave {
+
+.brand-inner {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: 100%;
+  max-width: 520px;
+  flex-direction: column;
+  gap: clamp(32px, 6vh, 72px);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  display: flex;
+  width: 32px;
+  height: 32px;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  border: 1px solid rgba(110, 231, 210, 0.3);
-  border-radius: 14px;
-  background: var(--accent-soft);
+  gap: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
-.brand-wave i {
-  width: 3px;
-  border-radius: 4px;
+
+.brand-mark i {
+  width: 2px;
+  border-radius: 1px;
   background: var(--accent);
 }
-.brand-wave i:nth-child(1) {
-  height: 10px;
+
+.brand-mark i:nth-child(1) {
+  height: 8px;
 }
-.brand-wave i:nth-child(2) {
-  height: 22px;
-}
-.brand-wave i:nth-child(3) {
+.brand-mark i:nth-child(2) {
   height: 16px;
 }
-.brand-wave i:nth-child(4) {
-  height: 7px;
+.brand-mark i:nth-child(3) {
+  height: 12px;
 }
-/* 柔光背景：填满品牌区，避免大片纯色显得空 */
-.brand-halo {
-  position: absolute;
-  top: 18%;
-  left: -12%;
-  width: min(78%, 720px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 62% 38%, rgba(110, 231, 210, 0.22), transparent 58%),
-    radial-gradient(circle at 38% 66%, rgba(169, 162, 255, 0.18), transparent 60%);
-  filter: blur(6px);
-  pointer-events: none;
+.brand-mark i:nth-child(4) {
+  height: 5px;
 }
-.brand-copy {
-  position: relative;
-  z-index: 2;
-  max-width: 620px;
+
+.brand-name strong,
+.brand-name small {
+  display: block;
 }
-.brand-copy p,
-.auth-copy p {
-  margin: 0 0 14px;
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
+
+.brand-name strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
+
+.brand-name small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
 .brand-copy h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(34px, 3.6vw, 54px);
-  line-height: 1.14;
-  letter-spacing: -0.04em;
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
-.brand-copy > span {
-  display: block;
-  max-width: 520px;
-  margin-top: 20px;
+
+.brand-lead {
+  max-width: 460px;
+  margin: 16px 0 0;
   color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.9;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
 }
+
 .brand-points {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 26px 0 0;
   padding: 0;
   list-style: none;
 }
+
 .brand-points li {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
 }
-.brand-points i {
-  display: grid;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 9px;
+
+.brand-points :deep(.app-icon) {
+  margin-top: 3px;
   color: var(--accent);
-  background: rgba(255, 255, 255, 0.04);
-  font-style: normal;
-  font-size: 12px;
 }
+
+.brand-source {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* 右侧：固定宽度表单 */
 .auth-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(28px, 3.2vw, 48px);
-  background: rgba(12, 20, 35, 0.44);
+  padding: clamp(24px, 4vw, 56px);
 }
-/* 表单列宽固定，卡片与文案左对齐同一条竖线 */
+
 .auth-inner {
   width: 100%;
-  max-width: 460px;
+  max-width: 340px;
 }
-.auth-copy {
-  margin-bottom: 22px;
-}
+
 .auth-copy h2 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(24px, 2.4vw, 32px);
-  letter-spacing: -0.03em;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.auth-copy > span {
+
+.auth-copy span {
   display: block;
-  min-height: 18px;
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
+
 .auth-card {
-  padding: 26px;
+  margin-top: 22px;
 }
-/* 两个模式就两列：多出来的列会让按钮挤在左边、右侧留白 */
+
 .mode-switch {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  margin-bottom: 22px;
-  padding: 4px;
+  display: flex;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 2px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(11, 21, 37, 0.5);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
+
 .mode-switch button {
-  padding: 10px 8px;
+  flex: 1;
+  height: 30px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 3px;
   color: var(--text-muted);
   background: transparent;
+  font-size: var(--fs-xs);
   cursor: pointer;
-  font-size: 12px;
-  transition:
-    color 0.18s ease,
-    background 0.18s ease;
 }
-.mode-switch button:hover:not(.active) {
+
+.mode-switch button:hover {
   color: var(--text);
 }
+
 .mode-switch button.active {
-  color: var(--text-on-accent);
-  background: var(--accent);
-  box-shadow: 0 7px 18px rgba(22, 186, 165, 0.18);
-  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-raised);
 }
+
 .submit-button {
   width: 100%;
-  height: 44px;
   margin-top: 4px;
 }
+
 .demo-divider {
   position: relative;
-  margin: 20px 0 14px;
+  margin: 22px 0;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: center;
 }
-.demo-divider::before,
-.demo-divider::after {
+
+.demo-divider::before {
   position: absolute;
   top: 50%;
-  width: calc(50% - 18px);
-  height: 1px;
-  background: var(--border);
+  left: 0;
+  width: 100%;
+  border-top: 1px solid var(--border);
   content: '';
 }
-.demo-divider::before {
-  left: 0;
+
+.demo-divider span {
+  position: relative;
+  padding: 0 8px;
+  background: var(--bg);
 }
-.demo-divider::after {
-  right: 0;
-}
-/* 次要动作：宽度与主按钮一致，避免卡片内部左右不齐 */
+
 .demo-button {
   width: 100%;
-  height: 42px;
 }
+
 .demo-hint {
   margin: 10px 0 0;
   color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.7;
-  text-align: center;
-}
-.security-note {
-  margin: 18px 0 0;
-  color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   line-height: 1.6;
-  text-align: center;
 }
-@media (max-width: 1040px) {
-  .login-page {
-    grid-template-columns: minmax(0, 1fr) clamp(420px, 52vw, 560px);
-  }
+
+.security-note {
+  margin: 24px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
 }
-@media (max-width: 880px) {
+
+@media (max-width: 900px) {
   .login-page {
-    display: block;
-    min-height: 100dvh;
+    grid-template-columns: 1fr;
   }
+
   .brand-panel {
-    gap: 26px;
-    padding: 30px 24px 38px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .brand-copy h1 {
-    font-size: clamp(30px, 7vw, 42px);
-  }
-  .brand-points {
     display: none;
-  }
-  .auth-panel {
-    padding: 32px 20px 48px;
   }
 }
 </style>

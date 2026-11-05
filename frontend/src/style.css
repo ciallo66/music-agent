@@ -1,48 +1,70 @@
+/*
+ * 全局设计令牌与 Element Plus 主题覆盖。
+ *
+ * 视觉原则（详见 docs/frontend-visual.md）：
+ * 1. 中性底色 + 单一强调色，不出现紫/青渐变的“氛围光”；
+ * 2. 层级靠边框、底色和字号，不靠大阴影和玻璃模糊；
+ * 3. 圆角只保留三档（4 / 8 / 12），不再到处 16~20px；
+ * 4. 正文最小 12px，说明性文字最大不超过 13px，不使用 9~10px 的装饰性小字。
+ */
 :root {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    'PingFang SC',
-    'Microsoft YaHei',
-    sans-serif;
-  color: #f7f9ff;
-  background: #101827;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  --bg: #101827;
-  --bg-elevated: #172238;
-  --surface: rgba(29, 42, 65, 0.72);
-  --surface-solid: #202e48;
-  --surface-raised: rgba(39, 54, 82, 0.82);
-  --surface-hover: rgba(50, 69, 102, 0.9);
-  --border: rgba(190, 211, 255, 0.16);
-  --border-strong: rgba(196, 215, 255, 0.3);
-  --text: #f7f9ff;
-  --text-on-accent: #0c1721;
-  --text-secondary: #c6d0e3;
-  --text-muted: #91a0bb;
-  --accent: #6ee7d2;
-  --accent-deep: #38bfae;
-  --accent-strong: #95f4e3;
-  --accent-soft: rgba(110, 231, 210, 0.14);
-  --accent-purple: #a9a2ff;
-  --accent-blue: #70b7ff;
-  --chart-border: rgba(255, 255, 255, 0.12);
-  --chart-border-strong: rgba(255, 255, 255, 0.2);
-  --chart-accent-soft: rgba(110, 231, 210, 0.08);
-  --chart-accent-fill: rgba(110, 231, 210, 0.24);
-  --danger: #ff8795;
-  --warning: #ffc875;
-  --shadow: 0 22px 55px rgba(4, 10, 24, 0.3);
-  --shadow-soft: 0 12px 32px rgba(4, 10, 24, 0.2);
-  --radius: 18px;
+  color-scheme: dark;
+
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  --font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* 中性色：同一色相，只靠明度分层 */
+  --bg: #0b0c0e;
+  --bg-elevated: #101113;
+  --surface: #141519;
+  --surface-solid: #17181c;
+  --surface-raised: #1c1d22;
+  --surface-hover: #202127;
+  --border: #25272d;
+  --border-strong: #3a3c44;
+
+  --text: #ececee;
+  --text-secondary: #b6b8be;
+  --text-muted: #85878f;
+  --text-on-accent: #191307;
+
+  /* 唯一强调色：暖琥珀。只用于交互、选中态和关键数字 */
+  --accent: #d8a25e;
+  --accent-strong: #e7b87c;
+  --accent-deep: #b8833f;
+  --accent-soft: rgba(216, 162, 94, 0.12);
+
+  /* 语义色只表达状态，不做装饰 */
+  --danger: #d9736a;
+  --warning: #c9a25f;
+  --success: #7fa87a;
+
+  --chart-border: rgba(255, 255, 255, 0.08);
+  --chart-border-strong: rgba(255, 255, 255, 0.16);
+  --chart-accent-soft: rgba(216, 162, 94, 0.06);
+  --chart-accent-fill: rgba(216, 162, 94, 0.18);
+
+  /* 阴影只留给浮层（弹窗、下拉），页面容器一律不用 */
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.46);
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.3);
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+
   --page-gutter: clamp(20px, 3.2vw, 48px);
   --content-width: 1440px;
-  /* 内容区最小高度：加载骨架、真实列表、空态都按这个高度占位。
+  /* 内容区最小高度：加载骨架、真实列表、空态都按这个高度占位，
      三者高度接近，页面切换/数据到达时就不会「先撑很高再塌下来」地闪一下。 */
   --content-min-height: 420px;
 }
@@ -61,10 +83,13 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 4% 4%, rgba(68, 208, 221, 0.22), transparent 30%),
-    radial-gradient(circle at 96% 0%, rgba(147, 124, 246, 0.24), transparent 32%),
-    linear-gradient(145deg, #18263b 0%, #101827 48%, #1b1d3b 100%);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -78,16 +103,25 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+button {
+  color: inherit;
+}
+
 button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline-offset: 2px;
+}
+
+::selection {
+  color: #16120b;
+  background: rgba(216, 162, 94, 0.75);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(134, 159, 196, 0.52) transparent;
+  scrollbar-color: rgba(133, 135, 143, 0.5) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -102,54 +136,103 @@ a:focus-visible,
 *::-webkit-scrollbar-thumb {
   min-height: 44px;
   border: 3px solid transparent;
-  border-radius: 999px;
-  background: rgba(134, 159, 196, 0.52);
+  border-radius: var(--radius-sm);
+  background: rgba(133, 135, 143, 0.5);
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(164, 186, 220, 0.72);
+  background: rgba(160, 162, 170, 0.7);
   background-clip: padding-box;
 }
 
-::selection {
-  color: #07141a;
-  background: rgba(110, 231, 210, 0.82);
+/* ── 通用容器 ────────────────────────────────────────────────
+   一整页只有一种容器语言：实色底 + 1px 边框 + 8px 圆角，没有渐变和阴影。
+   需要强调的内容用标题、留白和分隔线，而不是再套一层卡片。 */
+.page-surface {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.el-message {
-  max-width: min(440px, calc(100vw - 32px));
-  border: 1px solid var(--border-strong) !important;
-  border-radius: 14px !important;
-  background: linear-gradient(135deg, rgba(40, 56, 84, 0.98), rgba(24, 35, 56, 0.98)) !important;
-  box-shadow: var(--shadow) !important;
-  backdrop-filter: blur(20px);
+/* 加载中 / 空态 / 错误占位也要占住内容区高度：
+   否则「骨架很高 → 内容很矮」或「空态很矮 → 内容很高」都会让整页跳动一下。 */
+.state-surface {
+  display: flex;
+  min-height: var(--content-min-height);
+  align-items: center;
+  justify-content: center;
 }
 
-.el-message__content,
-.el-dialog__title,
-.el-dialog__body,
-.el-form-item__label {
-  color: var(--text) !important;
+.numeric {
+  font-variant-numeric: tabular-nums;
 }
 
-.el-overlay {
-  background: rgba(5, 12, 25, 0.68) !important;
-  backdrop-filter: blur(6px);
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  [role='button'] {
+    transition:
+      color 140ms ease,
+      border-color 140ms ease,
+      background-color 140ms ease;
+  }
 }
 
-.el-dialog {
-  border: 1px solid var(--border) !important;
-  border-radius: 20px !important;
-  background: linear-gradient(145deg, rgba(40, 56, 84, 0.99), rgba(23, 34, 55, 0.99)) !important;
-  box-shadow: var(--shadow) !important;
+/* ── Element Plus 变量映射 ──────────────────────────────────
+   直接改 EP 的变量，比在组件上堆 !important 更稳，也不会把
+   非主题组件的默认蓝紫带进来。 */
+/* 必须写在 html.dark 下：Element Plus 的深色变量同样挂在 html.dark 上，
+   用 :root 覆盖会因选择器权重不足而被它盖回去（主按钮曾因此变回默认蓝）。 */
+html.dark {
+  --el-color-primary: #d8a25e;
+  --el-color-primary-light-3: #c2914f;
+  --el-color-primary-light-5: #9c7440;
+  --el-color-primary-light-7: #6f5330;
+  --el-color-primary-light-8: #57412a;
+  --el-color-primary-light-9: #372c1f;
+  --el-color-primary-dark-2: #e7b87c;
+
+  --el-color-danger: #d9736a;
+  --el-color-warning: #c9a25f;
+  --el-color-success: #7fa87a;
+
+  --el-bg-color: #141519;
+  --el-bg-color-page: #0b0c0e;
+  --el-bg-color-overlay: #17181c;
+  --el-fill-color: #1c1d22;
+  --el-fill-color-light: #202127;
+  --el-fill-color-blank: #141519;
+  --el-fill-color-darker: #17181c;
+
+  --el-text-color-primary: #ececee;
+  --el-text-color-regular: #b6b8be;
+  --el-text-color-secondary: #85878f;
+  --el-text-color-placeholder: #6f717a;
+  --el-text-color-disabled: #5c5e66;
+
+  --el-border-color: #25272d;
+  --el-border-color-light: #25272d;
+  --el-border-color-lighter: #202127;
+  --el-border-color-extra-light: #1c1d22;
+  --el-border-color-dark: #3a3c44;
+  --el-border-color-darker: #474a53;
+
+  --el-mask-color: rgba(6, 7, 9, 0.72);
+  --el-box-shadow: 0 18px 44px rgba(0, 0, 0, 0.46);
+  --el-box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
 }
+
+/* ── Element Plus 组件外观 ───────────────────────────────── */
 
 .el-button {
-  border-radius: 10px !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500;
 }
 
-.el-button--primary {
+html.dark .el-button--primary {
   --el-button-bg-color: var(--accent);
   --el-button-border-color: var(--accent);
   --el-button-text-color: var(--text-on-accent);
@@ -159,9 +242,9 @@ a:focus-visible,
   --el-button-active-border-color: var(--accent-deep);
   /* 禁用态：Element Plus 默认把主色淡化 40%，深色底上几乎看不出是按钮，
      这里改成低不透明度的实心块 + 明确的禁用光标。 */
-  --el-button-disabled-bg-color: rgba(110, 231, 210, 0.16);
-  --el-button-disabled-border-color: rgba(110, 231, 210, 0.24);
-  --el-button-disabled-text-color: rgba(233, 240, 255, 0.55);
+  --el-button-disabled-bg-color: rgba(216, 162, 94, 0.14);
+  --el-button-disabled-border-color: rgba(216, 162, 94, 0.2);
+  --el-button-disabled-text-color: rgba(236, 236, 238, 0.5);
 }
 
 .el-button.is-disabled,
@@ -169,9 +252,9 @@ a:focus-visible,
   cursor: not-allowed;
 }
 
-.el-button:not(.el-button--primary) {
-  --el-button-bg-color: rgba(255, 255, 255, 0.035);
-  --el-button-border-color: var(--border);
+html.dark .el-button:not(.el-button--primary) {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--border-strong);
   --el-button-text-color: var(--text-secondary);
   --el-button-hover-bg-color: var(--surface-hover);
   --el-button-hover-border-color: var(--border-strong);
@@ -181,8 +264,8 @@ a:focus-visible,
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner {
-  border-radius: 11px !important;
-  background: rgba(17, 28, 47, 0.72) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--bg-elevated) !important;
   box-shadow: 0 0 0 1px var(--border) inset !important;
 }
 
@@ -233,36 +316,49 @@ a:focus-visible,
   background: var(--accent) !important;
 }
 
-.page-surface {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: linear-gradient(145deg, rgba(37, 53, 81, 0.96), rgba(24, 35, 56, 0.94));
-  box-shadow: var(--shadow-soft);
+.el-message {
+  max-width: min(440px, calc(100vw - 32px));
+  /* 顶部居中的提示会压住工具栏搜索框，统一改成右上角 */
+  right: 20px !important;
+  left: auto !important;
+  transform: none !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius) !important;
+  background: var(--surface-solid) !important;
+  box-shadow: var(--shadow-soft) !important;
 }
 
-/* 加载中 / 空态 / 错误占位也要占住内容区高度：
-   否则「骨架很高 → 内容很矮」或「空态很矮 → 内容很高」都会让整页跳动一下。 */
-.state-surface {
-  display: flex;
-  min-height: var(--content-min-height);
-  align-items: center;
-  justify-content: center;
+.el-message__content,
+.el-dialog__title,
+.el-dialog__body,
+.el-form-item__label {
+  color: var(--text) !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a,
-  button,
-  [role='button'] {
-    transition:
-      color 160ms ease,
-      border-color 160ms ease,
-      background 160ms ease,
-      transform 160ms ease,
-      box-shadow 160ms ease;
-  }
+.el-overlay {
+  background: rgba(6, 7, 9, 0.72) !important;
 }
 
-/* ── Element Plus 组件的深色兜底 ──────────────────────────────
+.el-dialog {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--surface-solid) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.el-dialog__header {
+  padding: 20px 22px 8px !important;
+}
+
+.el-dialog__body {
+  padding: 8px 22px 4px !important;
+}
+
+.el-dialog__footer {
+  padding: 12px 22px 20px !important;
+}
+
+/* ── Element Plus 组件的深色兜底 ─────────────────────────────
    官方深色变量（main.ts 里引入）解决大部分组件，但表格/抽屉/加载遮罩
    在深色变量下仍有偏亮的实底，这里按设计令牌再兜一层，
    保证管理控制台不会出现白色块。 */
@@ -301,7 +397,7 @@ a:focus-visible,
   background-color: var(--surface-hover) !important;
 }
 .el-loading-mask {
-  background-color: rgba(12, 20, 34, 0.72) !important;
+  background-color: rgba(11, 12, 14, 0.72) !important;
 }
 .el-drawer,
 .el-drawer__header,
@@ -327,7 +423,8 @@ a:focus-visible,
   border-color: var(--border) !important;
 }
 
-/* ── 管理控制台：独立界面 ─────────────────────────────────────   后台与前台是两套壳子。路由本身是整页跳转（window.location.assign），
+/* ── 管理控制台：独立界面 ────────────────────────────────────
+   后台与前台是两套壳子。路由本身是整页跳转（window.location.assign），
    这里再把前台的外壳整体隐藏：侧边导航、顶部搜索条、演示横幅都不该出现在
    控制台里，否则整页跳转也会被看成「同一页换了个路由」。
    标记打在 body 上：前台的侧栏与内容区是兄弟节点，挂在内容区里管不到它。
@@ -370,8 +467,6 @@ body.admin-console .content-frame {
 @media (max-width: 640px) {
   :root {
     --page-gutter: 16px;
-    --radius: 15px;
-    /* 手机上一屏能放的内容更少，占位高度同步收紧 */
     --content-min-height: 320px;
   }
 

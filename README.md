@@ -81,6 +81,7 @@ npm run dev
 ## 文档索引
 
 - [`docs/deployment.md`](docs/deployment.md) — 生产环境部署说明
+- [`docs/frontend-visual.md`](docs/frontend-visual.md) — 前端视觉与交互规范（设计令牌、图标、状态与自查清单）
 - `docs/data-import.md` — 数据导入管道
 - `docs/web-search.md` — 联网搜索能力
 - `docs/agent-fallback.md` — Agent 异常兜底策略

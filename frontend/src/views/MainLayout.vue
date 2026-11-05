@@ -3,8 +3,8 @@
   <div class="app-layout">
     <aside class="sidebar">
       <router-link class="brand" to="/" aria-label="返回首页">
-        <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span>
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="brand-copy">
           <strong>智能数据平台</strong>
           <small>数据检索与智能分析</small>
         </span>
@@ -18,17 +18,20 @@
           :to="item.to"
           :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+          :aria-label="
+            item.requiresAuth && !auth.isAuthenticated ? `${item.label}（需要登录）` : item.label
+          "
           @mouseenter="prefetchRoute(item.to)"
           @focus="prefetchRoute(item.to)"
         >
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          <AppIcon :name="item.icon" :size="16" class="nav-icon" />
           <span>{{ item.label }}</span>
-          <span
+          <AppIcon
             v-if="item.requiresAuth && !auth.isAuthenticated"
+            name="lock"
+            :size="13"
             class="nav-lock"
-            aria-hidden="true"
-            >🔒</span
-          >
+          />
         </router-link>
         <p class="nav-label">个人空间</p>
         <router-link
@@ -37,23 +40,34 @@
           :to="item.to"
           :class="{ 'nav-link-loading': isNavigating && item.to !== route.path }"
           :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
+          :aria-label="
+            item.requiresAuth && !auth.isAuthenticated ? `${item.label}（需要登录）` : item.label
+          "
           @mouseenter="prefetchRoute(item.to)"
           @focus="prefetchRoute(item.to)"
         >
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          <AppIcon :name="item.icon" :size="16" class="nav-icon" />
           <span>{{ item.label }}</span>
-          <span
+          <AppIcon
             v-if="item.requiresAuth && !auth.isAuthenticated"
+            name="lock"
+            :size="13"
             class="nav-lock"
-            aria-hidden="true"
-            >🔒</span
-          >
+          />
         </router-link>
+        <!-- 窄屏专用：侧栏底部的账号区会隐藏，这里补上登录/控制台/退出入口 -->
+        <span class="mobile-account">
+          <router-link v-if="!auth.user" to="/login">登录</router-link>
+          <template v-else>
+            <a v-if="auth.isAdmin" href="/admin">控制台</a>
+            <button type="button" @click="logout">退出</button>
+          </template>
+        </span>
       </nav>
 
       <div class="sidebar-bottom">
         <!-- 管理员入口放在用户信息**上面**：靠底、贴着账号区，位置固定；
-            从控制台返回时也是回到这里，来回切换不用换地方找。 -->
+             从控制台返回时也是回到这里，来回切换不用换地方找。 -->
         <div v-if="auth.isAdmin" class="console-slot">
           <a
             class="console-entry"
@@ -61,12 +75,12 @@
             :class="{ 'nav-link-loading': enteringConsole }"
             @click="enterConsole"
           >
-            <span class="console-mark" aria-hidden="true">▣</span>
+            <AppIcon name="shield" :size="16" class="console-mark" />
             <span class="console-text">
               <strong>管理控制台</strong>
               <small>数据维护与账号管理</small>
             </span>
-            <span class="console-arrow" aria-hidden="true">↗</span>
+            <AppIcon name="external" :size="13" class="console-arrow" />
           </a>
         </div>
 
@@ -76,10 +90,11 @@
           }}</span>
           <span class="user-copy">
             <strong>{{ auth.user.username }}</strong>
-            <small>{{ auth.isAdmin ? '管理员' : '智能体用户' }}</small>
+            <small>{{ auth.isAdmin ? '管理员' : '普通用户' }}</small>
           </span>
           <button type="button" aria-label="退出登录" title="退出登录" @click="logout">退出</button>
         </div>
+        <router-link v-else class="login-entry" to="/login">登录 / 注册</router-link>
       </div>
     </aside>
 
@@ -95,7 +110,7 @@
         </div>
         <div v-if="!isFullHeightPage" class="workspace-toolbar">
           <form class="quick-search" role="search" @submit.prevent="submitSearch">
-            <span aria-hidden="true">⌕</span>
+            <AppIcon name="search" :size="14" class="search-icon" />
             <input v-model="quickSearch" type="search" placeholder="搜索内容、来源或标签" />
           </form>
           <span class="toolbar-hint">示例数据 · 可检索、可分析</span>
@@ -114,6 +129,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { isNavigating } from '../router'
+import AppIcon from '../components/AppIcon.vue'
 
 interface NavigationItem {
   to: string
@@ -123,14 +139,14 @@ interface NavigationItem {
 }
 
 const discoveryItems: NavigationItem[] = [
-  { to: '/', label: '首页', icon: '⌂' },
-  { to: '/songs', label: '内容数据', icon: '▦' },
-  { to: '/agent', label: '智能体', icon: '✦', requiresAuth: true },
+  { to: '/', label: '首页', icon: 'home' },
+  { to: '/songs', label: '内容数据', icon: 'library' },
+  { to: '/agent', label: '智能体', icon: 'agent', requiresAuth: true },
 ]
 const personalItems: NavigationItem[] = [
-  { to: '/playlists', label: '我的空间', icon: '▤', requiresAuth: true },
-  { to: '/favorites', label: '收藏', icon: '♡', requiresAuth: true },
-  { to: '/profile', label: '个人分析', icon: '◫', requiresAuth: true },
+  { to: '/playlists', label: '我的空间', icon: 'list', requiresAuth: true },
+  { to: '/favorites', label: '收藏', icon: 'heart', requiresAuth: true },
+  { to: '/profile', label: '个人分析', icon: 'chart', requiresAuth: true },
 ]
 const auth = useAuthStore()
 const router = useRouter()
@@ -182,79 +198,77 @@ async function logout(): Promise<void> {
   overflow: hidden;
 }
 
+/* 侧栏：扁平深色，右侧一条 1px 分隔线，不再用整块渐变背景。 */
 .sidebar {
   position: relative;
   z-index: 20;
   display: flex;
-  width: 244px;
+  width: 232px;
   flex-shrink: 0;
   flex-direction: column;
-  padding: 22px 14px 16px;
+  padding: 18px 12px 14px;
   border-right: 1px solid var(--border);
-  background:
-    linear-gradient(180deg, rgba(34, 50, 76, 0.94), rgba(20, 31, 51, 0.95)), var(--bg-elevated);
-  box-shadow: 10px 0 40px rgba(4, 10, 24, 0.12);
+  background: var(--bg-elevated);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 6px 30px;
+  gap: 10px;
+  margin: 0 4px 24px;
   color: var(--text);
   text-decoration: none;
 }
 
-.brand-wave {
+.brand-mark {
   display: flex;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  border: 1px solid rgba(149, 244, 227, 0.3);
-  border-radius: 13px;
-  background: linear-gradient(145deg, rgba(110, 231, 210, 0.24), rgba(169, 162, 255, 0.18));
-  box-shadow: 0 9px 24px rgba(28, 184, 164, 0.14);
+  gap: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
-.brand-wave i {
-  width: 3px;
-  border-radius: 4px;
+.brand-mark i {
+  width: 2px;
+  border-radius: 1px;
   background: var(--accent);
 }
 
-.brand-wave i:nth-child(1) {
-  height: 10px;
+.brand-mark i:nth-child(1) {
+  height: 8px;
 }
 
-.brand-wave i:nth-child(2) {
-  height: 20px;
+.brand-mark i:nth-child(2) {
+  height: 16px;
 }
 
-.brand-wave i:nth-child(3) {
-  height: 15px;
+.brand-mark i:nth-child(3) {
+  height: 12px;
 }
 
-.brand-wave i:nth-child(4) {
-  height: 7px;
+.brand-mark i:nth-child(4) {
+  height: 5px;
 }
 
-.brand strong,
-.brand small {
+.brand-copy strong,
+.brand-copy small {
   display: block;
 }
 
-.brand strong {
-  font-size: 15px;
-  letter-spacing: -0.01em;
+.brand-copy strong {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
-.brand small {
-  margin-top: 3px;
+.brand-copy small {
+  margin-top: 2px;
   color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.05em;
+  font-size: var(--fs-xs);
 }
 
 nav {
@@ -262,16 +276,14 @@ nav {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   overflow-y: auto;
 }
 
 .nav-label {
-  margin: 18px 13px 6px;
+  margin: 16px 8px 6px;
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-size: var(--fs-xs);
 }
 
 .nav-label:first-child {
@@ -281,51 +293,40 @@ nav {
 nav a {
   position: relative;
   display: flex;
+  min-height: 36px;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  color: var(--text-muted);
-  font-size: 13px;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
   text-decoration: none;
+}
+
+.nav-icon {
+  color: var(--text-muted);
 }
 
 .nav-lock {
   margin-left: auto;
-  font-size: 11px;
-  opacity: 0.72;
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 
 nav a:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-nav a:active {
-  transform: scale(0.98);
+  background: var(--surface-hover);
 }
 
 nav a.nav-link-loading {
   cursor: wait;
-  opacity: 0.72;
+  opacity: 0.6;
 }
 
 nav a.router-link-exact-active {
-  border-color: rgba(110, 231, 210, 0.2);
   color: var(--text);
-  background: linear-gradient(100deg, rgba(110, 231, 210, 0.18), rgba(111, 183, 255, 0.08));
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.nav-icon {
-  display: grid;
-  width: 23px;
-  height: 23px;
-  flex-shrink: 0;
-  place-items: center;
-  color: var(--text-secondary);
-  font-size: 17px;
+  background: var(--surface-raised);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 nav a.router-link-exact-active .nav-icon {
@@ -333,32 +334,31 @@ nav a.router-link-exact-active .nav-icon {
 }
 
 .sidebar-bottom {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
 .user-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.035);
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .avatar {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   place-items: center;
-  border: 1px solid rgba(110, 231, 210, 0.3);
-  border-radius: 11px;
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  font-size: 13px;
-  font-weight: 800;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface-raised);
+  font-size: var(--fs-xs);
+  font-weight: 600;
 }
 
 .user-copy {
@@ -376,29 +376,56 @@ nav a.router-link-exact-active .nav-icon {
 
 .user-copy strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 
 .user-copy small {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .user-card button {
-  width: 42px;
-  height: 30px;
-  border: 0;
-  border-radius: 9px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   background: transparent;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .user-card button:hover {
-  color: var(--danger);
-  background: rgba(255, 135, 149, 0.1);
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+/* 未登录时侧栏底部给出明确的登录入口，而不是一片空白 */
+.login-entry {
+  display: flex;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  text-decoration: none;
+}
+
+.login-entry:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+/* 移动端账号操作：桌面用侧栏底部，窄屏折叠进导航最后一行 */
+.mobile-account {
+  display: none;
 }
 
 .main-content {
@@ -426,28 +453,27 @@ nav a.router-link-exact-active .nav-icon {
   min-height: 0;
 }
 
-/* 演示账号横幅：每页都在，压成一条细带，别抢对话页的纵向空间 */
+/* 演示账号横幅：一条细带，左侧一道强调色，不抢内容注意力 */
 .demo-banner {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
-  margin: 0 0 10px;
-  padding: 6px 12px;
-  border: 1px solid rgba(232, 172, 96, 0.4);
-  border-radius: 10px;
+  margin: 14px var(--page-gutter) 0;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: rgba(232, 172, 96, 0.1);
-  font-size: 11px;
+  background: var(--surface);
+  font-size: var(--fs-xs);
   line-height: 1.6;
 }
 
 .demo-banner strong {
   flex: 0 0 auto;
-  padding: 2px 8px;
-  border-radius: 6px;
-  color: #e8ac60;
-  background: rgba(232, 172, 96, 0.18);
-  font-size: 11px;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
 }
 
 .workspace-toolbar {
@@ -455,24 +481,29 @@ nav a.router-link-exact-active .nav-icon {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 10px var(--page-gutter) 0;
+  padding: 12px var(--page-gutter) 0;
 }
 
 .quick-search {
   display: flex;
-  width: min(100%, 380px);
+  width: min(100%, 360px);
+  height: 32px;
   align-items: center;
   gap: 8px;
-  padding: 6px 11px;
+  padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.045);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
   color: var(--text-muted);
 }
 
 .quick-search:focus-within {
-  border-color: rgba(110, 231, 210, 0.55);
-  box-shadow: 0 0 0 3px rgba(110, 231, 210, 0.08);
+  border-color: var(--border-strong);
+  background: var(--surface-solid);
+}
+
+.search-icon {
+  color: var(--text-muted);
 }
 
 .quick-search input {
@@ -483,44 +514,38 @@ nav a.router-link-exact-active .nav-icon {
   color: var(--text);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 
 /* 管理员入口固定在侧栏底部、用户信息上方：靠底、不抢导航，
    与后台里的「返回前台工作区」是同一处位置。 */
 .console-slot {
-  margin-bottom: 10px;
-  padding-bottom: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
 .console-entry {
   display: flex;
+  min-height: 40px;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(232, 172, 96, 0.4);
-  border-radius: 12px;
-  color: var(--text);
-  background: linear-gradient(120deg, rgba(232, 172, 96, 0.16), rgba(232, 172, 96, 0.06));
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface);
   text-decoration: none;
 }
 
 .console-entry:hover {
-  border-color: rgba(232, 172, 96, 0.65);
-  background: linear-gradient(120deg, rgba(232, 172, 96, 0.24), rgba(232, 172, 96, 0.1));
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface-hover);
 }
 
 .console-mark {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  place-items: center;
-  border-radius: 9px;
-  color: #e8ac60;
-  background: rgba(232, 172, 96, 0.18);
-  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .console-text {
@@ -537,30 +562,29 @@ nav a.router-link-exact-active .nav-icon {
 }
 
 .console-text strong {
-  color: var(--text);
-  font-size: 12px;
+  color: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 
 .console-text small {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .console-arrow {
-  flex-shrink: 0;
-  color: #e8ac60;
-  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .console-entry.nav-link-loading {
   cursor: wait;
-  opacity: 0.72;
+  opacity: 0.6;
 }
 
 .toolbar-hint {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .content-frame {
@@ -571,9 +595,9 @@ nav a.router-link-exact-active .nav-icon {
 }
 
 .site-footer {
-  padding: 18px var(--page-gutter) 28px;
+  padding: 20px var(--page-gutter) 28px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.6;
   text-align: center;
 }
@@ -581,27 +605,26 @@ nav a.router-link-exact-active .nav-icon {
 /* 平板横屏：收窄侧栏，把宽度让给内容区（与下方 800px 断点不重叠） */
 @media (min-width: 801px) and (max-width: 1024px) {
   .sidebar {
-    width: 200px;
-    padding: 18px 10px 14px;
+    width: 196px;
+    padding: 16px 10px 12px;
   }
 
   .brand {
-    margin: 0 4px 22px;
-  }
-
-  nav a {
-    padding: 9px 10px;
+    margin: 0 4px 18px;
   }
 }
 
 @media (max-width: 800px) {
   .app-layout {
-    display: block;
+    display: flex;
+    height: 100vh;
+    flex-direction: column;
   }
 
   .sidebar {
     position: relative;
     width: 100%;
+    flex-shrink: 0;
     height: auto;
     padding: 10px 12px 8px;
     border-right: 0;
@@ -609,12 +632,12 @@ nav a.router-link-exact-active .nav-icon {
   }
 
   .brand {
-    margin: 0 5px 8px;
+    margin: 0 4px 8px;
   }
 
-  .brand-wave {
-    width: 34px;
-    height: 34px;
+  .brand-mark {
+    width: 28px;
+    height: 28px;
   }
 
   .brand small,
@@ -623,32 +646,62 @@ nav a.router-link-exact-active .nav-icon {
     display: none;
   }
 
+  /* 窄屏导航换行而不是横向滚动：所有入口直接可见，不用猜右边还有没有内容 */
   nav {
     flex-direction: row;
-    gap: 5px;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow: visible;
     padding-bottom: 2px;
   }
 
   nav a {
     flex: 0 0 auto;
-    gap: 7px;
-    padding: 8px 10px;
+    min-height: 32px;
+    gap: 6px;
+    padding: 5px 9px;
     white-space: nowrap;
   }
 
   nav a.router-link-exact-active {
     box-shadow: none;
-  }
-
-  .nav-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 15px;
+    background: var(--surface-raised);
   }
 
   .main-content {
-    height: calc(100vh - 93px);
+    flex: 1;
+    min-height: 0;
+  }
+
+  .mobile-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    padding: 0 6px;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  .mobile-account a,
+  .mobile-account button {
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font-family: inherit;
+    font-size: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .mobile-account a:hover,
+  .mobile-account button:hover {
+    color: var(--text);
+  }
+
+  .demo-banner {
+    margin: 12px 16px 0;
   }
 
   .workspace-toolbar {

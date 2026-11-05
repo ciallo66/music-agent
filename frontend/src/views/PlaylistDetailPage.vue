@@ -7,7 +7,7 @@
       <div class="pl-info">
         <h2>{{ playlist.name }}</h2>
         <p class="desc">{{ playlist.description || '还没有添加描述' }}</p>
-        <p class="meta"><span>歌单</span>{{ playlist.song_count }} 首歌曲</p>
+        <p class="meta">共 {{ playlist.song_count }} 首歌曲</p>
       </div>
     </div>
     <StatePanel
@@ -68,39 +68,28 @@ onMounted(load)
   padding: var(--page-gutter);
 }
 .page-header {
-  margin-bottom: 24px;
-  padding: clamp(24px, 4vw, 42px);
+  margin-bottom: 20px;
+  padding: clamp(20px, 3vw, 28px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background:
-    radial-gradient(circle at 92% 20%, rgba(110, 231, 210, 0.18), transparent 26%),
-    linear-gradient(145deg, rgba(42, 60, 91, 0.8), rgba(25, 38, 62, 0.72));
-  box-shadow: var(--shadow-soft);
+  background: var(--surface);
 }
 .pl-info h2 {
   color: var(--text);
-  font-size: clamp(28px, 4vw, 42px);
-  letter-spacing: -0.04em;
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0 0 6px;
 }
 .desc {
   color: var(--text-secondary);
-  font-size: 14px;
-  margin: 0 0 4px;
+  font-size: var(--fs-sm);
+  margin: 0;
 }
 .meta {
   color: var(--text-muted);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  font-size: var(--fs-xs);
   margin: 12px 0 0;
-}
-.meta span {
-  color: var(--accent);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
 }
 .state-surface {
   min-height: 360px;

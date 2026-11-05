@@ -25,6 +25,11 @@
         <span class="track-copy">
           <strong>{{ song.title }}</strong>
           <small>{{ song.album || (song.music_key ? `${song.music_key} 调` : '特征数据') }}</small>
+          <!-- 窄屏下隐藏了歌手/风格/BPM 列，这里补一条合并信息，避免只剩标题 -->
+          <span class="track-mobile-meta"
+            >{{ song.artist.name }}<template v-if="song.genre"> · {{ song.genre }}</template
+            ><template v-if="song.bpm"> · {{ Math.round(song.bpm) }} BPM</template></span
+          >
         </span>
       </router-link>
       <span class="artist">{{ song.artist.name }}</span>
@@ -44,9 +49,10 @@
         class="remove-button"
         type="button"
         :aria-label="`取消收藏 ${song.title}`"
+        title="取消收藏"
         @click.stop="emit('remove', song.id)"
       >
-        ×
+        <AppIcon name="close" :size="14" />
       </button>
     </div>
   </div>
@@ -56,6 +62,7 @@
 import type { SongSummary } from '../types/music'
 import { danceabilityHint, danceabilityLabel } from '../types/music'
 import SongCover from './SongCover.vue'
+import AppIcon from './AppIcon.vue'
 import { fusedGenre } from '../utils/genre'
 
 type SongListVariant = 'catalog' | 'search' | 'favorites' | 'playlist'
@@ -87,20 +94,29 @@ function formatDuration(duration: number | null): string {
 .song-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 8px;
+  gap: 0;
+  padding: 0;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .song-row {
   display: grid;
-  min-height: 64px;
+  min-height: 60px;
   align-items: center;
-  padding: 8px 12px;
-  border: 1px solid transparent;
-  border-radius: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
   color: var(--text-secondary);
-  cursor: pointer;
+}
+
+.song-row.header {
+  min-height: 36px;
+  border-top: 0;
+  color: var(--text-muted);
+  cursor: default;
+  font-size: var(--fs-xs);
 }
 
 .variant-catalog .song-row {
@@ -124,18 +140,7 @@ function formatDuration(duration: number | null): string {
 }
 
 .song-row:not(.header):hover {
-  border-color: var(--border);
-  background: linear-gradient(100deg, rgba(110, 231, 210, 0.09), rgba(169, 162, 255, 0.07));
-  transform: translateY(-1px);
-}
-
-.song-row.header {
-  min-height: 38px;
-  color: var(--text-muted);
-  cursor: default;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  background: var(--surface-hover);
 }
 
 .track-cell {
@@ -145,21 +150,7 @@ function formatDuration(duration: number | null): string {
   gap: 12px;
   color: inherit;
   text-decoration: none;
-}
-
-.cover {
-  position: relative;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  background: linear-gradient(145deg, rgba(110, 231, 210, 0.26), rgba(169, 162, 255, 0.26));
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
 .track-copy {
@@ -167,30 +158,38 @@ function formatDuration(duration: number | null): string {
 }
 
 .track-copy strong,
-.track-copy small {
+.track-copy small,
+.track-mobile-meta {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.track-mobile-meta {
+  display: none;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
 .track-copy strong {
   color: var(--text);
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--fs-sm);
+  font-weight: 500;
 }
 
 .track-copy small {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .artist,
 .muted {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -199,58 +198,21 @@ function formatDuration(duration: number | null): string {
   font-variant-numeric: tabular-nums;
 }
 
-.row-feedback {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.fb-button {
-  padding: 4px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
-  background: transparent;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.fb-button:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.fb-button.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.fb-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .remove-button {
   display: grid;
-  width: 31px;
-  height: 31px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.remove-button {
   border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   background: transparent;
-  font-size: 17px;
+  cursor: pointer;
 }
 
 .remove-button:hover {
   border-color: var(--danger);
   color: var(--danger);
-  background: rgba(255, 135, 149, 0.08);
 }
 
 @media (max-width: 860px) {
@@ -275,17 +237,21 @@ function formatDuration(duration: number | null): string {
 }
 
 @media (max-width: 560px) {
-  .song-list {
-    padding: 5px;
-  }
-
   .song-row {
-    min-height: 59px;
-    padding: 7px 8px;
+    min-height: 56px;
+    padding: 8px 10px;
   }
 
   .song-row.header {
     display: none;
+  }
+
+  .track-copy small {
+    display: none;
+  }
+
+  .track-mobile-meta {
+    display: block;
   }
 
   .variant-catalog .song-row,
@@ -306,11 +272,6 @@ function formatDuration(duration: number | null): string {
 
   .variant-favorites .artist {
     display: none;
-  }
-
-  .cover {
-    width: 40px;
-    height: 40px;
   }
 }
 </style>

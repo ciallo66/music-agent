@@ -20,7 +20,7 @@ defineProps<{ title: string; subtitle?: string; eyebrow?: string }>()
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 .heading-copy {
   min-width: 0;
@@ -28,29 +28,28 @@ defineProps<{ title: string; subtitle?: string; eyebrow?: string }>()
 .page-header h2 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(26px, 3vw, 36px);
-  line-height: 1.12;
-  letter-spacing: -0.04em;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 .eyebrow {
-  margin: 0 0 8px;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 .subtitle {
-  max-width: 660px;
-  margin: 10px 0 0;
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.65;
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
 }
 .actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -58,7 +57,7 @@ defineProps<{ title: string; subtitle?: string; eyebrow?: string }>()
   .page-header {
     align-items: flex-start;
     flex-direction: column;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
   .actions {
     width: 100%;

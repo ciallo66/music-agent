@@ -125,21 +125,21 @@ const rendered = computed(() =>
 .markdown-body :deep(code) {
   padding: 2px 6px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: rgba(12, 23, 33, 0.55);
-  color: var(--accent-strong);
-  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
-  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
 }
 
 /* 代码块：横向可滚动，避免长行撑破气泡 */
 .markdown-body :deep(pre) {
   margin: 0 0 12px;
-  padding: 13px 15px;
+  padding: 12px 14px;
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(9, 17, 27, 0.72);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
   line-height: 1.6;
 }
 
@@ -149,15 +149,15 @@ const rendered = computed(() =>
   border-radius: 0;
   background: none;
   color: var(--text-secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-md);
 }
 
 .markdown-body :deep(blockquote) {
   margin: 0 0 12px;
   padding: 8px 12px;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--accent-soft);
+  border-left: 2px solid var(--border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-raised);
   color: var(--text-secondary);
 }
 
@@ -189,8 +189,8 @@ const rendered = computed(() =>
 }
 
 .markdown-body :deep(th) {
-  background: rgba(110, 231, 210, 0.08);
-  color: var(--accent-strong);
-  font-weight: 700;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 </style>

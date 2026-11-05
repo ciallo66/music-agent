@@ -47,7 +47,7 @@
         <el-table-column label="节拍" width="90">
           <template #default="{ row }">{{ row.bpm ? Math.round(row.bpm) : '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <el-button
               size="small"
@@ -234,6 +234,7 @@ async function remove(song: SongSummary): Promise<void> {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger',
     })
   } catch {
     return

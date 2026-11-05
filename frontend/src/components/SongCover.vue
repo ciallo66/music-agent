@@ -58,14 +58,14 @@ const label = computed(
   flex-shrink: 0;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
   background: linear-gradient(145deg, var(--cover-from), var(--cover-to));
   color: var(--cover-text);
   user-select: none;
 }
 .cover-glyph {
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 1;
 }
@@ -75,38 +75,35 @@ const label = computed(
   right: 4px;
   bottom: 3px;
   color: var(--cover-accent);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  opacity: 0.85;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
 }
 .size-sm {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
 }
 .size-sm .cover-glyph {
-  font-size: 20px;
+  font-size: 17px;
 }
 .size-md {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
 }
 .size-md .cover-glyph {
-  font-size: 26px;
+  font-size: 22px;
 }
 .size-lg {
-  width: 112px;
-  height: 112px;
-  border-radius: 20px;
+  width: 96px;
+  height: 96px;
 }
 .size-lg .cover-glyph {
-  font-size: 54px;
+  font-size: 42px;
 }
 .size-lg .cover-source {
-  right: 8px;
-  bottom: 7px;
+  right: 7px;
+  bottom: 6px;
   font-size: 11px;
 }
 </style>

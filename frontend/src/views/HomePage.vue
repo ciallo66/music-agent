@@ -1,179 +1,244 @@
-<!-- 首页聚合入口：提供快捷操作和个性化推荐。 -->
+<!-- 首页：先给数据概览，再给推荐列表。装饰元素一律去掉，信息本身承担视觉。 -->
 <template>
   <section class="home-page">
-    <div class="hero page-surface">
-      <div class="hero-copy">
-        <p class="eyebrow">欢迎回来</p>
-        <h1>{{ auth.user ? `欢迎回来，${auth.user.username}` : '让智能体帮你理解数据' }}</h1>
-        <p>这是一个可调用数据工具的智能工作区，帮助你检索、分析并获得可解释的建议。</p>
-        <div class="hero-actions">
-          <router-link class="primary-link" to="/agent">使用智能体 <span>→</span></router-link>
-          <router-link class="secondary-link" to="/agent">
-            {{ auth.user ? '继续对话' : '登录后使用' }}
-          </router-link>
+    <PageHeader
+      :title="auth.user ? '概览' : '内容数据平台'"
+      :subtitle="
+        auth.user
+          ? '你的收听、收藏与反馈会汇总在这里，并参与下一轮推荐。'
+          : '按标题、来源和音频特征检索示例内容；登录后可获得个性化推荐。'
+      "
+    >
+      <template #actions>
+        <el-button :loading="loading" @click="reload">刷新</el-button>
+        <router-link class="button-link" to="/agent">{{
+          auth.user ? '打开智能体' : '登录后使用智能体'
+        }}</router-link>
+      </template>
+    </PageHeader>
+
+    <!-- 概览：只在登录且有画像数据时出现，避免给游客看一排 0 -->
+    <div v-if="auth.user && profile" class="overview">
+      <div v-for="item in overviewStats" :key="item.label" class="overview-item">
+        <span>{{ item.label }}</span>
+        <strong class="numeric">{{ item.value }}</strong>
+        <small>{{ item.hint }}</small>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <div class="home-main">
+        <div class="section-head">
+          <h3>{{ auth.user ? '为你推荐' : '热门内容' }}</h3>
+          <div class="section-tools">
+            <span v-if="!auth.user" class="section-note">按热度排序，登录后按偏好重排</span>
+            <button v-else type="button" class="text-button" :disabled="loading" @click="reload">
+              换一批
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading" class="panel-state page-surface">
+          <StatePanel type="loading" title="正在加载推荐" message="结合你的偏好筛选合适的内容" />
+        </div>
+        <div v-else-if="loadFailed" class="panel-state page-surface">
+          <StatePanel
+            type="error"
+            title="推荐暂时没有加载成功"
+            message="检查服务状态后可以重新加载"
+          >
+            <template #action>
+              <el-button size="small" @click="reload">重新加载</el-button>
+            </template>
+          </StatePanel>
+        </div>
+        <div v-else-if="cards.length" class="recommendations">
+          <RecommendationCard
+            v-for="card in cards"
+            :key="card.title + card.items.length"
+            :card="card"
+            :actions="feedbackStore.actions"
+            @feedback="handleFeedbackPayload"
+            @openAgent="onOpenAgent"
+          />
+        </div>
+        <div v-else-if="hotSongs.length" class="track-list">
+          <article v-for="song in hotSongs" :key="song.id" class="track-row">
+            <router-link class="track-main" :to="`/songs/${song.id}`">
+              <SongCover :song="song" size="md" show-source />
+              <span class="track-copy">
+                <strong>{{ song.title }}</strong>
+                <span class="track-meta">
+                  {{ song.artist.name }} · {{ song.genre || '未知风格' }}
+                  <template v-if="song.bpm"> · {{ Math.round(song.bpm) }} BPM</template>
+                </span>
+                <span class="track-reason">{{ song.reason }}</span>
+              </span>
+            </router-link>
+            <span class="track-tail">
+              <router-link class="text-button" :to="`/songs/${song.id}`">查看</router-link>
+            </span>
+          </article>
+        </div>
+        <div v-else class="panel-state page-surface">
+          <StatePanel
+            title="还没有足够的推荐数据"
+            message="导入示例数据并产生互动记录后，这里会出现个性化推荐"
+          >
+            <template #action>
+              <router-link class="button-link" to="/songs">先去内容数据看看</router-link>
+            </template>
+          </StatePanel>
         </div>
       </div>
-      <div class="hero-orbit" aria-hidden="true">
-        <div class="record"><span>✦</span></div>
-        <i class="orbit-dot dot-one"></i><i class="orbit-dot dot-two"></i>
-      </div>
-    </div>
 
-    <div class="section-heading">
-      <div>
-        <p>快捷入口</p>
-        <h2>快速开始</h2>
-      </div>
-      <span>{{
-        auth.user ? '把智能体和数据工具放在触手可及的位置' : '先了解工具，登录后解锁个人工作区'
-      }}</span>
-    </div>
-    <div class="quick-actions">
-      <router-link
-        v-for="item in quickActions"
-        :key="item.to"
-        :to="item.to"
-        class="action-card"
-        :class="{ locked: item.requiresAuth && !auth.isAuthenticated }"
-        :title="item.requiresAuth && !auth.isAuthenticated ? '登录后使用' : undefined"
-      >
-        <span class="action-icon" :class="item.tone" aria-hidden="true">{{ item.icon }}</span>
-        <span class="action-copy"
-          ><strong>{{ item.label }}</strong
-          ><small>{{ item.description }}</small></span
-        >
-        <span v-if="item.requiresAuth && !auth.isAuthenticated" class="lock-mark" aria-hidden="true"
-          >🔒</span
-        >
-        <span v-else class="arrow" aria-hidden="true">→</span>
-      </router-link>
-    </div>
-
-    <div class="section-heading recommendation-heading">
-      <div>
-        <p>{{ auth.user ? 'MADE FOR YOU' : 'POPULAR NOW' }}</p>
-        <h2>{{ auth.user ? '为你推荐' : '热门推荐' }}</h2>
-      </div>
-      <div v-if="auth.user" class="feedback-summary" v-loading="!feedbackStore.loaded">
-        <span v-if="feedbackStore.stats"
-          >反馈：{{ feedbackStore.stats.liked_count }} 👍 ·
-          {{ feedbackStore.stats.disliked_count }} 👎 · 共{{ feedbackStore.stats.total }}条</span
-        >
-        <span v-else>登录后反馈将影响推荐</span>
-      </div>
-    </div>
-
-    <div v-if="loading" class="recommendation-state page-surface">
-      <StatePanel type="loading" title="正在生成推荐" message="结合你的偏好筛选合适的内容" />
-    </div>
-    <div v-else-if="cards.length" class="recommendations">
-      <RecommendationCard
-        v-for="card in cards"
-        :key="card.title + card.items.length"
-        :card="card"
-        :actions="feedbackStore.actions"
-        @refresh="loadRecommendations"
-        @feedback="handleFeedbackPayload"
-        @openAgent="onOpenAgent"
-      />
-    </div>
-    <div v-else-if="hotSongs.length" class="hot-grid">
-      <router-link
-        v-for="song in hotSongs"
-        :key="song.id"
-        class="hot-card page-surface"
-        :to="`/songs/${song.id}`"
-      >
-        <SongCover :song="song" size="md" show-source />
-        <div class="hot-info">
-          <strong>{{ song.title }}</strong>
-          <span>{{ song.artist.name }}</span>
-          <small>{{ song.reason }}</small>
-          <p>
-            {{ song.genre || '未知风格'
-            }}<template v-if="song.bpm"> · {{ Math.round(song.bpm) }} BPM</template>
+      <aside class="home-side">
+        <!-- 特征画像：数据源没提供的项直接不出现，不用 0 占位 -->
+        <section v-if="auth.user && featureRows.length" class="side-block">
+          <div class="side-head">
+            <h3>你的特征</h3>
+            <router-link class="text-button" to="/profile">详情</router-link>
+          </div>
+          <div v-for="row in featureRows" :key="row.label" class="feature-row">
+            <div class="feature-label">
+              <span>{{ row.label }}</span
+              ><strong class="numeric">{{ row.display }}</strong>
+            </div>
+            <div class="feature-track" aria-hidden="true">
+              <span :style="{ width: `${row.percent}%` }"></span>
+            </div>
+          </div>
+          <p v-if="profile?.preferred_genres.length" class="side-note">
+            常听风格：{{ profile.preferred_genres.slice(0, 4).join('、') }}
           </p>
-        </div>
-        <div v-if="auth.user" class="hot-feedback">
-          <button
-            v-for="action in feedbackStore.actions.slice(0, 3)"
-            :key="action.action"
-            class="hot-feedback-btn"
-            :title="action.label"
-            @click.prevent.stop="handleFeedback(song.id, action.action)"
-          >
-            {{ action.label }}
-          </button>
-        </div>
-      </router-link>
-    </div>
-    <div v-else class="recommendation-state page-surface">
-      <StatePanel
-        :type="loadFailed ? 'error' : 'empty'"
-        :title="loadFailed ? '推荐暂时没有加载成功' : '还没有足够的推荐数据'"
-        :message="
-          loadFailed
-            ? '检查服务状态后可以重新加载'
-            : '导入示例数据并产生互动记录后，这里会出现个性化推荐'
-        "
-      >
-        <template #action>
-          <el-button v-if="loadFailed" type="primary" @click="loadRecommendations"
-            >重新加载</el-button
-          >
-          <router-link v-else class="state-link" to="/songs">先去内容数据看看</router-link>
-        </template>
-      </StatePanel>
+        </section>
+
+        <section v-else-if="auth.user" class="side-block">
+          <h3>你的特征</h3>
+          <p class="side-note">
+            产生收听、收藏或反馈后，这里会显示平均节拍、能量和律动。先去
+            <router-link class="inline-link" to="/songs">内容库</router-link> 建立几首歌的互动。
+          </p>
+        </section>
+
+        <section v-if="profile?.recent_plays.length" class="side-block">
+          <div class="side-head">
+            <h3>最近互动</h3>
+            <router-link class="text-button" to="/profile">全部</router-link>
+          </div>
+          <ul class="recent-list">
+            <li
+              v-for="item in profile.recent_plays.slice(0, 4)"
+              :key="`${item.song.id}-${item.played_at}`"
+            >
+              <router-link :to="`/songs/${item.song.id}`">
+                <span class="recent-title">{{ item.song.title }}</span>
+                <span class="recent-meta">
+                  {{ item.song.artist.name }} · {{ formatDate(item.played_at) }}
+                </span>
+              </router-link>
+            </li>
+          </ul>
+        </section>
+
+        <section class="side-block side-block--quiet">
+          <h3>数据来源</h3>
+          <p class="side-note">
+            曲目特征来自 AcousticBrainz 的音频分析，元数据与时长由 MusicBrainz
+            补齐。平台不托管音频，也不存储歌词。
+          </p>
+        </section>
+      </aside>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listRecommendationCards, listRecommendations } from '../api/recommendations'
+import { getMusicProfile } from '../api/profile'
+import PageHeader from '../components/PageHeader.vue'
 import RecommendationCard from '../components/RecommendationCard.vue'
 import SongCover from '../components/SongCover.vue'
 import StatePanel from '../components/StatePanel.vue'
 import type { RecommendationItem, StructuredRecommendationCard } from '../types/music'
+import type { MusicProfileResponse } from '../types/profile'
 import { useAuthStore } from '../stores/auth'
 import { useFeedbackStore } from '../stores/feedback'
 
-const quickActions = [
-  {
-    to: '/songs',
-    label: '数据浏览',
-    description: '查看可供智能体调用的示例数据',
-    icon: '▦',
-    tone: 'mint',
-  },
-  {
-    to: '/playlists',
-    label: '我的空间',
-    description: '登录后整理你的内容集合',
-    icon: '▤',
-    tone: 'purple',
-    requiresAuth: true,
-  },
-  {
-    to: '/favorites',
-    label: '收藏',
-    description: '登录后重温你标记过的声音',
-    icon: '♡',
-    tone: 'rose',
-    requiresAuth: true,
-  },
-  { to: '/search', label: '搜索', description: '快速定位内容与来源', icon: '⌕', tone: 'blue' },
-]
 const router = useRouter()
 const auth = useAuthStore()
 const feedbackStore = useFeedbackStore()
 const hotSongs = ref<RecommendationItem[]>([])
 const cards = ref<StructuredRecommendationCard[]>([])
+const profile = ref<MusicProfileResponse | null>(null)
 // 初值就是「加载中」：以前初值是 false，而数据在 onMounted 才请求，
 // 于是每次进首页都会先渲染一帧「还没有足够的推荐数据」空态再换成推荐卡 —— 一次可见的闪烁。
 const loading = ref(true)
 const loadFailed = ref(false)
+
+const overviewStats = computed(() => {
+  const current = profile.value
+  if (!current) return []
+  return [
+    { label: '互动次数', value: current.total_plays, hint: '记录在案的收听' },
+    { label: '收藏', value: current.favorite_count, hint: '当前收藏条目' },
+    { label: '反馈', value: feedbackStore.stats?.total ?? 0, hint: '全部反馈记录' },
+    { label: '覆盖内容', value: current.unique_songs, hint: '不同的曲目' },
+  ]
+})
+
+// 特征条形：null 的字段直接不展示，避免出现「0%」造成误读。
+const featureRows = computed(() => {
+  const feature = profile.value?.feature_profile
+  if (!feature) return []
+  const rows = [
+    {
+      label: '平均节拍',
+      value: feature.average_bpm,
+      max: 180,
+      display: feature.average_bpm === null ? '—' : `${Math.round(feature.average_bpm)} BPM`,
+    },
+    {
+      label: '能量',
+      value: feature.average_energy,
+      max: 1,
+      display: formatPercent(feature.average_energy),
+    },
+    {
+      label: '明亮度',
+      value: feature.average_valence,
+      max: 1,
+      display: formatPercent(feature.average_valence),
+    },
+    {
+      label: '律动',
+      value: feature.average_danceability,
+      max: 1,
+      display: formatPercent(feature.average_danceability),
+    },
+  ]
+  return rows
+    .filter((row) => row.value !== null)
+    .map((row) => ({
+      label: row.label,
+      display: row.display,
+      percent: Math.min(100, Math.max(0, ((row.value ?? 0) / row.max) * 100)),
+    }))
+})
+
+function formatPercent(value: number | null): string {
+  return value === null ? '—' : `${Math.round(value * 100)}%`
+}
+
+// 把互动时间压成「月 日」，侧栏只需要一个时间锚点。
+function formatDate(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? '日期未知'
+    : date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+}
 
 async function loadRecommendations(): Promise<void> {
   loading.value = true
@@ -195,23 +260,45 @@ async function loadRecommendations(): Promise<void> {
   }
 }
 
+// 画像只对登录用户请求；失败时静默降级，不影响推荐区。
+async function loadProfile(): Promise<void> {
+  if (!auth.user) {
+    profile.value = null
+    return
+  }
+  try {
+    const { data } = await getMusicProfile()
+    profile.value = data
+  } catch {
+    profile.value = null
+  }
+}
+
+async function reload(): Promise<void> {
+  await Promise.all([loadRecommendations(), loadProfile()])
+}
+
 // 在应用内切换到智能体页并带入话题，避免反复打开新标签页。
 function onOpenAgent(payload: { type: string; query: string }) {
   void router.push({ name: 'agent', query: { topic: payload.query } })
 }
 
 // 反馈提交后对“不喜欢”的歌曲立刻从推荐中移除，形成反馈闭环；其余动作只记录统计。
-async function handleFeedback(songId: number, action: string): Promise<void> {
-  await feedbackStore.submitFeedback(songId, action)
-  if (action === 'dislike') await loadRecommendations()
-}
-
 async function handleFeedbackPayload(payload: { songId: number; action: string }): Promise<void> {
   if (payload.action === 'dislike') await loadRecommendations()
 }
 
 onMounted(async () => {
-  await Promise.all([feedbackStore.loadActions(), feedbackStore.loadStats(), loadRecommendations()])
+  // 首页是公开路由，守卫不会等认证恢复；这里必须显式等一次。
+  // 否则会先按游客加载热门内容，登录态回来后又把标题换成「为你推荐」，
+  // 页面就停在「推荐标题 + 游客数据」的错位状态。
+  await auth.initialize()
+  await Promise.all([
+    feedbackStore.loadActions(),
+    feedbackStore.loadStats(),
+    loadRecommendations(),
+    loadProfile(),
+  ])
 })
 </script>
 
@@ -220,425 +307,335 @@ onMounted(async () => {
   padding: var(--page-gutter);
 }
 
-.hero {
-  position: relative;
-  display: grid;
-  min-height: 280px;
-  grid-template-columns: minmax(0, 1.55fr) minmax(230px, 0.7fr);
-  align-items: center;
-  padding: clamp(30px, 5vw, 62px);
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 82% 40%, rgba(110, 231, 210, 0.22), transparent 26%),
-    radial-gradient(circle at 92% 4%, rgba(169, 162, 255, 0.28), transparent 32%),
-    linear-gradient(135deg, rgba(43, 63, 96, 0.88), rgba(26, 38, 65, 0.82));
-}
-
-.hero::after {
-  position: absolute;
-  right: -90px;
-  bottom: -150px;
-  width: 360px;
-  height: 360px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  content: '';
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 2;
-  max-width: 680px;
-}
-
-.eyebrow,
-.section-heading p {
-  margin: 0 0 10px;
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.hero h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(34px, 4.2vw, 54px);
-  line-height: 1.08;
-  letter-spacing: -0.045em;
-}
-
-.hero-copy > p:not(.eyebrow) {
-  max-width: 600px;
-  margin: 18px 0 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 11px;
-  margin-top: 28px;
-}
-
-.hero-actions a,
-.state-link {
+.button-link {
   display: inline-flex;
-  min-height: 42px;
+  height: 32px;
   align-items: center;
-  justify-content: center;
-  padding: 0 17px;
-  border-radius: 11px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: transparent;
+  font-size: var(--fs-xs);
   text-decoration: none;
 }
 
-.primary-link {
-  gap: 16px;
-  color: var(--text-on-accent);
-  background: var(--accent);
-  box-shadow: 0 10px 26px rgba(22, 186, 165, 0.2);
+.button-link:hover {
+  background: var(--surface-hover);
 }
 
-.primary-link:hover {
-  background: var(--accent-strong);
-  transform: translateY(-2px);
-}
-
-.secondary-link,
-.state-link {
-  border: 1px solid var(--border-strong);
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.hero-orbit {
-  position: relative;
-  z-index: 1;
+/* 概览条：四项并排，用分隔线而不是卡片分隔 */
+.overview {
   display: grid;
-  min-height: 220px;
-  place-items: center;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.record {
+.overview-item {
+  padding: 14px 16px;
+  border-left: 1px solid var(--border);
+}
+
+.overview-item:first-child {
+  border-left: 0;
+}
+
+.overview-item span,
+.overview-item small {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.overview-item strong {
+  display: block;
+  margin: 4px 0 2px;
+  color: var(--text);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.home-grid {
   display: grid;
-  width: 180px;
-  height: 180px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, var(--accent) 0 8%, #18283f 9% 16%, transparent 17%),
-    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.1) 0 1px, rgba(15, 25, 43, 0.9) 2px 8px);
-  box-shadow: 0 32px 70px rgba(4, 10, 24, 0.36);
-  transform: rotate(-12deg);
+  grid-template-columns: minmax(0, 1fr) 288px;
+  gap: 32px;
+  align-items: start;
 }
 
-.record span {
-  display: grid;
-  width: 56px;
-  height: 56px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--text-on-accent);
-  background: linear-gradient(145deg, var(--accent), var(--accent-purple));
-  font-size: 22px;
+.home-main {
+  min-width: 0;
 }
 
-.orbit-dot {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 22px rgba(110, 231, 210, 0.8);
-}
-
-.dot-one {
-  top: 28px;
-  right: 17%;
-  width: 8px;
-  height: 8px;
-}
-
-.dot-two {
-  bottom: 24px;
-  left: 12%;
-  width: 5px;
-  height: 5px;
-}
-
-.section-heading {
+.section-head {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 20px;
-  margin: 36px 2px 16px;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
-.section-heading h2 {
+.section-head h3 {
   margin: 0;
   color: var(--text);
-  font-size: 21px;
-  letter-spacing: -0.025em;
+  font-size: var(--fs-lg);
+  font-weight: 600;
 }
 
-.section-heading > span,
-.section-heading > a {
-  color: var(--text-muted);
-  font-size: 11px;
-  text-decoration: none;
-}
-
-.section-heading > a:hover {
-  color: var(--accent);
-}
-
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 13px;
-}
-
-.action-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 13px;
-  padding: 17px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  color: inherit;
-  background: linear-gradient(145deg, rgba(39, 56, 85, 0.72), rgba(25, 38, 61, 0.66));
-  box-shadow: var(--shadow-soft);
-  text-decoration: none;
-}
-
-.action-card:hover {
-  border-color: var(--border-strong);
-  background: linear-gradient(145deg, rgba(48, 69, 103, 0.86), rgba(29, 44, 71, 0.78));
-  transform: translateY(-3px);
-}
-
-.action-icon {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border-radius: 13px;
-  font-size: 19px;
-}
-
-.mint {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.purple {
-  color: var(--accent-purple);
-  background: rgba(169, 162, 255, 0.13);
-}
-.rose {
-  color: #ff9bb0;
-  background: rgba(255, 155, 176, 0.12);
-}
-.blue {
-  color: var(--accent-blue);
-  background: rgba(112, 183, 255, 0.13);
-}
-
-.action-copy {
-  min-width: 0;
-}
-
-.action-copy strong,
-.action-copy small {
-  display: block;
-}
-
-.action-copy strong {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.action-copy small {
-  margin-top: 5px;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.arrow {
-  color: var(--text-muted);
-}
-
-.lock-mark {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.action-card:hover .arrow {
-  color: var(--accent);
-  transform: translateX(2px);
-}
-
-.hot-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 13px;
-  /* 与加载占位同高：从「正在生成推荐」切到实实在在的卡片时页面不跳动 */
-  min-height: var(--content-min-height, 420px);
-  align-content: start;
-}
-
-.hot-card {
-  position: relative;
-  min-width: 0;
-  padding: 10px 10px 16px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.hot-card:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-3px);
-}
-
-.hot-cover {
-  position: relative;
-  display: grid;
-  min-height: 125px;
-  place-items: center;
-  border-radius: 13px;
-  color: rgba(8, 20, 29, 0.8);
-  font-size: 38px;
-  font-weight: 900;
-}
-
-.hot-cover small {
-  position: absolute;
-  top: 10px;
-  right: 11px;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-}
-
-.tone-0 {
-  background: linear-gradient(145deg, #74ead6, #6eb7f7);
-}
-.tone-1 {
-  background: linear-gradient(145deg, #b6afff, #f1a7cc);
-}
-.tone-2 {
-  background: linear-gradient(145deg, #f8ca7b, #f28f93);
-}
-.tone-3 {
-  background: linear-gradient(145deg, #8bc9ff, #a8e5be);
-}
-
-.hot-info {
-  min-width: 0;
-  padding: 13px 5px 0;
-}
-
-.hot-info strong,
-.hot-info span,
-.hot-info small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hot-info strong {
-  color: var(--text);
-  font-size: 13px;
-}
-.hot-info span {
-  margin-top: 4px;
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-.hot-info small {
-  margin-top: 9px;
-  color: var(--accent-strong);
-  font-size: 10px;
-}
-.hot-info p {
-  margin: 5px 0 0;
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
-/* 推荐区三种状态（加载中 / 有卡片 / 空态）共用同一片高度：
-   否则从「正在生成推荐」切到卡片、或卡片切到空态时，整页会跳一下。 */
-.recommendation-state {
-  min-height: var(--content-min-height, 420px);
+.section-tools {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
 }
 
-.feedback-summary {
-  font-size: 12px;
+.section-note {
   color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 
-.hot-feedback {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 10px 10px 10px;
-}
-
-.hot-feedback-btn {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
+.text-button {
+  padding: 0;
+  border: 0;
+  color: var(--text-muted);
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 9px;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  text-decoration: none;
   cursor: pointer;
 }
 
-.hot-feedback-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
-  background: var(--accent-soft);
+.text-button:hover {
+  color: var(--text);
 }
 
-@media (max-width: 1120px) {
-  .quick-actions,
-  .hot-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.panel-state {
+  display: flex;
+  min-height: var(--content-min-height);
+  align-items: center;
+  justify-content: center;
+}
+
+/* 热门列表：行之间只用分隔线，不套卡片 */
+.track-list {
+  border-top: 1px solid var(--border);
+}
+
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.track-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.track-copy {
+  min-width: 0;
+}
+
+.track-copy strong,
+.track-meta,
+.track-reason {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-copy strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.track-meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.track-reason {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+}
+
+.track-tail {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.side-block h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.side-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.side-head h3 {
+  margin: 0;
+}
+
+.side-block--quiet h3 {
+  color: var(--text-secondary);
+}
+
+.side-note {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+}
+
+.inline-link {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.feature-row + .feature-row {
+  margin-top: 10px;
+}
+
+.feature-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.feature-label strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.feature-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-hover);
+}
+
+.feature-track span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+}
+
+.recent-list li:first-child a {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.recent-list a:hover .recent-title {
+  color: var(--text);
+}
+
+.recent-title,
+.recent-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-title {
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+}
+
+.recent-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 1100px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
   }
 }
 
 @media (max-width: 720px) {
-  .hero {
-    display: block;
-    min-height: auto;
+  .overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hero-orbit {
+  .overview-item {
+    border-top: 1px solid var(--border);
+  }
+
+  .overview-item:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .text-button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+  }
+
+  .track-tail {
     display: none;
-  }
-
-  .section-heading > span {
-    display: none;
-  }
-}
-
-@media (max-width: 520px) {
-  .quick-actions,
-  .hot-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-actions a {
-    width: 100%;
   }
 }
 </style>

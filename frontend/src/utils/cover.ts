@@ -73,16 +73,17 @@ export function coverPalette(song: CoverSource): CoverPalette {
       ? Math.min(1, Math.max(0, song.danceability))
       : 0.5
 
-  const fromLight = 30 + tempo * 14
-  const toLight = 16 + tempo * 10
-  const saturation = 34 + tempo * 16 + groove * 6
+  // 明度压低、饱和度收窄：看上去像印刷封面，而不是彩色渐变占位图
+  const fromLight = 24 + tempo * 10
+  const toLight = 14 + tempo * 8
+  const saturation = 22 + tempo * 10 + groove * 4
 
   return {
     hue,
     from: `hsl(${hue.toFixed(0)} ${saturation.toFixed(0)}% ${fromLight.toFixed(0)}%)`,
-    to: `hsl(${((hue + 26) % 360).toFixed(0)} ${(saturation - 10).toFixed(0)}% ${toLight.toFixed(0)}%)`,
-    text: `hsl(${hue.toFixed(0)} 82% 86%)`,
-    accent: `hsl(${hue.toFixed(0)} 70% 68%)`,
+    to: `hsl(${((hue + 26) % 360).toFixed(0)} ${(saturation - 8).toFixed(0)}% ${toLight.toFixed(0)}%)`,
+    text: `hsl(${hue.toFixed(0)} 55% 78%)`,
+    accent: `hsl(${hue.toFixed(0)} 45% 62%)`,
   }
 }
 

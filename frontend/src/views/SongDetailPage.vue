@@ -49,10 +49,6 @@
           }}</span>
         </div>
         <div class="feat-item">
-          <span class="feat-label">律动（判定分）</span
-          ><span class="feat-val">{{ danceabilityPercent(song.danceability) }}</span>
-        </div>
-        <div class="feat-item">
           <span class="feat-label">响度</span
           ><span class="feat-val">{{
             song.loudness !== null ? song.loudness.toFixed(2) : '-'
@@ -144,13 +140,7 @@ import { getSong, type SongDetail } from '../api/songs'
 import { recordPlay } from '../api/recommendations'
 import { useAuthStore } from '../stores/auth'
 import BackLink from '../components/BackLink.vue'
-import {
-  danceabilityHint,
-  danceabilityLabel,
-  danceabilityPercent,
-  moodTags,
-  voiceLabel,
-} from '../types/music'
+import { danceabilityHint, danceabilityLabel, moodTags, voiceLabel } from '../types/music'
 import { fusedGenreLabel } from '../utils/genre'
 import { addFavorite, listFavorites, removeFavorite } from '../api/favorites'
 import { showError, showSuccess } from '../utils/feedback'
@@ -407,148 +397,149 @@ onUnmounted(() => {
 }
 .song-header {
   display: flex;
-  gap: 32px;
+  gap: 24px;
   align-items: flex-start;
-  margin-bottom: 24px;
-  padding: clamp(22px, 4vw, 36px);
+  margin-bottom: 20px;
+  padding: clamp(20px, 3vw, 28px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background:
-    radial-gradient(circle at 92% 15%, rgba(110, 231, 210, 0.18), transparent 28%),
-    linear-gradient(145deg, rgba(40, 58, 89, 0.82), rgba(24, 37, 61, 0.74));
-  box-shadow: var(--shadow-soft);
-}
-.cover-placeholder {
-  width: 160px;
-  height: 160px;
-  border-radius: 20px;
-  background: linear-gradient(145deg, var(--accent), var(--accent-blue));
-  box-shadow: 0 22px 50px rgba(22, 186, 165, 0.2);
-  display: grid;
-  place-items: center;
-  font-size: 48px;
-  color: var(--text-on-accent);
-  font-weight: 800;
-  flex-shrink: 0;
+  background: var(--surface);
 }
 .info h2 {
   color: var(--text);
-  font-size: clamp(28px, 4vw, 42px);
-  letter-spacing: -0.04em;
-  margin: 0 0 8px;
-}
-.artist {
-  color: var(--accent);
-  font-size: 16px;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0 0 6px;
 }
-.meta {
+.artist {
   color: var(--text-secondary);
-  font-size: 14px;
-  margin: 0 0 20px;
+  font-size: var(--fs-sm);
+  margin: 0 0 8px;
+}
+.meta {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  margin: 0 0 18px;
 }
 .actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 .features,
 .radar-block,
 .detail-block {
-  margin-bottom: 18px;
-  padding: clamp(18px, 3vw, 26px);
+  margin-bottom: 16px;
+  padding: clamp(18px, 3vw, 24px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgba(37, 53, 81, 0.72), rgba(24, 35, 56, 0.62));
-  box-shadow: var(--shadow-soft);
+  background: var(--surface);
 }
 .meta-sub {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .features h3,
 .radar-block h3,
 .detail-block h3 {
   color: var(--text);
-  font-size: 18px;
-  margin: 0 0 16px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin: 0 0 14px;
 }
+/* 特征值排成一张表：用分隔线而不是一格一卡 */
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 .feat-item {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.feat-item:nth-child(-n + 3) {
+  border-top: 0;
+}
+.feat-item:nth-child(3n + 1) {
+  border-left: 0;
 }
 .feat-label {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .feat-val {
   color: var(--text);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 .radar-chart {
   width: 100%;
+  max-width: 560px;
   height: 320px;
+  margin: 0 auto;
 }
 .feature-source {
   margin: 10px 0 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .radar-note {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   margin: 8px 0 0;
+  line-height: 1.7;
 }
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 .tag {
-  background: var(--accent-soft);
-  border: 1px solid var(--border-strong);
-  color: var(--accent);
-  border-radius: 999px;
-  padding: 4px 14px;
-  font-size: 13px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: var(--fs-xs);
 }
 .structure-text {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.9;
-  background: var(--surface-raised);
-  border-radius: 10px;
-  padding: 16px 20px;
   margin: 0;
 }
 .actions-note {
   margin: 10px 0 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 @media (max-width: 640px) {
   .song-header {
-    align-items: center;
+    align-items: flex-start;
     flex-direction: column;
-    text-align: center;
-  }
-  .actions {
-    justify-content: center;
   }
   .feature-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .feat-item:nth-child(3n + 1) {
+    border-left: 1px solid var(--border);
+  }
+  .feat-item:nth-child(odd) {
+    border-left: 0;
+  }
+  .feat-item:nth-child(-n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .feat-item:nth-child(-n + 2) {
+    border-top: 0;
   }
 }
 </style>

@@ -13,7 +13,7 @@
               class="drawer-new"
               :disabled="loading"
               title="开始新对话"
-              @click="startNewConversation"
+              @click="newConversation"
             >
               <span aria-hidden="true">＋</span> 新对话
             </button>
@@ -31,7 +31,7 @@
                 class="session-item"
                 :disabled="loading"
                 :title="sessionTitle(item)"
-                @click="openSession(item)"
+                @click="selectSession(item)"
               >
                 <span class="session-title">{{ sessionTitle(item) }}</span>
                 <span class="session-meta">
@@ -62,7 +62,7 @@
           :title="sessionsOpen ? '收起历史对话' : '展开历史对话'"
           @click="sessionsOpen = !sessionsOpen"
         >
-          <span aria-hidden="true">☰</span>
+          <AppIcon name="menu" :size="16" />
         </button>
         <div class="agent-body">
           <div
@@ -82,9 +82,7 @@
                 class="message-row"
                 :class="item.role"
               >
-                <span class="message-avatar" aria-hidden="true">{{
-                  item.role === 'user' ? userInitial : '✦'
-                }}</span>
+                <span class="message-role">{{ item.role === 'user' ? '你' : '助手' }}</span>
                 <div class="message">
                   <!-- 用户输入按纯文本展示，模型回复渲染 Markdown。 -->
                   <MarkdownContent v-if="item.role === 'assistant'" :content="item.content" />
@@ -98,7 +96,7 @@
                 </div>
               </div>
               <div v-if="loading && !hasPendingAssistant" class="message-row assistant pending">
-                <span class="message-avatar" aria-hidden="true">✦</span>
+                <span class="message-role">助手</span>
                 <div class="message">
                   <p class="typing"><i></i><i></i><i></i></p>
                 </div>
@@ -109,19 +107,22 @@
 
           <div v-else class="agent-empty page-surface">
             <div class="empty-copy">
-              <span class="empty-mark" aria-hidden="true">✦</span>
               <h2>今天想分析点什么？</h2>
               <p>我可以调用已接入的数据工具，完成检索、特征分析与知识问答。</p>
             </div>
             <div class="suggestion-grid">
               <button
-                v-for="item in suggestions"
+                v-for="(item, index) in suggestions"
                 :key="item"
                 type="button"
                 class="suggestion-card"
                 @click="sendSuggestion(item)"
               >
-                {{ item }}
+                <span class="suggestion-index numeric">{{
+                  String(index + 1).padStart(2, '0')
+                }}</span>
+                <span>{{ item }}</span>
+                <AppIcon name="arrow-right" :size="14" class="suggestion-arrow" />
               </button>
             </div>
           </div>
@@ -183,7 +184,7 @@
               :autosize="{ minRows: 1, maxRows: 6 }"
               maxlength="2000"
               resize="none"
-              placeholder="直接输入需求，例如：推荐节奏舒缓、器乐为主的内容"
+              placeholder="描述你想找的内容，例如：节奏舒缓的器乐"
               :disabled="awaitingConfirmation"
               @keydown="handleComposerKeydown"
             />
@@ -210,6 +211,10 @@
             <p v-if="loading && draft.trim()" class="composer-busy">
               智能体正在运行，这条将在本轮结束后发送
             </p>
+            <!-- 待确认时输入被禁用，明确说明为什么不能输入 -->
+            <p v-if="awaitingConfirmation" class="composer-busy">
+              先处理上方的确认操作，再继续提问
+            </p>
           </form>
 
           <div class="composer-foot">
@@ -227,6 +232,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ElInput } from 'element-plus'
 import { useRoute } from 'vue-router'
 import MarkdownContent from '../components/MarkdownContent.vue'
+import AppIcon from '../components/AppIcon.vue'
 import {
   deleteAgentSession,
   getAgentSession,
@@ -237,14 +243,12 @@ import {
 } from '../api/agent'
 import type { AgentEvent, AgentSessionSummary, PendingToolConfirmation } from '../types/agent'
 import { showError } from '../utils/feedback'
-import { useAuthStore } from '../stores/auth'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
-const auth = useAuthStore()
 const route = useRoute()
 const draft = ref('')
 const loading = ref(false)
@@ -276,6 +280,11 @@ watch(sessionsOpen, (open) => {
     // 存不下就算了，不影响使用
   }
 })
+
+// 窄屏抽屉是浮层：选完会话或新建后自动收起，否则会一直盖住对话
+function closeDrawerOnNarrow(): void {
+  if (window.innerWidth <= 1100) sessionsOpen.value = false
+}
 const toolStatus = ref('')
 const pendingConfirmations = ref<PendingToolConfirmation[]>([])
 // 已作出的决定：确认后按钮要禁用、卡片转为「已确认」状态，不能还能再点一次。
@@ -290,7 +299,6 @@ const autoFollow = ref(true)
 let resizeObserver: ResizeObserver | null = null
 // 一帧内只滚一次，避免滚动 ↔ ResizeObserver 互相触发。
 let scrollScheduled = false
-const userInitial = computed(() => auth.user?.username.slice(0, 1).toUpperCase() || '你')
 const hasPendingAssistant = computed(
   () => messages.value[messages.value.length - 1]?.role === 'assistant',
 )
@@ -510,6 +518,18 @@ function startNewConversation(): void {
   void nextTick(() => composerInput.value?.focus())
 }
 
+// 抽屉里的「新对话」：桌面保持抽屉展开，窄屏浮层选完自动收起
+function newConversation(): void {
+  startNewConversation()
+  closeDrawerOnNarrow()
+}
+
+// 抽屉里的历史会话：同上，窄屏点完就收起，桌面保持原样
+async function selectSession(item: AgentSessionSummary): Promise<void> {
+  await openSession(item)
+  closeDrawerOnNarrow()
+}
+
 // 会话列表标题：没有用户消息的会话（建完就走）给一个兜底文案。
 function sessionTitle(item: AgentSessionSummary): string {
   const title = item.title?.replace(/\s+/g, ' ').trim() ?? ''
@@ -689,10 +709,10 @@ watch(conversationElement, (element) => {
   height: 100%;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 10px;
+  padding: 10px 8px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface-solid);
+  border-radius: var(--radius);
+  background: var(--surface);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -723,13 +743,13 @@ watch(conversationElement, (element) => {
   top: 10px;
   left: 10px;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: var(--surface-solid);
+  background: var(--surface);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
@@ -750,14 +770,14 @@ watch(conversationElement, (element) => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface);
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .drawer-new:hover:not(:disabled) {
   background: var(--surface-hover);
@@ -769,8 +789,7 @@ watch(conversationElement, (element) => {
 .drawer-label {
   margin: 4px 4px 0;
   color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: var(--fs-xs);
 }
 .agent-body {
   display: flex;
@@ -782,7 +801,7 @@ watch(conversationElement, (element) => {
 .session-state {
   margin: 4px 2px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .session-list {
@@ -835,7 +854,7 @@ watch(conversationElement, (element) => {
 }
 .session-meta {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 .session-remove {
   position: absolute;
@@ -929,11 +948,10 @@ watch(conversationElement, (element) => {
   margin: 0 0 16px;
   padding: 6px 12px 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   background: var(--surface);
-  backdrop-filter: blur(6px);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.2;
 }
 .run-status i {
@@ -955,36 +973,21 @@ watch(conversationElement, (element) => {
     transform: scale(1);
   }
 }
+/* 消息按「说话人 + 内容」两行排：不做头像、不做左右气泡，
+   读起来像一份对话记录，而不是聊天模板。 */
 .message-row {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 5px;
   margin-bottom: 26px;
 }
 .message-row:last-child {
   margin-bottom: 2px;
 }
-.message-row.user {
-  flex-direction: row-reverse;
+.message-role {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
-.message-avatar {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  margin-top: 2px;
-  place-items: center;
-  border-radius: 9px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  font-size: 12px;
-  font-weight: 800;
-}
-.user .message-avatar {
-  color: var(--accent-purple);
-  background: rgba(169, 162, 255, 0.15);
-}
-/* 助手消息不再套气泡：直接排在背景上，读起来是对话而不是卡片列表 */
 .message {
   max-width: 100%;
   min-width: 0;
@@ -992,13 +995,17 @@ watch(conversationElement, (element) => {
   color: var(--text);
   background: none;
 }
-/* 只给用户消息保留气泡，突出「我说的话」 */
+/* 助手回复限制阅读宽度：1040px 的长段落每行太多字，读起来累 */
+.assistant .message {
+  max-width: 760px;
+}
+/* 用户消息给一块浅底，区分「我说的话」；助手回复直接排在页面底色上。 */
 .user .message {
   max-width: min(76%, 720px);
-  padding: 10px 14px;
-  border: 1px solid rgba(169, 162, 255, 0.22);
-  border-radius: 14px 4px 14px 14px;
-  background: linear-gradient(135deg, rgba(169, 162, 255, 0.16), rgba(112, 183, 255, 0.1));
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
 }
 /* 流式输出光标：让用户看出「正在生成」 */
 .stream-cursor {
@@ -1025,81 +1032,72 @@ watch(conversationElement, (element) => {
     opacity: 0.15;
   }
 }
-/* 空状态：居中引导 + 示例问题，降低首次使用门槛
-   （只有这一处需要垂直居中；对话列表按上方规则从顶部开始排） */
+/* 空状态：左对齐的引导 + 一组编号示例，像「查询示例」而不是 AI 灵感卡片 */
 .agent-empty {
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 28px;
-  padding: clamp(28px, 5vw, 56px);
+  gap: 24px;
+  padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 44px);
 }
 .empty-copy {
   width: 100%;
-  text-align: center;
-}
-.empty-mark {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  place-items: center;
-  margin: 0 auto 16px;
-  border-radius: 14px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  font-size: 20px;
+  max-width: 640px;
 }
 .empty-copy h2 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(20px, 3vw, 26px);
-  letter-spacing: -0.02em;
+  font-size: clamp(20px, 2.4vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .empty-copy p {
-  margin: 10px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
   line-height: 1.7;
 }
 .suggestion-grid {
-  display: grid;
+  display: flex;
   width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  max-width: 640px;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
 }
 .suggestion-card {
-  padding: 13px 15px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   color: var(--text-secondary);
-  background: var(--surface);
+  background: transparent;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-align: left;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
 }
 .suggestion-card:hover {
-  border-color: var(--border-strong);
   color: var(--text);
   background: var(--surface-hover);
-  transform: translateY(-1px);
 }
 .suggestion-card:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
-@media (max-width: 640px) {
-  .suggestion-grid {
-    grid-template-columns: 1fr;
-  }
+.suggestion-index {
+  flex: 0 0 22px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.suggestion-arrow {
+  margin-left: auto;
+  color: var(--text-muted);
 }
 .message p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-md);
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1127,13 +1125,13 @@ watch(conversationElement, (element) => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 14px 40px;
-  padding: 6px 12px 6px 10px;
+  margin: 0 0 14px;
+  padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   background: var(--surface);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.2;
 }
 .tool-status span {
@@ -1142,45 +1140,45 @@ watch(conversationElement, (element) => {
   flex: 0 0 7px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(112, 183, 255, 0.6);
-  animation: tool-pulse 1.4s ease-out infinite;
+  animation: tool-pulse 1.4s ease-in-out infinite;
 }
 @keyframes tool-pulse {
-  70% {
-    box-shadow: 0 0 0 7px rgba(112, 183, 255, 0);
-  }
+  0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(112, 183, 255, 0);
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
   }
 }
 .confirmation-panel {
   width: 100%;
   margin: 13px auto 0;
   padding: 10px 14px;
-  border-color: rgba(232, 172, 96, 0.35);
+  border-color: var(--border-strong);
 }
 /* 标题与按钮同一行：需要操作时按钮就在眼前，不用往下找 */
 .confirmation-head {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .confirmation-badge {
   flex: 0 0 auto;
-  padding: 3px 9px;
-  border: 1px solid rgba(232, 172, 96, 0.45);
-  border-radius: 999px;
-  color: #e8ac60;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border: 1px solid rgba(201, 162, 95, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 .confirmation-head strong {
   min-width: 0;
   flex: 1;
   color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: 500;
 }
 .confirmation-actions {
   display: flex;
@@ -1200,41 +1198,65 @@ watch(conversationElement, (element) => {
   gap: 8px;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 .op-tag {
   flex: 0 0 auto;
-  padding: 2px 7px;
-  border-radius: 6px;
-  color: #e8ac60;
-  background: rgba(232, 172, 96, 0.13);
-  font-size: 10px;
-  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  background: rgba(201, 162, 95, 0.12);
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 .confirmation-detail {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 10px;
+}
+/* 参数明细：标题一行，键值对换行排在下面，避免长值把标题挤走 */
+.confirmation-facts {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+}
+.confirmation-facts div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.confirmation-facts dt,
+.confirmation-facts dd {
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+.confirmation-facts dt {
+  color: var(--text-muted);
+}
+.confirmation-facts dd {
+  color: var(--text-secondary);
 }
 .confirmation-detail strong {
   color: var(--text);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 .confirmation-detail code {
   min-width: 0;
   color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   word-break: break-all;
 }
 .confirmation-detail small {
   width: 100%;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 .composer {
   /* 固定在整列最底部：不是 sticky，而是 flex 布局里排在消息区之后的一层。
@@ -1245,16 +1267,12 @@ watch(conversationElement, (element) => {
   margin-top: 12px;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  background: var(--surface-solid);
-  box-shadow: 0 10px 30px rgba(8, 15, 30, 0.28);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
-/* 聚焦时给出明确反馈，和主流对话产品一致 */
+/* 聚焦时只换边框色，不加外发光 */
 .composer:focus-within {
   border-color: var(--accent);
-  box-shadow:
-    0 10px 30px rgba(8, 15, 30, 0.32),
-    0 0 0 3px var(--accent-soft);
 }
 .composer :deep(.el-textarea__inner) {
   min-height: 56px !important;
@@ -1262,7 +1280,7 @@ watch(conversationElement, (element) => {
   border: none;
   background: transparent;
   box-shadow: none;
-  font-size: 13px;
+  font-size: var(--fs-md);
   line-height: 1.7;
 }
 /* 发送按钮贴在输入框右下角内侧，并相对输入框垂直居中：
@@ -1278,13 +1296,13 @@ watch(conversationElement, (element) => {
   min-width: 40px;
   height: 40px;
   padding: 0;
-  border-radius: 12px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
 }
 .composer-busy {
   margin: 6px 2px 0;
-  color: var(--accent);
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
   line-height: 1.4;
 }
 .composer-foot {
@@ -1300,12 +1318,11 @@ watch(conversationElement, (element) => {
 .composer-hint {
   margin: 0;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   line-height: 1.5;
 }
 .composer-hint {
-  color: var(--text-faint, var(--text-muted));
-  opacity: 0.85;
+  opacity: 0.9;
 }
 @keyframes pulse {
   0%,

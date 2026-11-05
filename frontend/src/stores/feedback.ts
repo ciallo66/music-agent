@@ -8,7 +8,7 @@ import {
   listFeedbackActions,
   removeFeedback,
 } from '../api/feedback'
-import { ElMessage } from 'element-plus'
+import { showError, showSuccess } from '../utils/feedback'
 
 export const useFeedbackStore = defineStore('feedback', () => {
   const actions = ref<FeedbackActionItem[]>([])
@@ -51,16 +51,16 @@ export const useFeedbackStore = defineStore('feedback', () => {
         const next = { ...mine.value }
         delete next[songId]
         mine.value = next
-        ElMessage.success('已取消该反馈')
+        showSuccess('已取消该反馈')
       } else {
         await createFeedback(songId, action)
         mine.value = { ...mine.value, [songId]: action }
-        ElMessage.success('反馈已记录')
+        showSuccess('反馈已记录')
       }
       await loadStats()
       return true
     } catch {
-      ElMessage.error('记录反馈失败')
+      showError('记录反馈失败')
       return false
     } finally {
       submitted.value.delete(songId)

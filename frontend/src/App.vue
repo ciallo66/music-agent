@@ -41,7 +41,6 @@ import { isNavigating } from './router'
   width: 42%;
   height: 100%;
   background: var(--accent);
-  box-shadow: 0 0 14px rgba(110, 231, 210, 0.85);
 }
 
 @keyframes route-progress {

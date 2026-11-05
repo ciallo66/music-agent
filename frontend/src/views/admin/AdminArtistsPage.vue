@@ -31,7 +31,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="歌手" min-width="200" />
         <el-table-column prop="avatar_url" label="头像地址" min-width="220" />
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <el-button
               size="small"
@@ -183,6 +183,7 @@ async function remove(artist: AdminArtistItem): Promise<void> {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger',
     })
   } catch {
     return

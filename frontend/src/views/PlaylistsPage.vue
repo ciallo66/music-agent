@@ -27,15 +27,16 @@
     </div>
     <div v-else class="playlist-grid">
       <article
-        v-for="(playlist, index) in playlists"
+        v-for="playlist in playlists"
         :key="playlist.id"
         class="playlist-card page-surface"
         role="button"
         tabindex="0"
         @click="go(playlist.id)"
         @keydown.enter="go(playlist.id)"
+        @keydown.space.prevent="go(playlist.id)"
       >
-        <div class="cover" :class="`tone-${index % 4}`">
+        <div class="cover">
           <span>{{ playlist.name.slice(0, 1) }}</span
           ><small>歌单</small>
         </div>
@@ -179,38 +180,30 @@ onMounted(load)
 }
 .playlist-card:hover {
   border-color: var(--border-strong);
-  transform: translateY(-3px);
+  background: var(--surface-hover);
 }
+/* 歌单没有专辑图，也不编造渐变封面：一块中性底 + 首字，信息更准确 */
 .cover {
-  display: grid;
-  width: 82px;
-  height: 82px;
-  place-items: center;
-  border-radius: 15px;
-  color: rgba(9, 22, 31, 0.8);
-  font-size: 28px;
-  font-weight: 900;
+  display: flex;
+  width: 72px;
+  height: 72px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-direction: column;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface-raised);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
 }
 .cover small {
-  align-self: end;
-  margin-bottom: 8px;
-  font-size: 7px;
-  letter-spacing: 0.14em;
-}
-.cover span {
-  align-self: end;
-}
-.tone-0 {
-  background: linear-gradient(145deg, #76ead8, #7cbcf4);
-}
-.tone-1 {
-  background: linear-gradient(145deg, #afa8ff, #e7a4cf);
-}
-.tone-2 {
-  background: linear-gradient(145deg, #f5c876, #f18f91);
-}
-.tone-3 {
-  background: linear-gradient(145deg, #8bc8ff, #a3e4ba);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 .playlist-copy {
   min-width: 0;
@@ -225,17 +218,18 @@ onMounted(load)
 }
 .playlist-copy strong {
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
 }
 .playlist-copy span {
-  margin-top: 6px;
-  color: var(--accent-strong);
-  font-size: 10px;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 .playlist-copy p {
-  margin: 9px 0 0;
+  margin: 8px 0 0;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 .open-mark {
   color: var(--text-muted);
@@ -250,28 +244,29 @@ onMounted(load)
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.025);
+  background: transparent;
   cursor: pointer;
 }
 .create-card span {
-  font-size: 24px;
-  color: var(--accent);
+  color: var(--text-muted);
+  font-size: 20px;
 }
 .create-card strong {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 .create-card small {
-  font-size: 9px;
+  font-size: var(--fs-xs);
 }
 .create-card:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 @media (max-width: 520px) {
   .playlist-grid {

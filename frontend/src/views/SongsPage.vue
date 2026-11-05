@@ -2,7 +2,6 @@
 <template>
   <section class="songs-page">
     <PageHeader
-      eyebrow="内容库"
       title="内容数据"
       subtitle="按标题、来源与标签浏览示例内容，结构化特征让每次检索更有依据"
     >
@@ -15,7 +14,7 @@
             @clear="applyFilters"
             @keyup.enter="applyFilters"
           >
-            <template #prefix>⌕</template>
+            <template #prefix><AppIcon name="search" :size="14" /></template>
           </el-input>
           <el-select v-model="genre" placeholder="全部风格" clearable @change="applyFilters">
             <el-option v-for="item in genres" :key="item" :label="item" :value="item" />
@@ -76,6 +75,7 @@ import PageHeader from '../components/PageHeader.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import StatePanel from '../components/StatePanel.vue'
 import SongList from '../components/SongList.vue'
+import AppIcon from '../components/AppIcon.vue'
 
 const pageSize = 20
 // 风格选项由后端按目录实际取值聚合返回，避免前后端硬编码不一致。
@@ -167,20 +167,24 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   min-height: 32px;
-  margin: -12px 2px 12px;
+  margin: -10px 2px 12px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .library-meta strong {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--fs-md);
+  font-weight: 600;
 }
 .library-meta button {
   border: 0;
-  color: var(--accent);
+  color: var(--text-muted);
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-xs);
+}
+.library-meta button:hover {
+  color: var(--text);
 }
 .state-surface {
   min-height: 310px;
@@ -195,25 +199,25 @@ onMounted(() => {
   gap: 5px;
   padding: 0;
   --el-pagination-bg-color: transparent;
-  --el-pagination-button-bg-color: rgba(255, 255, 255, 0.045);
+  --el-pagination-button-bg-color: transparent;
   --el-pagination-button-color: var(--text-secondary);
   --el-pagination-hover-color: var(--accent);
 }
 .pagination :deep(.btn-prev),
 .pagination :deep(.btn-next),
 .pagination :deep(.el-pager li) {
-  min-width: 34px;
-  height: 34px;
+  min-width: 32px;
+  height: 32px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.045) !important;
+  background: transparent !important;
 }
 .pagination :deep(.el-pager li:hover),
 .pagination :deep(.btn-prev:hover),
 .pagination :deep(.btn-next:hover) {
-  border-color: rgba(110, 231, 210, 0.42);
-  color: var(--accent);
+  border-color: var(--border-strong);
+  color: var(--text);
 }
 .pagination :deep(.el-pager li.is-active) {
   border-color: var(--accent);

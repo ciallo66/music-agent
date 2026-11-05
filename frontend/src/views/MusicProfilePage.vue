@@ -1,7 +1,7 @@
 <!-- 个人画像页面：将历史互动与收藏数据转换为统计卡片和趋势图。 -->
 <template>
   <section class="profile-page">
-    <PageHeader title="个人内容画像" subtitle="从你的历史互动和收藏记录里，了解内容偏好">
+    <PageHeader title="个人分析" subtitle="从你的历史互动和收藏记录里，了解内容偏好">
       <template #actions>
         <el-button :loading="loading" @click="() => loadProfile(true)">刷新数据</el-button>
       </template>
@@ -37,10 +37,9 @@
       </div>
       <div class="stat-grid">
         <article v-for="stat in stats" :key="stat.label" class="stat-card">
-          <span class="stat-icon" aria-hidden="true">{{ stat.icon }}</span>
           <div>
             <p>{{ stat.label }}</p>
-            <strong>{{ stat.value }}</strong>
+            <strong class="numeric">{{ stat.value }}</strong>
           </div>
         </article>
       </div>
@@ -52,7 +51,6 @@
               <p class="panel-kicker">你的偏好</p>
               <h3>常听风格</h3>
             </div>
-            <span class="panel-icon">♫</span>
           </div>
           <div v-if="profile.preferred_genres.length" class="genre-tags">
             <span v-for="(genre, index) in profile.preferred_genres" :key="genre" class="genre-tag">
@@ -110,7 +108,7 @@
           <div class="panel-heading">
             <div>
               <p class="panel-kicker">Top 5</p>
-              <h3>常来源</h3>
+              <h3>常听歌手</h3>
             </div>
           </div>
           <div v-if="profile.top_artists.length" ref="artistChart" class="chart chart-bar"></div>
@@ -121,10 +119,9 @@
       <article v-if="profile.agent_interpretation" class="panel interpretation-panel">
         <div class="panel-heading">
           <div>
-            <p class="panel-kicker">智能解读</p>
-            <h3>智能体解读</h3>
+            <p class="panel-kicker">根据你的记录</p>
+            <h3>解读</h3>
           </div>
-          <span class="panel-icon">✦</span>
         </div>
         <p class="interpretation-text">{{ profile.agent_interpretation }}</p>
       </article>
@@ -244,10 +241,10 @@ let resizeObserver: ResizeObserver | null = null
 const stats = computed(() => {
   if (!profile.value) return []
   return [
-    { label: '累计互动', value: profile.value.total_plays, icon: '◉' },
-    { label: '浏览条目', value: profile.value.unique_songs, icon: '♫' },
-    { label: '收藏条目', value: profile.value.favorite_count, icon: '♡' },
-    { label: '主动反馈', value: feedbackCount.value, icon: '✓' },
+    { label: '累计互动', value: profile.value.total_plays },
+    { label: '浏览条目', value: profile.value.unique_songs },
+    { label: '收藏条目', value: profile.value.favorite_count },
+    { label: '主动反馈', value: feedbackCount.value },
   ]
 })
 
@@ -264,17 +261,17 @@ const featureRows = computed(() => {
       percent: scale(feature.average_bpm, 200),
     },
     {
-      label: '能量 Energy',
+      label: '能量',
       display: formatPercent(feature.average_energy),
       percent: scale(feature.average_energy, 1),
     },
     {
-      label: '愉悦 Valence',
+      label: '明亮度',
       display: formatPercent(feature.average_valence),
       percent: scale(feature.average_valence, 1),
     },
     {
-      label: '律动 Danceability',
+      label: '律动',
       display: danceLevel ? `${dancePercent}（${danceLevel}）` : dancePercent,
       percent: scale(feature.average_danceability, 1),
     },
@@ -298,6 +295,13 @@ function renderCharts(): void {
   disposeCharts()
   const data = profile.value
   if (!data) return
+  // 图表颜色统一从设计令牌读取，避免页面换色后图表还是旧配色。
+  const muted = cssVariable('--text-muted')
+  const secondary = cssVariable('--text-secondary')
+  const accent = cssVariable('--accent')
+  const border = cssVariable('--chart-border')
+  const borderStrong = cssVariable('--chart-border-strong')
+  const accentSoft = cssVariable('--chart-accent-fill')
 
   if (trendChart.value && data.play_trend.length) {
     const chart = init(trendChart.value)
@@ -307,25 +311,25 @@ function renderCharts(): void {
         type: 'category',
         boundaryGap: false,
         data: data.play_trend.map((item) => item.date.slice(5)),
-        axisLabel: { color: '#8f98b0' },
-        axisLine: { lineStyle: { color: 'rgba(202,210,255,.14)' } },
+        axisLabel: { color: muted },
+        axisLine: { lineStyle: { color: borderStrong } },
       },
       yAxis: {
         type: 'value',
         minInterval: 1,
-        splitLine: { lineStyle: { color: 'rgba(202,210,255,.08)' } },
-        axisLabel: { color: '#8f98b0' },
+        splitLine: { lineStyle: { color: border } },
+        axisLabel: { color: muted },
       },
       series: [
         {
           type: 'line',
-          smooth: true,
+          smooth: false,
           symbol: 'circle',
-          symbolSize: 6,
+          symbolSize: 4,
           data: data.play_trend.map((item) => item.count),
-          lineStyle: { color: '#8b7cf6', width: 3 },
-          itemStyle: { color: '#a99dff' },
-          areaStyle: { color: 'rgba(139,124,246,.16)' },
+          lineStyle: { color: accent, width: 1.5 },
+          itemStyle: { color: accent },
+          areaStyle: { color: accentSoft },
         },
       ],
       tooltip: { trigger: 'axis' },
@@ -333,8 +337,8 @@ function renderCharts(): void {
     charts.value.push(chart)
   }
 
-  createBarChart(genreChart.value, data.genre_distribution)
-  createBarChart(artistChart.value, data.top_artists)
+  createBarChart(genreChart.value, data.genre_distribution, { muted, secondary, border, accent })
+  createBarChart(artistChart.value, data.top_artists, { muted, secondary, border, accent })
   if (data.interest_distribution?.length) {
     createBarChart(
       interestChart.value,
@@ -342,9 +346,10 @@ function renderCharts(): void {
         name: item.label,
         count: Math.round(item.weight * 100),
       })),
+      { muted, secondary, border, accent },
     )
   }
-  createActiveHoursChart()
+  createActiveHoursChart({ muted, border, accent })
   resizeObserver = new ResizeObserver(() => charts.value.forEach((chart) => chart.resize()))
   ;[
     trendChart.value,
@@ -355,8 +360,13 @@ function renderCharts(): void {
   ].forEach((element) => element && resizeObserver?.observe(element))
 }
 
+// 从全局设计令牌读取图表颜色，保证 ECharts 与页面主题同步。
+function cssVariable(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 // 创建活跃时段的条形图。
-function createActiveHoursChart(): void {
+function createActiveHoursChart(palette: { muted: string; border: string; accent: string }): void {
   const element = activeHoursChart.value
   const data = profile.value
   if (!element || !data?.active_hours?.length) return
@@ -367,21 +377,21 @@ function createActiveHoursChart(): void {
     xAxis: {
       type: 'category',
       data: hours.map((item) => `${item.hour}:00`),
-      axisLabel: { color: '#8f98b0' },
-      axisLine: { lineStyle: { color: 'rgba(202,210,255,.14)' } },
+      axisLabel: { color: palette.muted },
+      axisLine: { lineStyle: { color: palette.border } },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
-      splitLine: { lineStyle: { color: 'rgba(202,210,255,.08)' } },
-      axisLabel: { color: '#8f98b0' },
+      splitLine: { lineStyle: { color: palette.border } },
+      axisLabel: { color: palette.muted },
     },
     series: [
       {
         type: 'bar',
-        barMaxWidth: 24,
+        barMaxWidth: 20,
         data: hours.map((item) => item.weight),
-        itemStyle: { color: '#59e2a4', borderRadius: [8, 8, 0, 0] },
+        itemStyle: { color: palette.accent },
       },
     ],
     tooltip: { trigger: 'axis' },
@@ -393,6 +403,7 @@ function createActiveHoursChart(): void {
 function createBarChart(
   element: HTMLDivElement | null,
   items: { name: string; count: number }[],
+  palette: { muted: string; secondary: string; border: string; accent: string },
 ): void {
   if (!element || !items.length) return
   const chart = init(element)
@@ -400,24 +411,24 @@ function createBarChart(
     grid: { left: 8, right: 18, top: 8, bottom: 8, containLabel: true },
     xAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(202,210,255,.08)' } },
-      axisLabel: { color: '#8f98b0' },
+      splitLine: { lineStyle: { color: palette.border } },
+      axisLabel: { color: palette.muted },
     },
     yAxis: {
       type: 'category',
       inverse: true,
       data: items.map((item) => item.name),
-      axisLabel: { color: '#c3c9dc', width: 92, overflow: 'truncate' },
+      axisLabel: { color: palette.secondary, width: 92, overflow: 'truncate' },
       axisLine: { show: false },
       axisTick: { show: false },
     },
     series: [
       {
         type: 'bar',
-        barMaxWidth: 16,
+        barMaxWidth: 14,
         data: items.map((item) => item.count),
-        itemStyle: { color: '#59e2a4', borderRadius: [0, 8, 8, 0] },
-        label: { show: true, position: 'right', color: '#c3c9dc' },
+        itemStyle: { color: palette.accent },
+        label: { show: true, position: 'right', color: palette.secondary },
       },
     ],
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -480,13 +491,13 @@ onBeforeUnmount(disposeCharts)
 .refresh-note {
   margin: 0 0 10px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .empty-hint {
   margin-bottom: 16px;
   padding: 14px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--surface);
 }
 /* 只让标题块级显示：这条规则以前会命中段落里的 <strong>，
@@ -495,156 +506,144 @@ onBeforeUnmount(disposeCharts)
   display: block;
   margin-bottom: 6px;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 .empty-hint p strong {
   color: var(--text-secondary);
-  font-weight: 700;
+  font-weight: 600;
 }
 .empty-hint p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .empty-hint a {
-  color: var(--accent);
-  text-decoration: none;
-}
-.empty-hint a:hover {
+  color: var(--text-secondary);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
+/* 四个统计值排成一条，靠分隔线区分，不摆四张卡 */
 .stat-grid {
   display: grid;
-  /* 四张统计卡排一行，避免 3 列布局在第二行留一个空洞 */
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.stat-card,
-.panel {
+  margin-bottom: 20px;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(39, 56, 85, 0.78), rgba(24, 36, 58, 0.68));
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 .stat-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px;
+  padding: 14px 16px;
+  border-left: 1px solid var(--border);
 }
-.stat-icon,
-.panel-icon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 13px;
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  font-size: 21px;
+.stat-card:first-child {
+  border-left: 0;
 }
 .stat-card p {
-  margin: 0 0 7px;
+  margin: 0 0 4px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-xs);
 }
 .stat-card strong {
   color: var(--text);
-  font-size: 27px;
-  letter-spacing: -0.04em;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: 1.2;
 }
 .profile-grid,
 .chart-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .chart-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .panel {
-  padding: 22px;
   min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 .panel-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .panel-kicker {
-  margin: 0 0 7px;
-  color: var(--accent-strong);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 .panel h3 {
   margin: 0;
   color: var(--text);
-  font-size: 19px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 .trend-total {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .genre-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
-  min-height: 42px;
+  gap: 6px;
+  min-height: 32px;
 }
 .genre-tag {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  border: 1px solid rgba(110, 231, 210, 0.25);
-  border-radius: 10px;
-  color: var(--text);
-  background: var(--accent-soft);
-  font-size: 13px;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: var(--fs-xs);
 }
 .genre-tag small {
-  color: var(--accent-strong);
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .feature-list {
   display: grid;
-  gap: 15px;
-  margin-top: 26px;
+  gap: 12px;
+  margin-top: 22px;
 }
 .feature-label {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 7px;
-  color: var(--text-secondary);
-  font-size: 12px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 .feature-label strong {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 .feature-track {
-  height: 6px;
+  height: 3px;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(202, 210, 255, 0.1);
+  border-radius: 2px;
+  background: var(--surface-hover);
 }
 .feature-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), #59e2a4);
+  background: var(--accent);
 }
 .feature-note {
   margin: 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.7;
 }
 .chart {
@@ -661,27 +660,30 @@ onBeforeUnmount(disposeCharts)
   place-items: center;
   min-height: 160px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   text-align: center;
 }
 .recent-panel {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 .text-link {
-  color: var(--accent-strong);
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
   text-decoration: none;
+}
+.text-link:hover {
+  color: var(--text);
 }
 .recent-list {
   display: grid;
 }
 .recent-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 120px 72px 24px;
+  grid-template-columns: 40px minmax(0, 1fr) 120px 64px;
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 11px 4px;
+  padding: 10px 2px;
   border: 0;
   border-top: 1px solid var(--border);
   color: inherit;
@@ -690,27 +692,18 @@ onBeforeUnmount(disposeCharts)
   cursor: pointer;
 }
 .recent-item:hover {
-  background: rgba(139, 124, 246, 0.08);
-}
-.song-cover {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
-  color: var(--text-on-accent);
-  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
-  font-weight: 700;
+  background: var(--surface-hover);
 }
 .song-info {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 .song-info strong {
   overflow: hidden;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -719,43 +712,39 @@ onBeforeUnmount(disposeCharts)
 .recent-item time {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.play-mark {
-  color: var(--accent-strong);
-  font-size: 12px;
 }
 .retry-button {
   padding: 0;
   border: 0;
-  color: var(--accent-strong);
+  color: var(--text-secondary);
   background: transparent;
+  font-size: var(--fs-xs);
+  text-decoration: underline;
   cursor: pointer;
 }
 
 /* 智能体解读面板 */
 .interpretation-panel {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .interpretation-text {
   margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border-strong);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: linear-gradient(145deg, rgba(110, 231, 210, 0.06), rgba(169, 162, 255, 0.06));
 }
 
 /* 洞察面板布局 */
 .insight-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .chart-active {
   height: 200px;
@@ -763,57 +752,33 @@ onBeforeUnmount(disposeCharts)
 
 /* 偏好变化列表 */
 .preference-change-panel {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .preference-change-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 .preference-change-row {
   display: grid;
-  grid-template-columns: 140px 1fr 100px 80px;
+  grid-template-columns: 120px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: 13px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
   color: var(--text-secondary);
+  font-size: var(--fs-xs);
 }
 .change-period {
-  color: var(--accent-strong);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 .change-genre {
   color: var(--text);
-  font-weight: 600;
-}
-.change-score {
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-.change-count {
-  color: var(--text-muted);
-  text-align: right;
-}
-
-@keyframes chartActive {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @media (max-width: 900px) {
   .profile-page {
-    padding: 28px 22px;
+    padding: var(--page-gutter);
   }
   .profile-grid,
   .chart-grid,
@@ -825,24 +790,37 @@ onBeforeUnmount(disposeCharts)
   .stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .stat-card:nth-child(3) {
+    border-left: 0;
+  }
+  .stat-card:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
 }
 @media (max-width: 620px) {
   .stat-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stat-card,
+  .stat-card:nth-child(3) {
+    border-left: 1px solid var(--border);
+  }
+  .stat-card:nth-child(odd) {
+    border-left: 0;
+  }
+  .stat-card:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
   }
   .recent-item {
-    grid-template-columns: 42px minmax(0, 1fr) 24px;
+    grid-template-columns: 40px minmax(0, 1fr);
   }
   .song-genre,
   .recent-item time {
     display: none;
   }
   .preference-change-row {
-    grid-template-columns: 100px 1fr;
-  }
-  .change-score,
-  .change-count {
-    display: none;
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 }
 </style>

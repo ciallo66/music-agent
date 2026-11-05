@@ -44,7 +44,7 @@ withDefaults(
 .skeleton {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 /* 加载占位与真实列表占用相近的高度：
@@ -56,67 +56,60 @@ withDefaults(
 
 .skeleton-card {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
 }
 
 .skeleton-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 
 .skeleton-card .skeleton-row {
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .skeleton-shape {
   display: block;
-  border-radius: 8px;
-  /* 静态底色兜底，用户声明减少动效时也能看出是占位 */
-  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* 仅在用户未声明减少动效时播放微光 */
+/* 用呼吸式明暗代替流光扫过：更安静，也不会让人觉得页面在“加载动画表演” */
 @media (prefers-reduced-motion: no-preference) {
   .skeleton-shape {
-    background-image: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(255, 255, 255, 0.12) 50%,
-      rgba(255, 255, 255, 0.04) 100%
-    );
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
   }
 }
 
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: 200% 0;
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
   }
 
-  100% {
-    background-position: -200% 0;
+  50% {
+    opacity: 1;
   }
 }
 
 .skeleton-thumb {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
-  border-radius: 12px;
 }
 
 .skeleton-card .skeleton-thumb {
   width: 100%;
-  height: 84px;
+  height: 78px;
 }
 
 .skeleton-lines {
@@ -127,21 +120,21 @@ withDefaults(
 }
 
 .skeleton-line {
-  height: 11px;
+  height: 10px;
 }
 
 .skeleton-line.is-title {
-  width: 46%;
+  width: 42%;
 }
 
 .skeleton-line.is-meta {
-  width: 26%;
-  height: 9px;
+  width: 24%;
+  height: 8px;
 }
 
 .skeleton-tail {
-  width: 52px;
-  height: 11px;
+  width: 44px;
+  height: 10px;
   flex-shrink: 0;
 }
 
@@ -155,7 +148,7 @@ withDefaults(
   }
 
   .skeleton-line.is-title {
-    width: 68%;
+    width: 64%;
   }
 }
 </style>
